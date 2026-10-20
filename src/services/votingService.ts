@@ -17,15 +17,15 @@ export function getDeviceId(): string {
 }
 
 // Verifica se o dispositivo já votou nesta sessão e rodada
-export function hasVoted(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN'): boolean {
+export function hasVoted(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN', iteration: number = 1): boolean {
   if (typeof window === 'undefined') return false;
-  const key = `voted_${sessionId}_${round}`;
+  const key = `voted_${sessionId}_i${iteration}_${round}`;
   return localStorage.getItem(key) === 'true';
 }
 
-export function markAsVoted(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN'): void {
+export function markAsVoted(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN', iteration: number = 1): void {
   if (typeof window === 'undefined') return;
-  const key = `voted_${sessionId}_${round}`;
+  const key = `voted_${sessionId}_i${iteration}_${round}`;
   localStorage.setItem(key, 'true');
 }
 
@@ -195,7 +195,9 @@ export async function submitBallot(
 ): Promise<{ success: boolean; message?: string }> {
   const voterId = getDeviceId();
 
-  if (hasVoted(session.id, round)) {
+  const iteration = session.votingIteration || 1;
+
+  if (hasVoted(session.id, round, iteration)) {
     return { success: false, message: 'Você já votou nesta rodada com este dispositivo!' };
   }
 
@@ -252,7 +254,7 @@ export async function submitBallot(
         });
       }
 
-      markAsVoted(session.id, round);
+      markAsVoted(session.id, round, iteration);
       return { success: true };
     } catch (err: unknown) {
       console.error('Erro ao enviar voto via Firebase:', err);

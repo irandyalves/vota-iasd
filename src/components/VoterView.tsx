@@ -39,8 +39,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     ? (session.tieBreak?.maxVotesPerVoter || 1)
     : session.maxVotesPerVoter;
 
-  // Verifica se o dispositivo já votou
-  const alreadyVoted = hasVoted(session.id, currentRound);
+  // Total de votos registrados na rodada atual
+  const totalVotesRecorded = options.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+
+  // Verifica se o dispositivo já votou nesta iteração específica:
+  // Se a apuração estiver zerada (totalVotesRecorded === 0), o celular é liberado imediatamente
+  const alreadyVoted = totalVotesRecorded > 0 && hasVoted(session.id, currentRound, session.votingIteration || 1);
 
   // Auto-login se já autenticado antes nesta sessão ou se o QR Code já trouxe o PIN na URL
   useEffect(() => {
@@ -59,11 +63,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     }
   }, [session.id, session.pin]);
 
-  // Limpa seleções se a rodada mudar
+  // Limpa seleções se a rodada, iteração ou status mudar
   useEffect(() => {
     setSelectedIds([]);
     setErrorMessage('');
-  }, [session.status, currentRound]);
+  }, [session.status, currentRound, session.votingIteration]);
 
   const handleVerifyPin = (e: React.FormEvent) => {
     e.preventDefault();

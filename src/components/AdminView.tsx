@@ -219,10 +219,13 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
   // Disparo: "VOTAR AGORA"
   const handleStartVoting = () => {
+    const totalVotes = session.options.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+    const nextIteration = totalVotes === 0 ? (session.votingIteration || 1) + 1 : (session.votingIteration || 1);
     saveSession({
       ...session,
       status: 'VOTING',
       telaoMode: 'voting',
+      votingIteration: nextIteration,
     });
     showNotification('success', 'Votação iniciada! Celulares liberados para votar.');
   };
@@ -245,20 +248,21 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     showNotification('success', 'Votação encerrada! Resultados consolidados no telão.');
   };
 
-  // Zerar Votos
+  // Zerar Votos e Reiniciar Votação nos Celulares
   const handleResetVotes = () => {
-    if (window.confirm('Tem certeza que deseja zerar a contagem de votos desta sessão?')) {
+    if (window.confirm('Tem certeza que deseja zerar a contagem de votos desta sessão? Isso reiniciará a votação e liberará todos os celulares imediatamente.')) {
       const resetOptions = session.options.map((o) => ({ ...o, votesCount: 0 }));
+      const nextIteration = (session.votingIteration || 1) + 1;
       saveSession({
         ...session,
         status: 'WAITING',
         options: resetOptions,
         tieBreak: undefined,
+        votingIteration: nextIteration,
       });
       // Limpa os registros de votos do navegador atual
-      localStorage.removeItem(`voted_${session.id}_MAIN`);
-      localStorage.removeItem(`voted_${session.id}_TIE_BREAK`);
-      showNotification('success', 'Votos zerados com sucesso!');
+      localStorage.clear();
+      showNotification('success', 'Votação reiniciada! Todos os celulares foram liberados para votar novamente.');
     }
   };
 
@@ -573,226 +577,235 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </span>
             </div>
 
-            {/* 1. VAGAS TITULARES EM DISPUTA */}
-            <div className="bg-[#07132a]/90 border border-emerald-500/40 rounded-2xl p-3.5 shadow-inner">
-              <div className="flex items-center gap-2 mb-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-                <h4 className="text-sm font-bold text-white uppercase tracking-wide">
-                  Vagas Titulares (Eleitos)
-                </h4>
-                <span className="text-[11px] text-blue-300 font-normal">
-                  (quantos candidatos assumirão o cargo)
-                </span>
-              </div>
+            {/* 3 COLUNAS NA MESMA LINHA: TITULARES, 1º SUPLENTE, 2º SUPLENTE */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
+              {/* 1. TITULARES */}
+              <div className="bg-[#07132a]/90 border border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
+                      Titulares (Eleitos)
+                    </h4>
+                  </div>
+                  <p className="text-[10px] text-blue-200/80 mb-3">
+                    Candidatos que assumirão o cargo
+                  </p>
+                </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                {/* Seletor Numérico com Input Digitável */}
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newVac = Math.max(1, session.vacancies - 1);
-                      saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
-                    }}
-                    disabled={session.vacancies <= 1}
-                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    -
-                  </button>
+                <div className="flex flex-col gap-2.5">
+                  {/* Seletor Numérico Centralizado com Input Digitável */}
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newVac = Math.max(1, session.vacancies - 1);
+                        saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
+                      }}
+                      disabled={session.vacancies <= 1}
+                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                    >
+                      -
+                    </button>
 
-                  <div className="min-w-[80px] h-13 bg-[#001f47] border-2 border-emerald-400 focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                    <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-emerald-400 focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                      <input
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={session.vacancies}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val)) {
+                            const safeVal = Math.max(1, Math.min(50, val));
+                            saveSession({ ...session, vacancies: safeVal, maxVotesPerVoter: safeVal });
+                          }
+                        }}
+                        className="w-full text-center bg-transparent text-2xl font-black font-mono text-emerald-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                      />
+                      <span className="text-[8.5px] font-bold text-emerald-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                        {session.vacancies === 1 ? 'Vaga' : 'Vagas'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const newVac = Math.min(50, session.vacancies + 1);
+                        saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
+                      }}
+                      disabled={session.vacancies >= 50}
+                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  {/* Slider */}
+                  <div className="flex flex-col gap-1 px-1">
+                    <div className="flex justify-between text-[10px] font-bold text-blue-200">
+                      <span>1 vaga</span>
+                      <span className="text-emerald-300 font-mono">
+                        Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{session.vacancies}</strong>
+                      </span>
+                      <span>20 vagas</span>
+                    </div>
                     <input
-                      type="number"
+                      type="range"
                       min={1}
-                      max={50}
+                      max={20}
                       value={session.vacancies}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val)) {
-                          const safeVal = Math.max(1, Math.min(50, val));
-                          saveSession({ ...session, vacancies: safeVal, maxVotesPerVoter: safeVal });
-                        }
+                        const val = Number(e.target.value);
+                        saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
                       }}
-                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-emerald-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                      className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-emerald-400 border border-blue-700"
                     />
-                    <span className="text-[9px] font-bold text-emerald-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                      {session.vacancies === 1 ? 'Vaga' : 'Vagas'}
-                    </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const newVac = Math.min(50, session.vacancies + 1);
-                      saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
-                    }}
-                    disabled={session.vacancies >= 50}
-                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    +
-                  </button>
-                </div>
-
-                {/* Slider */}
-                <div className="flex-1 min-w-[200px] max-w-sm flex flex-col gap-1 px-2">
-                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
-                    <span>1 vaga</span>
-                    <span className="text-emerald-300 font-mono">
-                      Deslize: <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">{session.vacancies}</strong>
-                    </span>
-                    <span>20 vagas</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={20}
-                    value={session.vacancies}
-                    onChange={(e) => {
-                      const val = Number(e.target.value);
-                      saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
-                    }}
-                    className="w-full h-3 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-emerald-400 border border-blue-700"
-                  />
                 </div>
               </div>
-            </div>
 
-            {/* 2. 1º SUPLENTES */}
-            <div className="bg-[#07132a]/90 border border-red-600/40 rounded-2xl p-3.5 shadow-inner">
-              <div className="flex items-center gap-2 mb-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse" />
-                <h4 className="text-sm font-bold text-white uppercase tracking-wide">
-                  Quantidade de 1º Suplentes
-                </h4>
-                <span className="text-[11px] text-blue-300 font-normal">
-                  (substitutos imediatos)
-                </span>
-              </div>
+              {/* 2. 1º SUPLENTE */}
+              <div className="bg-[#07132a]/90 border border-red-600/50 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
+                      1º Suplente
+                    </h4>
+                  </div>
+                  <p className="text-[10px] text-blue-200/80 mb-3">
+                    Substitutos imediatos
+                  </p>
+                </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => saveSession({ ...session, suplentesCount: Math.max(0, (session.suplentesCount || 0) - 1) })}
-                    disabled={(session.suplentesCount || 0) <= 0}
-                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    -
-                  </button>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveSession({ ...session, suplentesCount: Math.max(0, (session.suplentesCount || 0) - 1) })}
+                      disabled={(session.suplentesCount || 0) <= 0}
+                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                    >
+                      -
+                    </button>
 
-                  <div className="min-w-[80px] h-13 bg-[#001f47] border-2 border-red-400 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                    <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-red-400 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                      <input
+                        type="number"
+                        min={0}
+                        max={20}
+                        value={session.suplentesCount || 0}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val)) saveSession({ ...session, suplentesCount: Math.max(0, Math.min(20, val)) });
+                        }}
+                        className="w-full text-center bg-transparent text-2xl font-black font-mono text-red-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                      />
+                      <span className="text-[8.5px] font-bold text-red-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                        {(session.suplentesCount || 0) === 1 ? 'Suplente' : 'Suplentes'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => saveSession({ ...session, suplentesCount: Math.min(20, (session.suplentesCount || 0) + 1) })}
+                      disabled={(session.suplentesCount || 0) >= 20}
+                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-1 px-1">
+                    <div className="flex justify-between text-[10px] font-bold text-blue-200">
+                      <span>0 suplentes</span>
+                      <span className="text-red-300 font-mono">
+                        Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{session.suplentesCount || 0}</strong>
+                      </span>
+                      <span>10 suplentes</span>
+                    </div>
                     <input
-                      type="number"
+                      type="range"
                       min={0}
-                      max={20}
+                      max={10}
                       value={session.suplentesCount || 0}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val)) saveSession({ ...session, suplentesCount: Math.max(0, Math.min(20, val)) });
-                      }}
-                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-red-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                      onChange={(e) => saveSession({ ...session, suplentesCount: Number(e.target.value) })}
+                      className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-red-400 border border-blue-700"
                     />
-                    <span className="text-[9px] font-bold text-red-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                      {(session.suplentesCount || 0) === 1 ? 'Suplente' : 'Suplentes'}
-                    </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => saveSession({ ...session, suplentesCount: Math.min(20, (session.suplentesCount || 0) + 1) })}
-                    disabled={(session.suplentesCount || 0) >= 20}
-                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="flex-1 min-w-[200px] max-w-sm flex flex-col gap-1 px-2">
-                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
-                    <span>0 suplentes</span>
-                    <span className="text-red-300 font-mono">
-                      Deslize: <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">{session.suplentesCount || 0}</strong>
-                    </span>
-                    <span>10 suplentes</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={10}
-                    value={session.suplentesCount || 0}
-                    onChange={(e) => saveSession({ ...session, suplentesCount: Number(e.target.value) })}
-                    className="w-full h-3 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-red-400 border border-blue-700"
-                  />
                 </div>
               </div>
-            </div>
 
-            {/* 3. 2º SUPLENTES */}
-            <div className="bg-[#07132a]/90 border border-amber-600/40 rounded-2xl p-3.5 shadow-inner">
-              <div className="flex items-center gap-2 mb-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                <h4 className="text-sm font-bold text-white uppercase tracking-wide">
-                  Quantidade de 2º Suplentes
-                </h4>
-                <span className="text-[11px] text-blue-300 font-normal">
-                  (segunda linha de suplência)
-                </span>
-              </div>
+              {/* 3. 2º SUPLENTE */}
+              <div className="bg-[#07132a]/90 border border-amber-600/50 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
+                <div>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                    <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
+                      2º Suplente
+                    </h4>
+                  </div>
+                  <p className="text-[10px] text-blue-200/80 mb-3">
+                    Segunda linha de suplência
+                  </p>
+                </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.max(0, (session.segundoSuplentesCount || 0) - 1) })}
-                    disabled={(session.segundoSuplentesCount || 0) <= 0}
-                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    -
-                  </button>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-center justify-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.max(0, (session.segundoSuplentesCount || 0) - 1) })}
+                      disabled={(session.segundoSuplentesCount || 0) <= 0}
+                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                    >
+                      -
+                    </button>
 
-                  <div className="min-w-[80px] h-13 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                    <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                      <input
+                        type="number"
+                        min={0}
+                        max={20}
+                        value={session.segundoSuplentesCount || 0}
+                        onChange={(e) => {
+                          const val = parseInt(e.target.value, 10);
+                          if (!isNaN(val)) saveSession({ ...session, segundoSuplentesCount: Math.max(0, Math.min(20, val)) });
+                        }}
+                        className="w-full text-center bg-transparent text-2xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                      />
+                      <span className="text-[8.5px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                        {(session.segundoSuplentesCount || 0) === 1 ? '2º Suplente' : '2º Suplentes'}
+                      </span>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.min(20, (session.segundoSuplentesCount || 0) + 1) })}
+                      disabled={(session.segundoSuplentesCount || 0) >= 20}
+                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                    >
+                      +
+                    </button>
+                  </div>
+
+                  <div className="flex flex-col gap-1 px-1">
+                    <div className="flex justify-between text-[10px] font-bold text-blue-200">
+                      <span>0 suplentes</span>
+                      <span className="text-amber-300 font-mono">
+                        Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{session.segundoSuplentesCount || 0}</strong>
+                      </span>
+                      <span>10 suplentes</span>
+                    </div>
                     <input
-                      type="number"
+                      type="range"
                       min={0}
-                      max={20}
+                      max={10}
                       value={session.segundoSuplentesCount || 0}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val)) saveSession({ ...session, segundoSuplentesCount: Math.max(0, Math.min(20, val)) });
-                      }}
-                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                      onChange={(e) => saveSession({ ...session, segundoSuplentesCount: Number(e.target.value) })}
+                      className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700"
                     />
-                    <span className="text-[9px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                      {(session.segundoSuplentesCount || 0) === 1 ? '2º Suplente' : '2º Suplentes'}
-                    </span>
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.min(20, (session.segundoSuplentesCount || 0) + 1) })}
-                    disabled={(session.segundoSuplentesCount || 0) >= 20}
-                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    +
-                  </button>
-                </div>
-
-                <div className="flex-1 min-w-[200px] max-w-sm flex flex-col gap-1 px-2">
-                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
-                    <span>0 suplentes</span>
-                    <span className="text-amber-300 font-mono">
-                      Deslize: <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">{session.segundoSuplentesCount || 0}</strong>
-                    </span>
-                    <span>10 suplentes</span>
-                  </div>
-                  <input
-                    type="range"
-                    min={0}
-                    max={10}
-                    value={session.segundoSuplentesCount || 0}
-                    onChange={(e) => saveSession({ ...session, segundoSuplentesCount: Number(e.target.value) })}
-                    className="w-full h-3 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700"
-                  />
                 </div>
               </div>
             </div>
