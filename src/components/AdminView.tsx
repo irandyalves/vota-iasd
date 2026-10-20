@@ -17,6 +17,7 @@ import {
   ArrowDownAZ,
   Pencil,
   FolderPlus,
+  ChevronsRight,
 } from 'lucide-react';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
@@ -666,6 +667,12 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 )}
               </AnimatePresence>
             </div>
+
+            {/* 2 SETINHAS JUNTAS E AZUL APÓS O BOTÃO CRIAR VOTAÇÃO */}
+            <ChevronsRight
+              className="w-5 h-5 text-blue-400 shrink-0 -mx-0.5 drop-shadow-[0_0_6px_rgba(96,165,250,0.6)]"
+              strokeWidth={2.75}
+            />
 
             {/* À DIREITA DO BOTÃO "+ CRIAR VOTAÇÃO": EVENTOS CRIADOS (QTD EM AMARELO, SEM SETINHA, APENAS LÁPIS E LIXEIRA CLICÁVEIS) */}
             {eventsList.map((evt) => {
