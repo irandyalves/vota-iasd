@@ -19,8 +19,11 @@ import {
   Tv,
   Sliders,
   ArrowDownAZ,
+  Pencil,
+  FolderPlus,
+  ChevronDown,
 } from 'lucide-react';
-import type { VotingSession, VotingOption } from '../types';
+import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
 import { openTelaoOnSecondMonitor } from '../utils/screen';
@@ -32,6 +35,178 @@ interface AdminViewProps {
 
 export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [activeTab, setActiveTab] = useState<'candidates' | 'control' | 'settings'>('candidates');
+  const [isBottomSectionOpen, setIsBottomSectionOpen] = useState<boolean>(true);
+  const [eventNameInput, setEventNameInput] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
+  const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
+
+  // Garante lista de eventos (inicializando com o evento atual caso ainda não exista)
+  const eventsList: VotingEventItem[] =
+    Array.isArray(session.events) && session.events.length > 0
+      ? session.events
+      : [
+          {
+            id: session.activeEventId || 'evt_principal',
+            name: session.title || 'ESCOLHA DO TESOUREIRO',
+            options: session.options || [],
+            vacancies: session.vacancies || 6,
+            maxVotesPerVoter: session.maxVotesPerVoter || 6,
+            suplentesCount: session.suplentesCount ?? 2,
+            segundoSuplentesCount: session.segundoSuplentesCount ?? 0,
+            habilitarSuplente1: session.habilitarSuplente1 ?? true,
+            habilitarSuplente2: session.habilitarSuplente2 ?? false,
+          },
+        ];
+  const currentActiveEventId = session.activeEventId || eventsList[0].id;
+
+  useEffect(() => {
+    setEventNameInput(session.title || '');
+  }, [session.title, session.activeEventId]);
+
+  // Selecionar um evento ao clicar no botão do evento no cabeçalho -> abre a parte de baixo (Print 2)
+  const handleSelectEventButton = (evt: VotingEventItem) => {
+    if (evt.id === currentActiveEventId && activeTab === 'candidates') {
+      // Se já está selecionado na aba de nomes, alterna abrir/fechar a parte de baixo ou garante aberto
+      setIsBottomSectionOpen((prev) => !prev);
+      return;
+    }
+
+    // Salva o estado do evento atual antes de trocar e carrega o evento clicado
+    const updatedEvents = eventsList.map((item) =>
+      item.id === currentActiveEventId
+        ? {
+            ...item,
+            name: session.title || item.name,
+            options: session.options,
+            vacancies: session.vacancies,
+            maxVotesPerVoter: session.maxVotesPerVoter,
+            suplentesCount: session.suplentesCount,
+            segundoSuplentesCount: session.segundoSuplentesCount,
+            habilitarSuplente1: session.habilitarSuplente1,
+            habilitarSuplente2: session.habilitarSuplente2,
+          }
+        : item
+    );
+
+    saveSession({
+      ...session,
+      activeEventId: evt.id,
+      title: evt.name,
+      options: evt.options || [],
+      vacancies: evt.vacancies || 1,
+      maxVotesPerVoter: evt.maxVotesPerVoter || evt.vacancies || 1,
+      suplentesCount: evt.suplentesCount ?? 0,
+      segundoSuplentesCount: evt.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: evt.habilitarSuplente1,
+      habilitarSuplente2: evt.habilitarSuplente2,
+      events: updatedEvents,
+    });
+
+    setActiveTab('candidates');
+    setIsBottomSectionOpen(true);
+    showNotification('success', `Evento "${evt.name}" aberto!`);
+  };
+
+  // Criar um novo evento com nome
+  const handleCreateEvent = (customName?: string) => {
+    const cleaned = (customName ?? eventNameInput).trim().toUpperCase();
+    if (!cleaned) {
+      showNotification('error', 'Digite o nome do evento (ex: Escolha do Tesoureiro).');
+      return;
+    }
+
+    const newEvtId = 'evt_' + Date.now();
+    const newEvt: VotingEventItem = {
+      id: newEvtId,
+      name: cleaned,
+      options: [],
+      vacancies: session.vacancies || 1,
+      maxVotesPerVoter: session.vacancies || 1,
+      suplentesCount: session.suplentesCount ?? 2,
+      segundoSuplentesCount: session.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: session.habilitarSuplente1 ?? true,
+      habilitarSuplente2: session.habilitarSuplente2 ?? false,
+    };
+
+    const syncedCurrentEvents = eventsList.map((item) =>
+      item.id === currentActiveEventId
+        ? {
+            ...item,
+            name: session.title || item.name,
+            options: session.options,
+            vacancies: session.vacancies,
+            maxVotesPerVoter: session.maxVotesPerVoter,
+            suplentesCount: session.suplentesCount,
+            segundoSuplentesCount: session.segundoSuplentesCount,
+            habilitarSuplente1: session.habilitarSuplente1,
+            habilitarSuplente2: session.habilitarSuplente2,
+          }
+        : item
+    );
+
+    saveSession({
+      ...session,
+      activeEventId: newEvtId,
+      title: cleaned,
+      options: [],
+      status: 'WAITING',
+      events: [...syncedCurrentEvents, newEvt],
+    });
+
+    setIsCreatingNewEvent(false);
+    setActiveTab('candidates');
+    setIsBottomSectionOpen(true);
+    showNotification('success', `Evento "${cleaned}" criado! Clique nele ou adicione os nomes abaixo.`);
+  };
+
+  // Renomear / Salvar nome do evento atual
+  const handleRenameCurrentEvent = () => {
+    const cleaned = eventNameInput.trim().toUpperCase();
+    if (!cleaned) {
+      showNotification('error', 'O nome do evento não pode ficar vazio.');
+      return;
+    }
+
+    const updatedEvents = eventsList.map((item) =>
+      item.id === currentActiveEventId ? { ...item, name: cleaned } : item
+    );
+
+    saveSession({
+      ...session,
+      activeEventId: currentActiveEventId,
+      title: cleaned,
+      events: updatedEvents,
+    });
+    showNotification('success', `Nome do evento atualizado para "${cleaned}"!`);
+  };
+
+  // Excluir um evento
+  const handleDeleteEvent = (evtId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (eventsList.length <= 1) {
+      showNotification('error', 'É necessário manter pelo menos 1 evento ativo.');
+      return;
+    }
+    const targetEvt = eventsList.find((x) => x.id === evtId);
+    if (!window.confirm(`Deseja excluir o evento "${targetEvt?.name}"?`)) return;
+
+    const remaining = eventsList.filter((x) => x.id !== evtId);
+    const nextActive = remaining[0];
+
+    saveSession({
+      ...session,
+      activeEventId: nextActive.id,
+      title: nextActive.name,
+      options: nextActive.options || [],
+      vacancies: nextActive.vacancies || 1,
+      maxVotesPerVoter: nextActive.maxVotesPerVoter || nextActive.vacancies || 1,
+      suplentesCount: nextActive.suplentesCount ?? 0,
+      segundoSuplentesCount: nextActive.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: nextActive.habilitarSuplente1,
+      habilitarSuplente2: nextActive.habilitarSuplente2,
+      events: remaining,
+    });
+    showNotification('success', 'Evento removido.');
+  };
   const [isListening, setIsListening] = useState(false);
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [newName, setNewName] = useState('');
@@ -424,36 +599,135 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* BARRA DE ABAS E COMANDOS RÁPIDOS DO ADMIN */}
-      <div className="bg-[#001f47] border border-blue-800 rounded-2xl px-4 py-3 shadow-lg mb-4">
+      {/* BARRA DE ABAS, EVENTOS (ESTILO BOTÕES) E COMANDOS RÁPIDOS DO ADMIN — ENCOSTA NAS BORDAS DA JANELA */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 px-4 sm:px-6 lg:px-8 py-3.5 shadow-xl mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* ESQUERDA: Abas (Nomes, Configurar Evento, Migração esmaecido) */}
-          <div className="inline-flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900">
-            <button
-              onClick={() => setActiveTab('candidates')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'candidates' ? 'bg-amber-500 text-blue-950 font-black shadow-md' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <span>Nomes ({session.options.length})</span>
-            </button>
-            <button
-              onClick={() => setActiveTab('control')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                activeTab === 'control' ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <span>Configurar Evento</span>
-            </button>
-            <button
-              type="button"
-              disabled
-              aria-disabled="true"
-              tabIndex={-1}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500/40 opacity-45 cursor-not-allowed pointer-events-none select-none"
-            >
-              <span>Migração</span>
-            </button>
+          {/* ESQUERDA: Abas + Botões de Eventos Criados */}
+          <div className="flex flex-wrap items-center gap-2.5">
+            <div className="inline-flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900">
+              <button
+                onClick={() => {
+                  setActiveTab('candidates');
+                  setIsBottomSectionOpen(true);
+                }}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'candidates' && isBottomSectionOpen
+                    ? 'bg-amber-500 text-blue-950 font-black shadow-md'
+                    : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>Nomes ({session.options.length})</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('control')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'control' ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>Configurar Evento</span>
+              </button>
+              <button
+                type="button"
+                disabled
+                aria-disabled="true"
+                tabIndex={-1}
+                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500/40 opacity-45 cursor-not-allowed pointer-events-none select-none"
+              >
+                <span>Migração</span>
+              </button>
+            </div>
+
+            {/* LISTA DE EVENTOS ESTILO BOTÕES (CLICOU ABRE A PARTE DE BAIXO / PRINT 2) */}
+            <div className="flex flex-wrap items-center gap-2">
+              {eventsList.map((evt) => {
+                const isSelected = evt.id === currentActiveEventId;
+                const count = isSelected ? session.options.length : (evt.options?.length || 0);
+                const displayName = isSelected ? (session.title || evt.name) : evt.name;
+                return (
+                  <div
+                    key={evt.id}
+                    onClick={() => handleSelectEventButton(evt)}
+                    title="Clique para abrir/recolher os nomes deste evento"
+                    className={`group px-3.5 py-2 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-150 cursor-pointer active:scale-95 select-none border-2 shadow-md ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.25)]'
+                        : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
+                    }`}
+                  >
+                    <span>{displayName}</span>
+                    <span className="px-1.5 py-0.2 rounded-md bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
+                      {count}
+                    </span>
+                    <ChevronDown
+                      className={`w-3.5 h-3.5 transition-transform ${
+                        isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
+                      }`}
+                    />
+                    {eventsList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteEvent(evt.id, e)}
+                        title="Excluir este evento"
+                        className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Botão Rápido + Novo Evento no Cabeçalho */}
+              {isCreatingNewEvent ? (
+                <div className="flex items-center gap-1.5 bg-[#07132a] border-2 border-amber-400 rounded-xl px-2.5 py-1 shadow-lg">
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="EX: ESCOLHA DO TESOUREIRO"
+                    value={eventNameInput}
+                    onChange={(e) => setEventNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateEvent(eventNameInput);
+                      if (e.key === 'Escape') {
+                        setIsCreatingNewEvent(false);
+                        setEventNameInput(session.title || '');
+                      }
+                    }}
+                    className="bg-transparent text-xs font-black text-white uppercase outline-none w-48 sm:w-56 placeholder-slate-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCreateEvent(eventNameInput)}
+                    className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-blue-950 font-black text-[11px] rounded-lg uppercase cursor-pointer"
+                  >
+                    Salvar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingNewEvent(false);
+                      setEventNameInput(session.title || '');
+                    }}
+                    className="px-2 py-1 text-slate-400 hover:text-white text-[11px] font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEventNameInput('');
+                    setIsCreatingNewEvent(true);
+                  }}
+                  title="Criar um novo evento de votação (ex: Escolha do Tesoureiro)"
+                  className="px-3 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border-2 border-dashed border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                >
+                  <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
+                  <span>+ Criar Evento</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {/* DIREITA: Botões Retangulares (PAUSAR VOTAÇÃO, ENCERRAR VOTAÇÃO, EXIBIR QR.CODE NO TELÃO) */}
@@ -505,9 +779,67 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       </div>
 
-      {/* ABA 1: CONFIGURAR (VAGAS, SUPLENTES E DESEMPATE) */}
+      {/* ABA 1: CONFIGURAR EVENTO (NOME DO EVENTO, VAGAS, SUPLENTES E DESEMPATE) */}
       {activeTab === 'control' && (
         <div className="space-y-3.5">
+          {/* SEÇÃO DE CRIAR / EDITAR NOME DO EVENTO */}
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-blue-900/80">
+              <div className="flex items-center gap-2">
+                <Pencil className="w-4 h-4 text-amber-400" />
+                <h3 className="text-base font-bold text-white font-sans tracking-tight">
+                  Criar ou Editar Evento
+                </h3>
+              </div>
+              <span className="text-[11px] text-blue-300">
+                Defina o nome do evento (ex: Escolha do Tesoureiro) — ele ficará disponível como botão no cabeçalho acima
+              </span>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+              <div className="flex-1">
+                <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-1">
+                  Nome do Evento:
+                </label>
+                <input
+                  type="text"
+                  value={eventNameInput}
+                  onChange={(e) => setEventNameInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleRenameCurrentEvent();
+                    }
+                  }}
+                  placeholder="Ex: ESCOLHA DO TESOUREIRO"
+                  className="w-full px-3.5 py-2.5 bg-[#07132a] border-2 border-blue-700 focus:border-amber-400 rounded-xl text-sm sm:text-base font-black text-white uppercase outline-none transition shadow-inner"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 sm:self-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleRenameCurrentEvent();
+                    setActiveTab('candidates');
+                    setIsBottomSectionOpen(true);
+                  }}
+                  className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Salvar Nome e Abrir Nomes</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleCreateEvent(eventNameInput)}
+                  className="px-4 py-2.5 bg-emerald-600/40 hover:bg-emerald-600/60 border-2 border-emerald-400 text-emerald-100 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                >
+                  <FolderPlus className="w-4 h-4" />
+                  <span>Criar Como Novo Evento</span>
+                </button>
+              </div>
+            </div>
+          </div>
           {/* PAINEL DE CONFIGURAÇÃO DE VAGAS E SUPLENTES */}
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-3.5">
             <div className="flex items-center justify-between pb-2.5 border-b border-blue-900/80">
@@ -1070,8 +1402,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* ABA: NOMES / CANDIDATOS (AGORA EM PRIMEIRO) */}
-      {activeTab === 'candidates' && (
+      {/* ABA: NOMES / CANDIDATOS (ABRE AO CLICAR NO BOTÃO DO EVENTO NO CABEÇALHO) */}
+      {activeTab === 'candidates' && isBottomSectionOpen && (
         <div className="space-y-3.5">
           {/* Inputs ocultos para importação de arquivos */}
           <input
@@ -1319,15 +1651,15 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 Nenhum nome cadastrado ainda. Digite ou fale no campo acima para começar!
               </div>
             ) : (
-              <div className="flex flex-wrap gap-2 items-center">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
                 {session.options.map((option) => {
                   const isEditing = editingCandidateId === option.id;
                   return (
                     <div
                       key={option.id}
-                      className="px-3 py-2 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800/80 hover:border-amber-400/80 rounded-xl flex items-center gap-2 shadow-sm transition group"
+                      className="w-full px-3 py-2 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800/80 hover:border-amber-400/80 rounded-xl flex items-center justify-between gap-2 shadow-sm transition group min-w-0"
                     >
-                      {/* Nome Editável Inline */}
+                      {/* Nome Editável Inline (Largura Fixa na Coluna) */}
                       {isEditing ? (
                         <input
                           type="text"
@@ -1339,7 +1671,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                             if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
                             if (e.key === 'Escape') setEditingCandidateId(null);
                           }}
-                          className="px-2 py-0.5 bg-blue-950 border border-amber-400 rounded text-xs text-white font-bold uppercase outline-none"
+                          className="w-full min-w-0 px-2 py-0.5 bg-blue-950 border border-amber-400 rounded text-xs text-white font-bold uppercase outline-none"
                         />
                       ) : (
                         <span
@@ -1347,8 +1679,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                             setEditingCandidateId(option.id);
                             setEditingCandidateName(option.name);
                           }}
-                          className="font-black text-xs text-white uppercase tracking-wide cursor-pointer hover:text-amber-300 transition"
-                          title="Clique para editar este nome"
+                          className="flex-1 min-w-0 truncate font-black text-xs text-white uppercase tracking-wide cursor-pointer hover:text-amber-300 transition"
+                          title={`${option.name} (Clique para editar)`}
                         >
                           {option.name}
                         </span>
@@ -1359,7 +1691,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         type="button"
                         onClick={() => handleRemoveCandidate(option.id)}
                         title="Remover nome"
-                        className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer"
+                        className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>

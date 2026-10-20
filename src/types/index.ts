@@ -18,6 +18,18 @@ export interface TelaoLayoutConfig {
   unclassifiedColor?: string; // Cor dos cards Não Classificados (padrão: '#1e293b')
 }
 
+export interface VotingEventItem {
+  id: string;
+  name: string; // Ex: "Escolha do Tesoureiro"
+  options: VotingOption[];
+  vacancies: number;
+  maxVotesPerVoter: number;
+  suplentesCount: number;
+  segundoSuplentesCount?: number;
+  habilitarSuplente1?: boolean;
+  habilitarSuplente2?: boolean;
+}
+
 export interface VotingSession {
   id: string;
   title: string;
@@ -35,6 +47,8 @@ export interface VotingSession {
   showQrOnTelao?: boolean; // Controlar exibição do QR Code no Telão
   telaoMode?: 'names' | 'voting'; // Modo de exibição no Telão: 'names' (Nomes para escolha - Print 2) ou 'voting' (Apuração / Tempo real)
   telaoLayout?: TelaoLayoutConfig; // Personalização de layout, altura, espaçamento, colunas e cores dos cards no Telão
+  events?: VotingEventItem[]; // Lista de eventos criados (ex: "Escolha do Tesoureiro", "Diáconos", etc.)
+  activeEventId?: string; // ID do evento atualmente selecionado
   logoUrl?: string; // Logo customizado da IASD ou do evento
   publicTitle?: string; // Título exibido no Telão (Ex: "VOTAÇÃO ESCOLHA DIÁCONOS")
   options: VotingOption[];

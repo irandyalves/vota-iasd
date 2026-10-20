@@ -112,6 +112,25 @@ function setLocalSession(session: VotingSession) {
 export async function saveSession(session: VotingSession): Promise<void> {
   session.updatedAt = Date.now();
 
+  // Sincroniza automaticamente o evento ativo dentro de session.events
+  if (Array.isArray(session.events) && session.events.length > 0 && session.activeEventId) {
+    session.events = session.events.map((evt) =>
+      evt.id === session.activeEventId
+        ? {
+            ...evt,
+            name: session.title || evt.name,
+            options: session.options,
+            vacancies: session.vacancies,
+            maxVotesPerVoter: session.maxVotesPerVoter,
+            suplentesCount: session.suplentesCount,
+            segundoSuplentesCount: session.segundoSuplentesCount,
+            habilitarSuplente1: session.habilitarSuplente1,
+            habilitarSuplente2: session.habilitarSuplente2,
+          }
+        : evt
+    );
+  }
+
   // Limpa campos undefined para total compatibilidade com Firestore
   const cleanSession = JSON.parse(JSON.stringify(session));
   // tieBreak removido precisa ser gravado como null, senão o merge mantém o desempate antigo no Firestore
