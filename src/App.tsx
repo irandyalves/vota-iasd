@@ -158,6 +158,8 @@ export function App() {
           onUpdateTitle={(newTitle) => {
             saveSession({ ...session, title: newTitle });
           }}
+          session={session}
+          onSaveSession={saveSession}
         />
       )}
 

@@ -4,7 +4,6 @@ import {
   Mic,
   MicOff,
   Trash2,
-  Play,
   StopCircle,
   RotateCcw,
   Download,
@@ -464,25 +463,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
     saveSession(updated);
     showNotification('success', `${newOptions.length} candidato(s) adicionado(s) por voz!`);
-  };
-
-  // Disparo: "VOTAR AGORA / INICIAR VOTAÇÃO"
-  const handleStartVoting = () => {
-    // Ao iniciar nova votação, zera a apuração e ordena alfabeticamente mantendo os nomes cadastrados
-    const freshOptions = [...session.options]
-      .map((o) => ({ ...o, votesCount: 0 }))
-      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
-    const nextIteration = (session.votingIteration || 1) + 1;
-
-    saveSession({
-      ...session,
-      status: 'VOTING',
-      options: freshOptions,
-      tieBreak: undefined,
-      telaoMode: 'voting',
-      votingIteration: nextIteration,
-    });
-    showNotification('success', 'Votação iniciada! Telão em tempo real e celulares liberados.');
   };
 
   // Disparo: "ENCERRAR VOTAÇÃO"
@@ -1310,18 +1290,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
               {/* SEÇÃO DA DIREITA: SEM BORDINHA EXTERNA, BOTÕES 25% MENORES, E SEM BOLD EM MOSTRAR TELÃO E QR.CODE TELÃO */}
               <div className="flex flex-col gap-2 shrink-0 w-full lg:w-48 justify-between">
-                {/* 1. Botão NOVA VOTAÇÃO (EM VERDE) */}
-                <button
-                  type="button"
-                  onClick={handleStartVoting}
-                  className="flex-1 min-h-[30px] px-2.5 py-1.5 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_12px_rgba(52,211,153,0.3)] hover:shadow-[0_0_16px_rgba(52,211,153,0.5)] font-black text-[9.5px] rounded-lg transition-all duration-150 active:scale-95 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                  title="Iniciar Nova Votação mantendo os nomes em ordem A-Z"
-                >
-                  <Play className="w-3 h-3 shrink-0 fill-current" />
-                  <span>NOVA VOTAÇÃO</span>
-                </button>
-
-                {/* 2. Botão ENCERRAR VOTAÇÃO (EM VERMELHO) */}
+                {/* 1. Botão ENCERRAR VOTAÇÃO (EM VERMELHO) */}
                 <button
                   type="button"
                   onClick={handleCloseVoting}

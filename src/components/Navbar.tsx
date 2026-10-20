@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Pencil } from 'lucide-react';
+import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Play } from 'lucide-react';
 import { IasdLogo } from './IasdLogo';
 import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
+import type { VotingSession } from '../types';
 
 interface NavbarProps {
   currentView: 'voter' | 'telao' | 'admin';
@@ -12,6 +13,8 @@ interface NavbarProps {
   onUpdateLogo?: (url: string) => void;
   title?: string;
   onUpdateTitle?: (newTitle: string) => void;
+  session?: VotingSession;
+  onSaveSession?: (session: VotingSession) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -21,23 +24,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   onRegeneratePin,
   logoUrl,
   onUpdateLogo,
-  title = 'COMISSÃO 2026',
-  onUpdateTitle,
+  session,
+  onSaveSession,
 }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [localPin, setLocalPin] = useState(pin);
   const [isScreen2Open, setIsScreen2Open] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(title);
 
-  // Sincroniza estado de senha e título caso venham externamente
+  // Sincroniza estado de senha caso venha externamente
   useEffect(() => {
     setLocalPin(pin);
   }, [pin]);
-
-  useEffect(() => {
-    setEditedTitle(title);
-  }, [title]);
 
   // Monitora se o Telão na 2ª tela está aberto ou fechado
   useEffect(() => {
@@ -53,17 +50,6 @@ export const Navbar: React.FC<NavbarProps> = ({
     } else if (!cleaned) {
       setLocalPin(pin);
     }
-  };
-
-  // Salva o título da comissão
-  const handleSaveTitle = () => {
-    const cleaned = editedTitle.trim();
-    if (cleaned && cleaned !== title) {
-      onUpdateTitle?.(cleaned);
-    } else if (!cleaned) {
-      setEditedTitle(title);
-    }
-    setIsEditingTitle(false);
   };
 
   // Gera novo PIN de 4 dígitos aleatório
@@ -90,10 +76,56 @@ export const Navbar: React.FC<NavbarProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const isVotingActive =
+    session?.status === 'VOTING' || session?.status === 'TIE_BREAK';
+
+  const activeOptions =
+    session?.status === 'TIE_BREAK' && session?.tieBreak?.active
+      ? session.tieBreak.options || []
+      : session?.options || [];
+
+  const totalVotesCast = activeOptions.reduce(
+    (acc, curr) => acc + (curr.votesCount || 0),
+    0
+  );
+
+  // Enquanto estiver girando (votação em andamento) e já houver voto(s) registrado(s), muda o caption para APURAÇÃO
+  const showApuracaoCaption = isVotingActive && totalVotesCast > 0;
+
+  const handleCenterVotingButtonClick = () => {
+    if (!session || !onSaveSession) return;
+
+    if (isVotingActive) {
+      // Se já está em votação (ou com caption APURAÇÃO), clicar encerra e abre a APURAÇÃO no Telão
+      onSaveSession({
+        ...session,
+        status: 'CLOSED',
+        telaoMode: 'voting',
+      });
+    } else {
+      // Inicia NOVA VOTAÇÃO zerando os votos e ordenando A-Z
+      const freshOptions = [...session.options]
+        .map((o) => ({ ...o, votesCount: 0 }))
+        .sort((a, b) =>
+          a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+        );
+      const nextIteration = (session.votingIteration || 1) + 1;
+
+      onSaveSession({
+        ...session,
+        status: 'VOTING',
+        options: freshOptions,
+        tieBreak: undefined,
+        telaoMode: 'voting',
+        votingIteration: nextIteration,
+      });
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-2 w-full">
+    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-3 min-h-[65px] flex items-center w-full">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 items-center gap-3">
-        {/* ESQUERDA: Logo + VOTA IASD (50% menor, fonte redonda, sem Tempo Real) + SENHA sem borda */}
+        {/* ESQUERDA: Logo + VOTA IASD + SENHA sem borda */}
         <div className="flex items-center gap-2.5 justify-self-start">
           <input
             ref={logoInputRef}
@@ -118,7 +150,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span
               className="font-extrabold tracking-wider text-white text-[11px] block select-none"
               style={{
-                fontFamily: '"Varela Round", "Nunito", "Quicksand", ui-rounded, "Segoe UI", system-ui, sans-serif',
+                fontFamily:
+                  '"Varela Round", "Nunito", "Quicksand", ui-rounded, "Segoe UI", system-ui, sans-serif',
               }}
             >
               VOTA <span className="text-[#d4af37]">IASD</span>
@@ -126,7 +159,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* SENHA EDITÁVEL SEM BORDA */}
             <div className="flex items-center gap-1 mt-0.5">
-              <label htmlFor="navbar-pin-input" className="text-[11px] text-blue-300 font-semibold cursor-pointer">
+              <label
+                htmlFor="navbar-pin-input"
+                className="text-[11px] text-blue-300 font-semibold cursor-pointer"
+              >
                 SENHA:
               </label>
               <input
@@ -156,39 +192,54 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* CENTRO: TÍTULO DO EVENTO EDITÁVEL (Ex: COMISSÃO 2026) */}
+        {/* CENTRO: BOTÃO NOVA VOTAÇÃO / APURAÇÃO COM RODINHA GIRANDO */}
         <div className="flex items-center justify-center justify-self-center">
-          {isEditingTitle ? (
-            <input
-              type="text"
-              value={editedTitle}
-              onChange={(e) => setEditedTitle(e.target.value)}
-              onBlur={handleSaveTitle}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') handleSaveTitle();
-                if (e.key === 'Escape') {
-                  setEditedTitle(title);
-                  setIsEditingTitle(false);
-                }
-              }}
-              autoFocus
-              className="text-base sm:text-lg font-black text-white uppercase tracking-wide bg-[#07132a] border border-[#d4af37] px-3 py-1 rounded-xl outline-none text-center shadow-inner min-w-[220px]"
-            />
-          ) : (
-            <div
-              onClick={() => {
-                setEditedTitle(title);
-                setIsEditingTitle(true);
-              }}
-              title="Clique para editar o título do evento"
-              className="group flex items-center gap-2 px-3 py-1 rounded-xl hover:bg-blue-900/40 cursor-pointer transition"
-            >
-              <h1 className="text-base sm:text-xl font-black text-white uppercase tracking-wide group-hover:text-amber-300 transition-colors">
-                {title}
-              </h1>
-              <Pencil className="w-3.5 h-3.5 text-amber-300/60 group-hover:text-amber-300 transition-opacity" />
-            </div>
-          )}
+          <button
+            type="button"
+            onClick={handleCenterVotingButtonClick}
+            title={
+              showApuracaoCaption
+                ? 'Clique para encerrar a votação e exibir a Apuração no Telão'
+                : isVotingActive
+                ? 'Votação em andamento (clique para abrir a Apuração)'
+                : 'Iniciar Nova Votação mantendo os nomes em ordem A-Z'
+            }
+            className={`px-5 py-2 rounded-xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 ${
+              showApuracaoCaption
+                ? 'bg-amber-500/30 hover:bg-amber-500/45 border-amber-300 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.45)] hover:shadow-[0_0_24px_rgba(251,191,36,0.65)]'
+                : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_22px_rgba(52,211,153,0.55)]'
+            }`}
+          >
+            {isVotingActive ? (
+              /* Rodinha com efeito de girar antes do texto enquanto a votação está ativa */
+              <svg
+                className="w-4 h-4 sm:w-5 sm:h-5 animate-spin shrink-0"
+                viewBox="0 0 24 24"
+                fill="none"
+              >
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="9"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeDasharray="14 8"
+                  className="opacity-90"
+                />
+                <circle
+                  cx="12"
+                  cy="12"
+                  r="4"
+                  stroke="#fbbf24"
+                  strokeWidth="2"
+                  strokeDasharray="6 4"
+                />
+              </svg>
+            ) : (
+              <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 fill-current" />
+            )}
+            <span>{showApuracaoCaption ? 'APURAÇÃO' : 'NOVA VOTAÇÃO'}</span>
+          </button>
         </div>
 
         {/* DIREITA: Botão 2ª Tela + Listbox "VISÃO DE:" (Admin, Celular, Público) */}
@@ -216,13 +267,18 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
 
           <div className="flex items-center gap-1.5 bg-[#07132a] px-2.5 py-1.5 rounded-xl border border-blue-800/80 shadow-inner">
-            <label htmlFor="navbar-view-select" className="text-[10px] font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap">
+            <label
+              htmlFor="navbar-view-select"
+              className="text-[10px] font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap"
+            >
               VISÃO DE:
             </label>
             <select
               id="navbar-view-select"
               value={currentView}
-              onChange={(e) => setCurrentView(e.target.value as 'admin' | 'voter' | 'telao')}
+              onChange={(e) =>
+                setCurrentView(e.target.value as 'admin' | 'voter' | 'telao')
+              }
               className="bg-transparent text-xs font-black text-amber-300 outline-none cursor-pointer pr-1"
             >
               <option value="admin" className="bg-[#07132a] text-white font-bold">
