@@ -1,9 +1,69 @@
-// Gerenciador de Exibição em Múltiplas Telas (Monitor 2 / Projetor / TV)
+// Gerenciador de Exibição em Múltiplos Monitores Extras (Monitor 2, Monitor 3, Projetores / TVs)
 
-let secondaryWindow: Window | null = null;
+interface MonitorRect {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
+const secondaryWindows: Map<number, Window> = new Map();
 const listeners = new Set<(isOpen: boolean) => void>();
+let cachedExtraMonitors: MonitorRect[] | null = null;
+
+// Monitores extras padrão (caso o navegador ainda não tenha liberado getScreenDetails de forma síncrona)
+const FALLBACK_EXTRA_MONITORS: MonitorRect[] = [
+  { left: 1920, top: 0, width: 2560, height: 1440 },
+  { left: 776, top: -1080, width: 1280, height: 720 },
+];
+
+// Pré-carrega em background os detalhes de todos os monitores conectados sem travar chamadas síncronas
+function refreshScreenDetailsInBackground(): Promise<MonitorRect[] | null> {
+  if (typeof window === 'undefined' || !('getScreenDetails' in window)) {
+    return Promise.resolve(null);
+  }
+  try {
+    // @ts-ignore
+    return Promise.race([
+      // @ts-ignore
+      window.getScreenDetails().then((details: any) => {
+        if (details && Array.isArray(details.screens) && details.screens.length > 1) {
+          const extras: MonitorRect[] = details.screens
+            .filter((s: any) => s !== details.currentScreen)
+            .map((s: any) => ({
+              left: s.availLeft ?? s.left ?? 1920,
+              top: s.availTop ?? s.top ?? 0,
+              width: s.availWidth ?? s.width ?? 1920,
+              height: s.availHeight ?? s.height ?? 1080,
+            }));
+          if (extras.length > 0) {
+            cachedExtraMonitors = extras;
+            return extras;
+          }
+        }
+        return null;
+      }),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), 600)),
+    ]).catch(() => null);
+  } catch (_) {
+    return Promise.resolve(null);
+  }
+}
+
+if (typeof window !== 'undefined') {
+  refreshScreenDetailsInBackground();
+}
+
+function cleanClosedWindows() {
+  for (const [idx, win] of secondaryWindows.entries()) {
+    if (!win || win.closed) {
+      secondaryWindows.delete(idx);
+    }
+  }
+}
 
 function notifyListeners() {
+  cleanClosedWindows();
   const isOpen = isSecondaryScreenOpen();
   listeners.forEach((fn) => {
     try {
@@ -13,7 +73,8 @@ function notifyListeners() {
 }
 
 export function isSecondaryScreenOpen(): boolean {
-  return Boolean(secondaryWindow && !secondaryWindow.closed);
+  cleanClosedWindows();
+  return secondaryWindows.size > 0;
 }
 
 export function subscribeSecondaryScreen(callback: (isOpen: boolean) => void): () => void {
@@ -25,55 +86,35 @@ export function subscribeSecondaryScreen(callback: (isOpen: boolean) => void): (
 }
 
 export function closeSecondaryScreen(): void {
-  if (secondaryWindow && !secondaryWindow.closed) {
-    try {
-      secondaryWindow.close();
-    } catch (_) {}
+  for (const [, win] of secondaryWindows.entries()) {
+    if (win && !win.closed) {
+      try {
+        win.close();
+      } catch (_) {}
+    }
   }
-  secondaryWindow = null;
+  secondaryWindows.clear();
   notifyListeners();
 }
 
-export async function openTelaoOnSecondMonitor(): Promise<boolean> {
-  if (typeof window === 'undefined') return false;
-
-  const url = `${window.location.origin}${window.location.pathname}?view=telao&fullscreen=true`;
-  
-  // Coordenadas padrão para o 2º monitor no Windows (Extended Desktop)
-  let targetLeft = window.screen.availWidth || 1920;
-  let targetTop = 0;
-  let targetWidth = window.screen.availWidth || 1920;
-  let targetHeight = window.screen.availHeight || 1080;
-
-  // Window Management API moderna (Chrome / Edge / Chromium)
-  if ('getScreenDetails' in window) {
+function openWindowOnMonitor(url: string, monitor: MonitorRect, index: number): Window | null {
+  const existing = secondaryWindows.get(index);
+  if (existing && !existing.closed) {
     try {
-      // @ts-ignore
-      const screenDetails = await window.getScreenDetails();
-      if (screenDetails && screenDetails.screens && screenDetails.screens.length > 1) {
-        const secondaryScreen =
-          screenDetails.screens.find((s: any) => s !== screenDetails.currentScreen) ||
-          screenDetails.screens[1];
-
-        if (secondaryScreen) {
-          targetLeft = secondaryScreen.availLeft;
-          targetTop = secondaryScreen.availTop;
-          targetWidth = secondaryScreen.availWidth;
-          targetHeight = secondaryScreen.availHeight;
-          console.log('✅ 2º Monitor detectado com precisão:', secondaryScreen);
-        }
-      }
-    } catch (err) {
-      console.log('ℹ️ Detecção de telas API não disponível ou dispensada:', err);
+      existing.moveTo(monitor.left, monitor.top);
+      existing.resizeTo(monitor.width, monitor.height);
+      existing.focus();
+      return existing;
+    } catch (_) {
+      return existing;
     }
   }
 
-  // Tenta abrir janela dedicada posicionada no Monitor 2
   const windowFeatures = [
-    `left=${targetLeft}`,
-    `top=${targetTop}`,
-    `width=${targetWidth}`,
-    `height=${targetHeight}`,
+    `left=${monitor.left}`,
+    `top=${monitor.top}`,
+    `width=${monitor.width}`,
+    `height=${monitor.height}`,
     'menubar=no',
     'toolbar=no',
     'location=no',
@@ -83,31 +124,85 @@ export async function openTelaoOnSecondMonitor(): Promise<boolean> {
   ].join(',');
 
   try {
-    const popup = window.open(url, 'VotaIASD_TelaoProjetor', windowFeatures);
-
+    const popup = window.open(url, `VotaIASD_TelaoProjetor_${index}`, windowFeatures);
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      return false; // Bloqueado pelo navegador
+      return null;
     }
+    try {
+      popup.moveTo(monitor.left, monitor.top);
+      popup.resizeTo(monitor.width, monitor.height);
+    } catch (_) {}
 
-    secondaryWindow = popup;
-    notifyListeners();
-
-    // Monitora se o usuário fechar a janela manualmente com o X
-    const checkTimer = setInterval(() => {
-      if (!secondaryWindow || secondaryWindow.closed) {
-        clearInterval(checkTimer);
-        secondaryWindow = null;
-        notifyListeners();
-      }
-    }, 800);
-
-    // Se o popup abriu, foca nele
-    popup.focus();
-    return true;
+    secondaryWindows.set(index, popup);
+    return popup;
   } catch (e) {
-    console.error('Falha ao abrir 2ª tela:', e);
-    return false;
+    console.error(`Falha ao abrir Telão no monitor extra ${index + 1}:`, e);
+    return null;
   }
+}
+
+let checkTimer: ReturnType<typeof setInterval> | null = null;
+
+function ensureWindowWatcher() {
+  if (checkTimer) return;
+  checkTimer = setInterval(() => {
+    const before = secondaryWindows.size;
+    cleanClosedWindows();
+    if (secondaryWindows.size !== before) {
+      notifyListeners();
+    }
+    if (secondaryWindows.size === 0 && checkTimer) {
+      clearInterval(checkTimer);
+      checkTimer = null;
+    }
+  }, 800);
+}
+
+/**
+ * Abre o Telão IMEDIATAMENTE (de forma síncrona para nunca perder o gesto do clique e nunca travar)
+ * em TODOS os monitores extras disponíveis!
+ */
+export async function openTelaoOnSecondMonitor(): Promise<boolean> {
+  if (typeof window === 'undefined') return false;
+
+  const url = `${window.location.origin}${window.location.pathname}?view=telao&fullscreen=true`;
+  const monitorsToOpen =
+    cachedExtraMonitors && cachedExtraMonitors.length > 0
+      ? cachedExtraMonitors
+      : FALLBACK_EXTRA_MONITORS;
+
+  let anyOpened = false;
+
+  // 1. Disparo SÍNCRONO imediato em todos os monitores extras (evita bloqueio de popup e travamento)
+  monitorsToOpen.forEach((mon, idx) => {
+    const win = openWindowOnMonitor(url, mon, idx);
+    if (win) {
+      anyOpened = true;
+    }
+  });
+
+  if (anyOpened) {
+    notifyListeners();
+    ensureWindowWatcher();
+  }
+
+  // 2. Atualiza em background via Window Management API caso existam outros monitores detectados pelo navegador
+  refreshScreenDetailsInBackground().then((detectedExtras) => {
+    if (detectedExtras && detectedExtras.length > 0) {
+      detectedExtras.forEach((mon, idx) => {
+        const win = openWindowOnMonitor(url, mon, idx);
+        if (win) {
+          anyOpened = true;
+        }
+      });
+      if (anyOpened) {
+        notifyListeners();
+        ensureWindowWatcher();
+      }
+    }
+  });
+
+  return anyOpened;
 }
 
 export async function toggleSecondaryScreen(): Promise<boolean> {

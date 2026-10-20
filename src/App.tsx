@@ -5,13 +5,11 @@ import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, getLocalSession } from './services/votingService';
-import { openTelaoOnSecondMonitor, subscribeSecondaryScreen } from './utils/screen';
-import { ExternalLink, X, MonitorPlay } from 'lucide-react';
+import { openTelaoOnSecondMonitor, isSecondaryScreenOpen } from './utils/screen';
 
 export function App() {
   const [session, setSession] = useState<VotingSession>(getLocalSession);
   const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('admin');
-  const [showPopupBlockedToast, setShowPopupBlockedToast] = useState(false);
 
   // Navegar de volta ao Admin
   const handleReturnToAdmin = () => {
@@ -34,26 +32,6 @@ export function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  // Monitora se o Telão na 2ª tela está ativo
-  useEffect(() => {
-    const unsub = subscribeSecondaryScreen((isOpen) => {
-      if (isOpen) {
-        setShowPopupBlockedToast(false);
-      }
-    });
-    return unsub;
-  }, []);
-
-  // Função para abrir o Telão na 2ª Tela (Projetor/TV)
-  const handleOpenTelaoSecondScreen = async () => {
-    const opened = await openTelaoOnSecondMonitor();
-    if (opened) {
-      setShowPopupBlockedToast(false);
-    } else {
-      setShowPopupBlockedToast(true);
-    }
-  };
-
   // Detecta parâmetro de URL (ex: ?view=voter ou ?view=telao ou ?view=admin)
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -69,24 +47,28 @@ export function App() {
       }
       setCurrentView(effectiveView);
 
-      // Se for Admin no Desktop/Notebook, inicializa abertura automática no 2º monitor
+      // Se for Admin no Desktop/Notebook, abre automaticamente em todos os monitores extras sem perguntar
       if (effectiveView === 'admin') {
-        // Tenta abrir imediatamente
-        openTelaoOnSecondMonitor().then((opened) => {
-          if (!opened) {
-            setShowPopupBlockedToast(true);
+        openTelaoOnSecondMonitor();
 
-            // Adiciona gatilho no primeiro clique do usuário para contornar bloqueador de popups do navegador
-            const handleFirstUserGesture = () => {
-              openTelaoOnSecondMonitor().then((res) => {
-                if (res) {
-                  setShowPopupBlockedToast(false);
-                }
-              });
-            };
-            window.addEventListener('click', handleFirstUserGesture, { once: true });
+        // Caso o navegador exija um primeiro gesto antes de liberar múltiplas janelas, abre automaticamente no 1º toque/clique sem exibir barra amarela
+        const autoOpenOnGesture = (e: Event) => {
+          const target = e.target instanceof Element ? e.target : null;
+          // Não interfere se o usuário estiver clicando explicitamente no botão de ocultar 2ª tela
+          if (target?.closest('[data-toggle-screen-btn="true"]')) return;
+          if (!isSecondaryScreenOpen()) {
+            openTelaoOnSecondMonitor();
           }
-        });
+          window.removeEventListener('click', autoOpenOnGesture, true);
+          window.removeEventListener('keydown', autoOpenOnGesture, true);
+        };
+
+        window.addEventListener('click', autoOpenOnGesture, true);
+        window.addEventListener('keydown', autoOpenOnGesture, true);
+        return () => {
+          window.removeEventListener('click', autoOpenOnGesture, true);
+          window.removeEventListener('keydown', autoOpenOnGesture, true);
+        };
       }
     }
   }, []);
@@ -106,33 +88,6 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#07132a] text-slate-100 flex flex-col font-sans selection:bg-[#d4af37] selection:text-blue-950 w-full overflow-x-hidden">
-      {/* Notificação Flutuante caso o navegador bloqueie popup automático (apenas no Admin) */}
-      {showPopupBlockedToast && currentView === 'admin' && (
-        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-blue-950 px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-bold shadow-xl border-b border-amber-300">
-          <div className="flex items-center gap-2">
-            <MonitorPlay className="w-5 h-5 shrink-0 text-blue-950 animate-bounce" />
-            <span>
-              2 Telas Detectadas: Clique para projetar o <strong>Telão no 2º Monitor (Projetor / TV)</strong>:
-            </span>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleOpenTelaoSecondScreen}
-              className="px-4 py-1.5 bg-blue-950 text-amber-300 hover:text-white rounded-lg text-xs font-black shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5 border border-amber-400/40"
-            >
-              <ExternalLink className="w-3.5 h-3.5" />
-              ABRIR NO MONITOR 2 AGORA
-            </button>
-            <button
-              onClick={() => setShowPopupBlockedToast(false)}
-              className="p-1 hover:bg-black/10 rounded-md transition text-blue-950 cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* NAVBAR: EXIBIDA EXCLUSIVAMENTE NO MODO ADMIN! */}
       {/* Nos celulares dos votantes (QR Code) e no Telão de projeção, o cabeçalho administrativo NÃO aparece */}
       {currentView === 'admin' && (

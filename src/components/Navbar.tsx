@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Vote } from 'lucide-react';
 import { IasdLogo } from './IasdLogo';
-import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
+import { toggleSecondaryScreen, subscribeSecondaryScreen, openTelaoOnSecondMonitor } from '../utils/screen';
 import type { VotingSession } from '../types';
 
 interface NavbarProps {
@@ -94,6 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleCenterVotingButtonClick = () => {
     if (!session || !onSaveSession) return;
+    openTelaoOnSecondMonitor();
 
     if (isVotingActive) {
       // Se já está em votação (ou com caption APURAÇÃO), clicar encerra e abre a APURAÇÃO no Telão
@@ -246,6 +247,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center gap-2.5 justify-self-end">
           {isScreen2Open ? (
             <button
+              data-toggle-screen-btn="true"
               onClick={() => toggleSecondaryScreen()}
               title="Fechar / Ocultar a janela do Telão no 2º monitor"
               className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-500/50 rounded-lg text-xs font-black shadow-md transition cursor-pointer active:scale-95"
@@ -256,6 +258,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           ) : (
             <button
+              data-toggle-screen-btn="true"
               onClick={() => toggleSecondaryScreen()}
               title="Abrir o Telão em Tela Cheia no 2º monitor ou projetor da igreja"
               className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-lg text-xs font-black shadow-md transition cursor-pointer active:scale-95"
