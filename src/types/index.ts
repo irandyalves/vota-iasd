@@ -16,7 +16,8 @@ export interface VotingSession {
   status: SessionStatus;
   maxVotesPerVoter: number;
   vacancies: number; // Quantidade de vagas principais
-  suplentesCount: number; // Quantidade de suplentes
+  suplentesCount: number; // Quantidade de 1º suplentes
+  segundoSuplentesCount?: number; // Quantidade de 2º suplentes
   showResultsLive: boolean; // Mostrar corrida ao vivo no telão ou ocultar até o fim
   showQrOnTelao?: boolean; // Controlar exibição do QR Code no Telão
   telaoMode?: 'names' | 'voting'; // Modo de exibição no Telão: 'names' (Nomes para escolha - Print 2) ou 'voting' (Apuração / Tempo real)

@@ -17,6 +17,7 @@ import {
   Pencil,
   QrCode,
   Tv,
+  Sliders,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
@@ -497,7 +498,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 activeTab === 'control' ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
               }`}
             >
-              <span>Comandos & Votação</span>
+              <span>CONFIGURAR</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}
@@ -554,9 +555,248 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       </div>
 
-      {/* ABA 1: COMANDOS E DESEMPATE (REDUZIDO EM 30%) */}
+      {/* ABA 1: CONFIGURAR (VAGAS, SUPLENTES E DESEMPATE) */}
       {activeTab === 'control' && (
         <div className="space-y-3.5">
+          {/* PAINEL DE CONFIGURAÇÃO DE VAGAS E SUPLENTES */}
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-3.5">
+            <div className="flex items-center justify-between pb-2.5 border-b border-blue-900/80">
+              <div className="flex items-center gap-2">
+                <Sliders className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-bold text-white font-sans tracking-tight">
+                  Configuração de Vagas & Suplentes
+                </h3>
+              </div>
+              <span className="text-[11px] text-blue-300">
+                Digite o número diretamente ou use os botões / slider
+              </span>
+            </div>
+
+            {/* 1. VAGAS TITULARES EM DISPUTA */}
+            <div className="bg-[#07132a]/90 border border-emerald-500/40 rounded-2xl p-3.5 shadow-inner">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                <h4 className="text-sm font-bold text-white uppercase tracking-wide">
+                  Vagas Titulares (Eleitos)
+                </h4>
+                <span className="text-[11px] text-blue-300 font-normal">
+                  (quantos candidatos assumirão o cargo)
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Seletor Numérico com Input Digitável */}
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newVac = Math.max(1, session.vacancies - 1);
+                      saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
+                    }}
+                    disabled={session.vacancies <= 1}
+                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                  >
+                    -
+                  </button>
+
+                  <div className="min-w-[80px] h-13 bg-[#001f47] border-2 border-emerald-400 focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                    <input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={session.vacancies}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          const safeVal = Math.max(1, Math.min(50, val));
+                          saveSession({ ...session, vacancies: safeVal, maxVotesPerVoter: safeVal });
+                        }
+                      }}
+                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-emerald-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                    />
+                    <span className="text-[9px] font-bold text-emerald-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                      {session.vacancies === 1 ? 'Vaga' : 'Vagas'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const newVac = Math.min(50, session.vacancies + 1);
+                      saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
+                    }}
+                    disabled={session.vacancies >= 50}
+                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Slider */}
+                <div className="flex-1 min-w-[200px] max-w-sm flex flex-col gap-1 px-2">
+                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
+                    <span>1 vaga</span>
+                    <span className="text-emerald-300 font-mono">
+                      Deslize: <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">{session.vacancies}</strong>
+                    </span>
+                    <span>20 vagas</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={20}
+                    value={session.vacancies}
+                    onChange={(e) => {
+                      const val = Number(e.target.value);
+                      saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
+                    }}
+                    className="w-full h-3 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-emerald-400 border border-blue-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 2. 1º SUPLENTES */}
+            <div className="bg-[#07132a]/90 border border-red-600/40 rounded-2xl p-3.5 shadow-inner">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse" />
+                <h4 className="text-sm font-bold text-white uppercase tracking-wide">
+                  Quantidade de 1º Suplentes
+                </h4>
+                <span className="text-[11px] text-blue-300 font-normal">
+                  (substitutos imediatos)
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => saveSession({ ...session, suplentesCount: Math.max(0, (session.suplentesCount || 0) - 1) })}
+                    disabled={(session.suplentesCount || 0) <= 0}
+                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                  >
+                    -
+                  </button>
+
+                  <div className="min-w-[80px] h-13 bg-[#001f47] border-2 border-red-400 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={session.suplentesCount || 0}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) saveSession({ ...session, suplentesCount: Math.max(0, Math.min(20, val)) });
+                      }}
+                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-red-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                    />
+                    <span className="text-[9px] font-bold text-red-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                      {(session.suplentesCount || 0) === 1 ? 'Suplente' : 'Suplentes'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => saveSession({ ...session, suplentesCount: Math.min(20, (session.suplentesCount || 0) + 1) })}
+                    disabled={(session.suplentesCount || 0) >= 20}
+                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="flex-1 min-w-[200px] max-w-sm flex flex-col gap-1 px-2">
+                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
+                    <span>0 suplentes</span>
+                    <span className="text-red-300 font-mono">
+                      Deslize: <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">{session.suplentesCount || 0}</strong>
+                    </span>
+                    <span>10 suplentes</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    value={session.suplentesCount || 0}
+                    onChange={(e) => saveSession({ ...session, suplentesCount: Number(e.target.value) })}
+                    className="w-full h-3 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-red-400 border border-blue-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. 2º SUPLENTES */}
+            <div className="bg-[#07132a]/90 border border-amber-600/40 rounded-2xl p-3.5 shadow-inner">
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                <h4 className="text-sm font-bold text-white uppercase tracking-wide">
+                  Quantidade de 2º Suplentes
+                </h4>
+                <span className="text-[11px] text-blue-300 font-normal">
+                  (segunda linha de suplência)
+                </span>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.max(0, (session.segundoSuplentesCount || 0) - 1) })}
+                    disabled={(session.segundoSuplentesCount || 0) <= 0}
+                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                  >
+                    -
+                  </button>
+
+                  <div className="min-w-[80px] h-13 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                    <input
+                      type="number"
+                      min={0}
+                      max={20}
+                      value={session.segundoSuplentesCount || 0}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) saveSession({ ...session, segundoSuplentesCount: Math.max(0, Math.min(20, val)) });
+                      }}
+                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                    />
+                    <span className="text-[9px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                      {(session.segundoSuplentesCount || 0) === 1 ? '2º Suplente' : '2º Suplentes'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.min(20, (session.segundoSuplentesCount || 0) + 1) })}
+                    disabled={(session.segundoSuplentesCount || 0) >= 20}
+                    className="w-11 h-11 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                  >
+                    +
+                  </button>
+                </div>
+
+                <div className="flex-1 min-w-[200px] max-w-sm flex flex-col gap-1 px-2">
+                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
+                    <span>0 suplentes</span>
+                    <span className="text-amber-300 font-mono">
+                      Deslize: <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">{session.segundoSuplentesCount || 0}</strong>
+                    </span>
+                    <span>10 suplentes</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={10}
+                    value={session.segundoSuplentesCount || 0}
+                    onChange={(e) => saveSession({ ...session, segundoSuplentesCount: Number(e.target.value) })}
+                    className="w-full h-3 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Seção de Desempate */}
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
             {/* Cabeçalho do Motor de Desempate */}
@@ -577,36 +817,47 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               )}
             </div>
 
-            {/* SEÇÃO DE VAGAS EM DISPUTA (POSICIONADA EM CIMA DOS NOMES, 2.5X MAIOR COM SLIDER) */}
+            {/* SEÇÃO DE VAGAS EM DISPUTA DO DESEMPATE (COM NÚMERO DIGITÁVEL) */}
             <div className="bg-[#07132a]/90 border border-amber-500/40 rounded-2xl p-4 mb-4 shadow-inner">
               <div className="flex items-center gap-2 mb-3">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
                 <h4 className="text-base font-bold text-white font-serif uppercase tracking-wide">
-                  Vagas em Disputa
+                  Vagas em Disputa (Desempate)
                 </h4>
                 <span className="text-xs text-blue-300 font-normal ml-1">
-                  (quantos candidatos serão eleitos nesta rodada)
+                  (quantos candidatos serão eleitos nesta rodada de desempate)
                 </span>
               </div>
 
               <div className="flex flex-wrap items-center justify-between gap-4">
-                {/* Seletor Numérico 2.5x Maior com Botões + e - */}
+                {/* Seletor Numérico 2.5x Maior com Botões + e - e Input Digitável */}
                 <div className="flex items-center gap-2.5">
                   <button
                     type="button"
                     onClick={() => setTieVacancies(Math.max(1, tieVacancies - 1))}
                     disabled={tieVacancies <= 1}
                     title="Diminuir vagas em disputa"
-                    className="w-12 h-12 rounded-xl bg-[#001f47] hover:bg-blue-900 border-2 border-blue-700 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md select-none"
+                    className="w-12 h-12 rounded-xl bg-transparent hover:bg-blue-900/40 border-2 border-blue-600 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
                   >
                     -
                   </button>
 
-                  <div className="min-w-[76px] h-14 bg-[#001f47] border-2 border-amber-400 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-amber-500/10 px-3 select-none">
-                    <span className="text-2xl sm:text-3xl font-black font-mono text-amber-300 tracking-wider">
-                      {tieVacancies}
-                    </span>
-                    <span className="text-[9px] font-bold text-amber-200/90 uppercase -mt-0.5">
+                  <div className="min-w-[80px] h-14 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-amber-500/10 px-2 transition">
+                    <input
+                      type="number"
+                      min={1}
+                      max={Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10)}
+                      value={tieVacancies}
+                      onChange={(e) => {
+                        const val = parseInt(e.target.value, 10);
+                        if (!isNaN(val)) {
+                          const maxLimit = Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10);
+                          setTieVacancies(Math.max(1, Math.min(maxLimit, val)));
+                        }
+                      }}
+                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                    />
+                    <span className="text-[9px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
                       {tieVacancies === 1 ? 'Vaga' : 'Vagas'}
                     </span>
                   </div>
@@ -618,7 +869,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       setTieVacancies(Math.min(maxLimit, tieVacancies + 1));
                     }}
                     title="Aumentar vagas em disputa"
-                    className="w-12 h-12 rounded-xl bg-[#001f47] hover:bg-blue-900 border-2 border-blue-700 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md select-none"
+                    className="w-12 h-12 rounded-xl bg-transparent hover:bg-blue-900/40 border-2 border-blue-600 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
                   >
                     +
                   </button>

@@ -31,7 +31,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
     ? (session.tieBreak?.vacancies || 1)
     : session.vacancies;
 
-  const suplentesCount = isTieBreak ? 0 : session.suplentesCount;
+  const suplentesCount = isTieBreak ? 0 : (session.suplentesCount || 0);
+  const segundoSuplentesCount = isTieBreak ? 0 : (session.segundoSuplentesCount || 0);
 
   // Lógica do QR Code: Sempre visível na coluna da esquerda por padrão no Telão
   const showQrCode = session.showQrOnTelao !== false;
@@ -290,7 +291,13 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     {suplentesCount > 0 && (
                       <span className="flex items-center gap-1 text-red-400">
                         <span className="w-2.5 h-2.5 rounded-sm bg-[#3a0d14] border border-red-500 inline-block" />
-                        Suplentes ({suplentesCount})
+                        {segundoSuplentesCount > 0 ? `1º Suplentes (${suplentesCount})` : `Suplentes (${suplentesCount})`}
+                      </span>
+                    )}
+                    {segundoSuplentesCount > 0 && (
+                      <span className="flex items-center gap-1 text-amber-400">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-[#3a220d] border border-amber-500 inline-block" />
+                        2º Suplentes ({segundoSuplentesCount})
                       </span>
                     )}
                   </div>
@@ -303,41 +310,41 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       const rank = index + 1;
                       const isElected = rank <= vacancies;
                       const isSuplente = !isElected && rank <= (vacancies + suplentesCount);
+                      const isSegundoSuplente = !isElected && !isSuplente && rank <= (vacancies + suplentesCount + segundoSuplentesCount);
                       const percentage = Math.round(((option.votesCount || 0) / maxVotesRecorded) * 100);
 
                       return (
                         <React.Fragment key={option.id}>
-                          {/* Linha Tracejada Separadora: Eleitos -> Suplentes (ou Não Eleitos se não houver suplentes) */}
-                          {rank === vacancies + 1 && (
-                            <div className="col-span-full py-0.5 flex items-center gap-2 text-[10px] font-bold my-1">
-                              {suplentesCount > 0 ? (
-                                <>
-                                  <div className="flex-1 border-t border-dashed border-red-600/60" />
-                                  <span className="px-2.5 py-0.5 rounded-full bg-[#2a0e12] border border-red-700/80 uppercase text-[9px] tracking-wider text-red-300 shadow">
-                                    ▲ Fim dos Titulares / Início dos Suplentes ({suplentesCount} {suplentesCount === 1 ? 'Vaga' : 'Vagas'}) ▲
-                                  </span>
-                                  <div className="flex-1 border-t border-dashed border-red-600/60" />
-                                </>
-                              ) : (
-                                <>
-                                  <div className="flex-1 border-t border-dashed border-emerald-500/50" />
-                                  <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/60 uppercase text-[9px] tracking-wider text-emerald-300">
-                                    ▲ Limite dos Eleitos ({vacancies} Vagas) ▲
-                                  </span>
-                                  <div className="flex-1 border-t border-dashed border-emerald-500/50" />
-                                </>
-                              )}
+                          {/* Linha Separadora: SUPLENTES (ou 1º SUPLENTES) - Borda esquerda à borda direita */}
+                          {rank === vacancies + 1 && suplentesCount > 0 && (
+                            <div className="col-span-full py-1.5 flex items-center gap-3 w-full my-1">
+                              <div className="flex-1 border-t-2 border-dashed border-red-600/70" />
+                              <span className="text-red-400 font-black text-xs sm:text-sm uppercase tracking-widest px-2 select-none shrink-0">
+                                {segundoSuplentesCount > 0 ? '1º SUPLENTES' : 'SUPLENTES'}
+                              </span>
+                              <div className="flex-1 border-t-2 border-dashed border-red-600/70" />
                             </div>
                           )}
 
-                          {/* Linha Tracejada Separadora: Suplentes -> Não Eleitos */}
-                          {suplentesCount > 0 && rank === vacancies + suplentesCount + 1 && (
-                            <div className="col-span-full py-0.5 flex items-center gap-2 text-[10px] font-semibold text-slate-500 my-1">
-                              <div className="flex-1 border-t border-dashed border-slate-700/60" />
-                              <span className="px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/60 uppercase text-[9px] tracking-wider text-slate-400">
-                                Demais Candidatos ({sortedOptions.length - (vacancies + suplentesCount)})
+                          {/* Linha Separadora: 2º SUPLENTES - Borda esquerda à borda direita */}
+                          {rank === vacancies + suplentesCount + 1 && segundoSuplentesCount > 0 && (
+                            <div className="col-span-full py-1.5 flex items-center gap-3 w-full my-1">
+                              <div className="flex-1 border-t-2 border-dashed border-amber-600/70" />
+                              <span className="text-amber-400 font-black text-xs sm:text-sm uppercase tracking-widest px-2 select-none shrink-0">
+                                2º SUPLENTES
                               </span>
-                              <div className="flex-1 border-t border-dashed border-slate-700/60" />
+                              <div className="flex-1 border-t-2 border-dashed border-amber-600/70" />
+                            </div>
+                          )}
+
+                          {/* Linha Separadora: NÃO CLASSIFICADOS - Borda esquerda à borda direita */}
+                          {rank === vacancies + suplentesCount + segundoSuplentesCount + 1 && (
+                            <div className="col-span-full py-1.5 flex items-center gap-3 w-full my-1">
+                              <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
+                              <span className="text-slate-400 font-bold text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                NÃO CLASSIFICADOS
+                              </span>
+                              <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
                             </div>
                           )}
 
@@ -354,6 +361,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/50 text-white py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl gap-2.5'
                                 : isSuplente
                                 ? 'bg-[#2b0c10]/95 border-red-700/70 shadow-sm text-red-100 py-1 px-2 sm:py-1 sm:px-2.5 rounded-lg gap-2'
+                                : isSegundoSuplente
+                                ? 'bg-[#2b180a]/95 border-amber-700/70 shadow-sm text-amber-100 py-1 px-2 sm:py-1 sm:px-2.5 rounded-lg gap-2'
                                 : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400 py-0.5 px-2 sm:py-0.5 sm:px-2 rounded-md gap-1.5'
                             }`}
                           >
@@ -367,6 +376,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   ? 'bg-gradient-to-r from-emerald-500 to-green-400'
                                   : isSuplente
                                   ? 'bg-gradient-to-r from-red-700 to-red-500'
+                                  : isSegundoSuplente
+                                  ? 'bg-gradient-to-r from-amber-700 to-amber-500'
                                   : 'bg-slate-700'
                               }`}
                             />
@@ -384,6 +395,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                     : 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-emerald-900 text-emerald-200 border border-emerald-600/50'
                                   : isSuplente
                                   ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[11px] sm:text-xs bg-[#451119] text-red-200 border border-red-600/60'
+                                  : isSegundoSuplente
+                                  ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[11px] sm:text-xs bg-[#45260f] text-amber-200 border border-amber-600/60'
                                   : 'w-5 h-5 sm:w-5.5 sm:h-5.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700/50'
                               }`}
                             >
@@ -396,7 +409,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 <img
                                   src={option.photoUrl}
                                   alt={option.name}
-                                  className={`${isElected ? 'w-8 h-8' : isSuplente ? 'w-6.5 h-6.5' : 'w-5 h-5'} rounded-lg object-cover border border-blue-500/50 shadow`}
+                                  className={`${isElected ? 'w-8 h-8' : isSuplente || isSegundoSuplente ? 'w-6.5 h-6.5' : 'w-5 h-5'} rounded-lg object-cover border border-blue-500/50 shadow`}
                                 />
                               </div>
                             )}
@@ -410,6 +423,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                       ? 'font-black text-xs sm:text-sm text-white'
                                       : isSuplente
                                       ? 'font-bold text-[11px] sm:text-xs text-red-100'
+                                      : isSegundoSuplente
+                                      ? 'font-bold text-[11px] sm:text-xs text-amber-100'
                                       : 'font-semibold text-[10px] sm:text-[11px] text-slate-300'
                                   }`}
                                 >
@@ -423,7 +438,12 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 )}
                                 {isSuplente && (
                                   <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#421016] text-red-200 border border-red-600/60">
-                                    Suplente
+                                    {segundoSuplentesCount > 0 ? '1º Suplente' : 'Suplente'}
+                                  </span>
+                                )}
+                                {isSegundoSuplente && (
+                                  <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#42240e] text-amber-200 border border-amber-600/60">
+                                    2º Suplente
                                   </span>
                                 )}
                               </div>
@@ -437,6 +457,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                     ? 'text-base sm:text-lg text-white'
                                     : isSuplente
                                     ? 'text-sm sm:text-base text-red-100'
+                                    : isSegundoSuplente
+                                    ? 'text-sm sm:text-base text-amber-100'
                                     : 'text-xs sm:text-sm text-slate-300'
                                 }`}
                               >
