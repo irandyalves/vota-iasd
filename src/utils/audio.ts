@@ -1,17 +1,21 @@
 // Gerenciador de Sons da Urna Eletrônica (TSE)
+// Utiliza o áudio autêntico enviado pelo usuário com buffer de baixa latência
 
 class UrnaAudioManager {
   private audioContext: AudioContext | null = null;
+  private audioBuffer: AudioBuffer | null = null;
   private audioEl: HTMLAudioElement | null = null;
 
   constructor() {
-    // Tenta carregar o áudio real MP3
     if (typeof window !== 'undefined') {
       try {
         this.audioEl = new Audio('/urna-confirma.mp3');
         this.audioEl.preload = 'auto';
+
+        // Pré-carrega o áudio no AudioContext para execução instantânea (latência zero)
+        this.preloadAudioBuffer();
       } catch (e) {
-        console.warn('Não foi possível pré-carregar o arquivo de áudio da urna:', e);
+        console.warn('Não foi possível pré-carregar o áudio da urna:', e);
       }
     }
   }
@@ -19,7 +23,9 @@ class UrnaAudioManager {
   private getAudioContext(): AudioContext | null {
     if (typeof window === 'undefined') return null;
     if (!this.audioContext) {
-      const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (AudioContextClass) {
         this.audioContext = new AudioContextClass();
       }
@@ -28,6 +34,19 @@ class UrnaAudioManager {
       this.audioContext.resume().catch(() => {});
     }
     return this.audioContext;
+  }
+
+  private async preloadAudioBuffer(): Promise<void> {
+    try {
+      const res = await fetch('/urna-confirma.mp3');
+      const arrayBuf = await res.arrayBuffer();
+      const ctx = this.getAudioContext();
+      if (ctx) {
+        this.audioBuffer = await ctx.decodeAudioData(arrayBuf);
+      }
+    } catch (e) {
+      console.warn('Buffer de áudio da urna não pré-carregado (usará HTML5 Audio):', e);
+    }
   }
 
   // Toca o clássico "Bip" ao tocar nas opções (clique de tecla da urna)
@@ -56,38 +75,50 @@ class UrnaAudioManager {
     }
   }
 
-  // Som Oficial do TSE de Confirmação ("Pirilili-li")
+  // Som Oficial da Urna (Tocado com latência zero)
   public playTseConfirma(): void {
-    // Tenta primeiro o MP3 autêntico
-    if (this.audioEl) {
-      this.audioEl.currentTime = 0;
-      const playPromise = this.audioEl.play();
-      if (playPromise) {
-        playPromise.catch((err) => {
-          console.warn('Autoplay do MP3 bloqueado ou com falha, usando sintetizador Web Audio API:', err);
-          this.synthesizeTseSound();
-        });
+    const ctx = this.getAudioContext();
+
+    // 1. Prioridade Máxima: Reprodução via AudioBuffer (instantânea e sem lag)
+    if (ctx && this.audioBuffer) {
+      try {
+        const source = ctx.createBufferSource();
+        source.buffer = this.audioBuffer;
+        source.connect(ctx.destination);
+        source.start(0);
         return;
+      } catch (e) {
+        console.warn('Erro ao tocar buffer da urna, tentando elemento HTML5 Audio:', e);
       }
     }
 
-    // Se o elemento de áudio não existir ou falhar, sintetiza via Web Audio API
-    this.synthesizeTseSound();
+    // 2. Segunda opção: HTML5 Audio
+    try {
+      const audio = new Audio('/urna-confirma.mp3');
+      const promise = audio.play();
+      if (promise) {
+        promise.catch(() => {
+          if (this.audioEl) {
+            this.audioEl.currentTime = 0;
+            this.audioEl.play().catch(() => this.synthesizeTseSound());
+          } else {
+            this.synthesizeTseSound();
+          }
+        });
+        return;
+      }
+    } catch (_) {
+      this.synthesizeTseSound();
+    }
   }
 
-  // Síntese por hardware do clássico som da Urna Eletrônica do TSE
+  // Fallback de contingência por hardware
   public synthesizeTseSound(): void {
     const ctx = this.getAudioContext();
     if (!ctx) return;
 
     try {
       const now = ctx.currentTime;
-
-      // Sequência harmônica clássica do TSE (Pirilili):
-      // Tom 1: 1046 Hz (C6) por ~90ms
-      // Tom 2: 1318 Hz (E6) por ~90ms
-      // Tom 3: 1567 Hz (G6) por ~100ms
-      // Tom 4 (Agudo longo): 2093 Hz (C7) por ~450ms
       const notes = [
         { freq: 1046.5, start: 0.00, dur: 0.08 },
         { freq: 1318.5, start: 0.09, dur: 0.08 },
@@ -101,8 +132,6 @@ class UrnaAudioManager {
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(note.freq, now + note.start);
-
-        // Curva de envelope para evitar estalos (clicks)
         gain.gain.setValueAtTime(0, now + note.start);
         gain.gain.linearRampToValueAtTime(0.35, now + note.start + 0.015);
         gain.gain.exponentialRampToValueAtTime(0.001, now + note.start + note.dur);
@@ -114,7 +143,7 @@ class UrnaAudioManager {
         osc.stop(now + note.start + note.dur + 0.02);
       });
     } catch (e) {
-      console.warn('Erro ao sintetizar som da urna:', e);
+      console.warn('Erro ao sintetizar som:', e);
     }
   }
 }
