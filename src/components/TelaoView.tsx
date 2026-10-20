@@ -124,62 +124,63 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       {/* ÁREA CENTRAL: QR CODE À ESQUERDA (REVELANDO SUAVE DA ESQUERDA P/ DIREITA) E SEÇÃO DA DIREITA SENDO EMPURRADA/ESMAGADA */}
       <div className="flex-1 w-full">
         <div className="flex flex-col md:flex-row items-start w-full">
-          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA */}
-          <AnimatePresence initial={false}>
-            {showQrCode && (
-              <motion.div
-                key="telao-qr-panel"
-                initial={{ width: 0, marginRight: 0, opacity: 0 }}
-                animate={{ width: 280, marginRight: 16, opacity: 1 }}
-                exit={{ width: 0, marginRight: 0, opacity: 0 }}
-                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                className="overflow-hidden shrink-0 sticky top-2 max-w-full"
-              >
-                <motion.div
-                  initial={{ x: -60, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  exit={{ x: -60, opacity: 0 }}
-                  transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-                  className="w-[280px] bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
-                >
-                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2 shadow-inner">
-                    <QrIcon className="w-5 h-5" />
-                  </div>
+          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (SEMPRE MONTADO PARA ANIMAR IDA E VOLTA SUAVEMENTE) */}
+          <motion.div
+            initial={false}
+            animate={{
+              width: showQrCode ? 280 : 0,
+              marginRight: showQrCode ? 16 : 0,
+              opacity: showQrCode ? 1 : 0,
+            }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            style={{ pointerEvents: showQrCode ? 'auto' : 'none' }}
+            className="overflow-hidden shrink-0 sticky top-2 max-w-full"
+          >
+            <motion.div
+              initial={false}
+              animate={{
+                x: showQrCode ? 0 : -280,
+                opacity: showQrCode ? 1 : 0,
+              }}
+              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              className="w-[280px] bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2 shadow-inner">
+                <QrIcon className="w-5 h-5" />
+              </div>
 
-                  <h3 className="font-extrabold text-white text-sm font-serif tracking-tight mb-0.5">
-                    VOTE PELO CELULAR
-                  </h3>
-                  <p className="text-[11px] text-blue-200/90 mb-3">
-                    Aponte a câmera para o QR Code:
-                  </p>
+              <h3 className="font-extrabold text-white text-sm font-serif tracking-tight mb-0.5">
+                VOTE PELO CELULAR
+              </h3>
+              <p className="text-[11px] text-blue-200/90 mb-3">
+                Aponte a câmera para o QR Code:
+              </p>
 
-                  {/* QR Code Nítido e Limpo */}
-                  <div className="p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37]">
-                    <QRCodeSVG
-                      value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
-                      size={135}
-                      level="M"
-                      includeMargin={false}
-                    />
-                  </div>
+              {/* QR Code Nítido e Limpo */}
+              <div className="p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37]">
+                <QRCodeSVG
+                  value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
+                  size={135}
+                  level="M"
+                  includeMargin={false}
+                />
+              </div>
 
-                  {/* Caixa da Senha em Grande Destaque */}
-                  <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-2 shadow-inner mb-2">
-                    <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
-                      SENHA DE ACESSO
-                    </span>
-                    <span className="text-2xl font-mono font-black text-[#d4af37] tracking-widest">
-                      {session.pin}
-                    </span>
-                  </div>
+              {/* Caixa da Senha em Grande Destaque */}
+              <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-2 shadow-inner mb-2">
+                <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
+                  SENHA DE ACESSO
+                </span>
+                <span className="text-2xl font-mono font-black text-[#d4af37] tracking-widest">
+                  {session.pin}
+                </span>
+              </div>
 
-                  <p className="text-[10px] text-blue-300/70 font-mono">
-                    vota-iasd-central.web.app
-                  </p>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+              <p className="text-[10px] text-blue-300/70 font-mono">
+                vota-iasd-central.web.app
+              </p>
+            </motion.div>
+          </motion.div>
 
           {/* COLUNA DA DIREITA: LISTA DE CANDIDATOS / CORRIDA DE BARRAS OU VOTO SECRETO */}
           <div className="flex-1 min-w-0 w-full">

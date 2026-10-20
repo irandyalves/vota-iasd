@@ -495,7 +495,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-95 cursor-pointer ${
                 session.showQrOnTelao !== false
                   ? 'bg-amber-500/15 hover:bg-amber-400/25 border-2 border-amber-400 text-amber-300 hover:text-amber-200'
-                  : 'bg-transparent hover:bg-slate-500/10 border-2 border-slate-600 text-slate-400 hover:text-slate-300'
+                  : 'bg-[#1e293b]/80 hover:bg-amber-500/15 border-2 border-amber-400 text-amber-300 hover:text-amber-200'
               }`}
             >
               <QrCode className="w-4 h-4" />
