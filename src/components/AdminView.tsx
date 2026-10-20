@@ -993,7 +993,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           />
 
           {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ (3X MAIS ALTA, COM BOTÕES DE IMPORTAR NA MESMA LINHA DO CABEÇALHO) */}
-          <div className="bg-[#001f47] border-2 border-amber-400/80 rounded-2xl p-4 shadow-xl">
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-xl">
             {/* CABEÇALHO NA MESMA LINHA: TÍTULO À ESQUERDA + BOTÕES DE IMPORTAR À DIREITA */}
             <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
               <div className="flex items-center gap-2">
@@ -1073,9 +1073,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </div>
             </div>
 
-            {/* CAMPO DE DIGITAÇÃO 3X MAIS ALTO + BOTÕES DE AÇÃO */}
-            <div className="flex flex-col sm:flex-row gap-3 items-stretch">
-              <div className="relative flex-1">
+            {/* CAMPO DE DIGITAÇÃO 3X MAIS ALTO + DUAS COLUNAS PEQUENAS DE BOTÕES NA PONTA */}
+            <div className="flex flex-col lg:flex-row gap-3 items-stretch">
+              {/* Textarea limpo sem microfone sobrepondo texto */}
+              <div className="flex-1">
                 <textarea
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
@@ -1086,73 +1087,107 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     }
                   }}
                   placeholder="DIGITE OU COLE OS NOMES AQUI (DÊ ENTER OU SEPARE POR VÍRGULA OU LINHA)..."
-                  className="w-full h-32 sm:h-36 p-3.5 pr-14 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
+                  className="w-full h-32 sm:h-36 p-3.5 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
                 />
-                <button
-                  type="button"
-                  onClick={() => setIsListening(!isListening)}
-                  title={isListening ? 'Parar microfone' : 'Falar nomes pelo microfone'}
-                  className={`absolute right-3 top-3 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer shadow-md active:scale-90 ${
-                    isListening
-                      ? 'bg-transparent border-2 border-rose-500 text-rose-400 animate-pulse ring-2 ring-rose-400/50'
-                      : 'bg-transparent border-2 border-amber-400 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 active:bg-amber-400/25'
-                  }`}
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
               </div>
 
-              {/* Coluna de Ações: Adicionar, Mostrar no Telão e Limpar Todos (Bordas Coloridas e Efeito de Clique) */}
-              <div className="flex flex-col gap-2 shrink-0 sm:w-52 justify-between">
-                <button
-                  type="button"
-                  onClick={() => handleAddCandidateName(newName)}
-                  className="flex-1 min-h-[44px] px-4 bg-transparent hover:bg-amber-400/10 border-2 border-amber-400 text-amber-400 hover:text-amber-300 hover:border-amber-300 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all duration-150 active:scale-90 active:bg-amber-400/25 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                >
-                  <Plus className="w-4 h-4 stroke-[3]" />
-                  <span>+ ADICIONAR</span>
-                </button>
+              {/* DUAS COLUNAS PEQUENAS NA PONTA */}
+              <div className="flex gap-2.5 shrink-0 justify-between">
+                {/* PRIMEIRA COLUNA PEQUENA: ADICIONAR, MOSTRAR NO TELÃO E LIMPAR */}
+                <div className="flex flex-col gap-2 shrink-0 w-36 sm:w-44 justify-between">
+                  {/* Botão ADICIONAR (verde 50% transparente, borda brilho, efeito clique, sem + repetido) */}
+                  <button
+                    type="button"
+                    onClick={() => handleAddCandidateName(newName)}
+                    className="flex-1 min-h-[44px] px-3.5 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-xs sm:text-sm rounded-xl transition-all duration-150 active:scale-90 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  >
+                    <Plus className="w-4 h-4 stroke-[3]" />
+                    <span>ADICIONAR</span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
-                    saveSession({ ...session, telaoMode: nextMode });
-                    openTelaoOnSecondMonitor();
-                    showNotification(
-                      'success',
-                      nextMode === 'names'
-                        ? 'Exibindo Nomes para Escolha no Telão!'
-                        : 'Exibindo Votação/Resultados no Telão!'
-                    );
-                  }}
-                  className={`flex-1 min-h-[40px] px-4 font-bold text-xs rounded-xl shadow-md transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider ${
-                    session.telaoMode === 'names'
-                      ? 'bg-transparent border-2 border-emerald-400 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 active:bg-emerald-400/25'
-                      : 'bg-transparent border-2 border-blue-500 text-blue-400 hover:text-blue-300 hover:border-blue-400 hover:bg-blue-500/10 active:bg-blue-500/25'
-                  }`}
-                  title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
-                >
-                  <Tv className="w-4 h-4" />
-                  <span>
-                    {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
-                  </span>
-                </button>
+                  {/* Botão MOSTRAR NO TELÃO (azul 50% transparente, borda brilho, efeito clique) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
+                      saveSession({ ...session, telaoMode: nextMode });
+                      openTelaoOnSecondMonitor();
+                      showNotification(
+                        'success',
+                        nextMode === 'names'
+                          ? 'Exibindo Nomes para Escolha no Telão!'
+                          : 'Exibindo Votação/Resultados no Telão!'
+                      );
+                    }}
+                    className={`flex-1 min-h-[40px] px-3 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-bold text-xs ${
+                      session.telaoMode === 'names'
+                        ? 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.4)]'
+                        : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_20px_rgba(96,165,250,0.55)]'
+                    }`}
+                    title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
+                  >
+                    <Tv className="w-4 h-4" />
+                    <span>
+                      {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
+                    </span>
+                  </button>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
-                      saveSession({ ...session, options: [] });
-                      showNotification('success', 'Todos os nomes foram apagados.');
-                    }
-                  }}
-                  className="min-h-[38px] px-4 bg-transparent hover:bg-rose-500/10 border-2 border-rose-500/80 text-rose-400 hover:text-rose-300 hover:border-rose-400 font-bold text-xs rounded-xl shadow transition-all duration-150 active:scale-90 active:bg-rose-500/25 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                  title="Apagar todos os nomes cadastrados"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>LIMPAR TODOS</span>
-                </button>
+                  {/* Botão lixeirinha LIMPAR (vermelho 50% transparente, borda brilho, efeito clique) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
+                        saveSession({ ...session, options: [] });
+                        showNotification('success', 'Todos os nomes foram apagados.');
+                      }
+                    }}
+                    className="min-h-[38px] px-3 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-bold text-xs rounded-xl transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                    title="Apagar todos os nomes cadastrados"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>LIMPAR</span>
+                  </button>
+                </div>
+
+                {/* SEGUNDA COLUNA PEQUENA: MICROFONE (FALAR), IMPORTAR E MODELO */}
+                <div className="flex flex-col gap-2 shrink-0 w-28 sm:w-32 justify-between">
+                  {/* Botão Microfone / FALAR */}
+                  <button
+                    type="button"
+                    onClick={() => setIsListening(!isListening)}
+                    className={`flex-1 min-h-[44px] px-2.5 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-black text-xs ${
+                      isListening
+                        ? 'bg-rose-600/60 border-rose-400 text-white shadow-[0_0_18px_rgba(244,63,94,0.6)] animate-pulse'
+                        : 'bg-amber-600/50 hover:bg-amber-600/70 border-amber-400 text-amber-100 shadow-[0_0_15px_rgba(251,191,36,0.35)] hover:shadow-[0_0_20px_rgba(251,191,36,0.55)]'
+                    }`}
+                    title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
+                  >
+                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    <span>{isListening ? 'OUVINDO' : 'FALAR'}</span>
+                  </button>
+
+                  {/* Botão IMPORTAR Arquivo */}
+                  <button
+                    type="button"
+                    onClick={() => fileUploadAppendRef.current?.click()}
+                    className="flex-1 min-h-[40px] px-2.5 bg-indigo-600/40 hover:bg-indigo-600/60 border-2 border-indigo-400 text-indigo-100 shadow-[0_0_15px_rgba(129,140,248,0.35)] hover:shadow-[0_0_20px_rgba(129,140,248,0.55)] rounded-xl text-xs font-bold transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                    title="Importar de arquivo Excel, CSV ou TXT"
+                  >
+                    <Upload className="w-4 h-4" />
+                    <span>IMPORTAR</span>
+                  </button>
+
+                  {/* Botão MODELO (.csv) */}
+                  <button
+                    type="button"
+                    onClick={handleDownloadSampleTemplate}
+                    className="min-h-[38px] px-2.5 bg-slate-700/50 hover:bg-slate-700/70 border-2 border-slate-400 text-slate-100 shadow-[0_0_15px_rgba(148,163,184,0.35)] hover:shadow-[0_0_20px_rgba(148,163,184,0.55)] rounded-xl text-xs font-bold transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                    title="Baixar planilha/arquivo modelo (.csv)"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>MODELO</span>
+                  </button>
+                </div>
               </div>
             </div>
 
