@@ -12,7 +12,6 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
-import { IasdLogo } from './IasdLogo';
 import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
 
 interface TelaoViewProps {
@@ -113,55 +112,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   }, [session.status]);
 
   return (
-    <div className="min-h-screen bg-[#07132a] text-white p-2.5 sm:p-3.5 lg:p-4 flex flex-col justify-between select-none">
-      {/* BOTÃO DISCRETO DE TELA CHEIA NO TOPO DIREITO */}
-      <div className="fixed top-2.5 right-2.5 z-50 flex items-center gap-1.5">
-        <button
-          onClick={toggleFullscreen}
-          title="Alternar Tela Cheia para o Projetor / TV (F11)"
-          className="bg-[#001f47]/80 hover:bg-[#002f6c] border border-blue-700/60 text-amber-300 font-bold p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg backdrop-blur-md transition cursor-pointer text-[11px] active:scale-95"
-        >
-          {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-          <span className="hidden sm:inline">{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
-        </button>
-      </div>
-
-      {/* ÁREA SUPERIOR: CABEÇALHO EM UMA LINHA, COR BRANCA, FONTE MODERNA */}
-      <div className="mb-3.5 pt-1 px-1 flex flex-wrap items-center justify-between gap-3 text-white">
-        {/* Lado Esquerdo: Logo + Título Digitado + 'Escolha X Nomes' + 'X já votaram' próximos na mesma linha */}
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-          {/* Logo 15% maior e sem fundo branco */}
-          <IasdLogo className="w-10 h-10 shrink-0" customUrl={session.logoUrl} />
-
-          {/* Título: O que foi digitado (sem 'Votação Escolha'), 35% menor, fonte moderna redonda */}
-          <h1 className="text-base sm:text-lg lg:text-xl font-extrabold text-white font-sans tracking-tight">
-            {session.title.toUpperCase()}
-          </h1>
-
-          {/* Card: Escolha X Nomes (Cantos com arredondamento reduzido: rounded-lg) */}
-          <span className="px-3 py-1 rounded-lg bg-blue-900 border border-blue-600/80 text-white font-bold text-xs sm:text-sm tracking-wide uppercase flex items-center gap-1.5 shadow-md">
-            <span>ESCOLHA</span>
-            <span className="text-amber-400 font-black text-sm sm:text-base">
-              {session.maxVotesPerVoter}
-            </span>
-            <span>{session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}</span>
-          </span>
-
-          {/* Card: X já votaram (Movido para próximo de 'Escolha de Nomes', cantos rounded-lg - oculto na tela de Nomes para Escolha) */}
-          {session.telaoMode !== 'names' && (
-            <span className="px-3 py-1 rounded-lg bg-[#001f47] border border-blue-700/80 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-inner">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-              <span>
-                <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
-                  {totalVotesCast}
-                </strong>{' '}
-                {totalVotesCast === 1 ? 'já votou' : 'já votaram'}
-              </span>
-            </span>
-          )}
-        </div>
-      </div>
-
+    <div className="min-h-screen bg-[#07132a] text-white p-2 sm:p-3 lg:p-3.5 flex flex-col justify-between select-none">
       {/* ÁREA CENTRAL: QR CODE À ESQUERDA E NOMES NA COLUNA DA DIREITA */}
       <div className="flex-1 w-full">
         <div className={`grid gap-4 items-start ${showQrCode ? 'grid-cols-1 md:grid-cols-12' : 'grid-cols-1'}`}>
@@ -225,6 +176,17 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       </span>
                       <span>{session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}</span>
                     </span>
+
+                    {/* BOTÃO TELA CHEIA */}
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      title="Alternar Tela Cheia para o Projetor / TV (F11)"
+                      className="bg-[#07132a] hover:bg-[#002f6c] border border-blue-700/80 text-amber-300 font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow transition cursor-pointer text-xs active:scale-95"
+                    >
+                      {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+                      <span>{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
+                    </button>
                   </div>
                 </div>
 
@@ -275,13 +237,38 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               </div>
             ) : (
               <div className="bg-[#001f47]/80 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-xl">
-                <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-blue-900/80">
-                  <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-[#d4af37]" />
-                    <h3 className="font-extrabold text-sm sm:text-base text-white font-sans tracking-tight">
-                      Tempo real
-                    </h3>
+                <div className="flex flex-wrap items-center justify-between mb-2.5 pb-2 border-b border-blue-900/80 gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                    <div className="flex items-center gap-1.5">
+                      <Trophy className="w-4 h-4 text-[#d4af37]" />
+                      <h3 className="font-extrabold text-sm sm:text-base text-white font-sans tracking-tight">
+                        Tempo real
+                      </h3>
+                    </div>
+
+                    {/* X JÁ VOTARAM (NA FRENTE DE TEMPO REAL) */}
+                    <span className="px-2.5 py-0.5 rounded-lg bg-[#07132a] border border-blue-700/80 text-white font-bold text-xs flex items-center gap-1.5 shadow-inner">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                      <span>
+                        <strong className="text-amber-300 font-mono text-xs sm:text-sm font-black">
+                          {totalVotesCast}
+                        </strong>{' '}
+                        {totalVotesCast === 1 ? 'já votou' : 'já votaram'}
+                      </span>
+                    </span>
+
+                    {/* BOTÃO TELA CHEIA (NA FRENTE DE TEMPO REAL) */}
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      title="Alternar Tela Cheia para o Projetor / TV (F11)"
+                      className="bg-[#07132a] hover:bg-[#002f6c] border border-blue-700/80 text-amber-300 font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow transition cursor-pointer text-xs active:scale-95"
+                    >
+                      {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
+                      <span>{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
+                    </button>
                   </div>
+
                   <div className="flex items-center gap-3 text-[11px] font-semibold">
                     <span className="flex items-center gap-1 text-emerald-400">
                       <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/30 border border-emerald-400 inline-block" />
