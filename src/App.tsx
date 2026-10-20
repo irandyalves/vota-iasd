@@ -5,18 +5,49 @@ import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
 import { subscribeToSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
+import { Tv, ExternalLink, X } from 'lucide-react';
 
 export function App() {
   const [session, setSession] = useState<VotingSession>(DEFAULT_INITIAL_SESSION);
-  const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('voter');
+  const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('admin');
+  const [showPopupBlockedToast, setShowPopupBlockedToast] = useState(false);
 
-  // Detecta parâmetro de URL (ex: ?view=telao ou ?view=admin)
+  // Função para abrir o Telão na 2ª Tela (Projetor/TV)
+  const openSecondaryScreen = () => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}/?view=telao&fullscreen=true`;
+    const screenWidth = window.screen.availWidth || 1920;
+    const screenHeight = window.screen.availHeight || 1080;
+    const popup = window.open(
+      url,
+      'VotaIASDTelaoProjetor',
+      `width=${screenWidth},height=${screenHeight},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
+    );
+    if (!popup) {
+      setShowPopupBlockedToast(true);
+    } else {
+      setShowPopupBlockedToast(false);
+      popup.focus();
+    }
+  };
+
+  // Detecta parâmetro de URL (ex: ?view=telao ou ?view=admin ou ?view=voter)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const viewParam = params.get('view');
       if (viewParam === 'telao' || viewParam === 'admin' || viewParam === 'voter') {
         setCurrentView(viewParam);
+      }
+
+      // Ao abrir o sistema pela primeira vez no admin, tenta abrir a 2ª tela automaticamente
+      const hasAttempted = sessionStorage.getItem('vota_iasd_telao_auto_launched');
+      if (viewParam !== 'telao' && !hasAttempted) {
+        sessionStorage.setItem('vota_iasd_telao_auto_launched', 'true');
+        // Pequeno atraso para dar tempo do navegador processar
+        setTimeout(() => {
+          openSecondaryScreen();
+        }, 500);
       }
     }
   }, []);
@@ -35,33 +66,81 @@ export function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#07132a] text-slate-100 flex flex-col font-sans selection:bg-[#d4af37] selection:text-blue-950">
-      {/* Navbar com seleção rápida de tela */}
-      <Navbar
-        currentView={currentView}
-        setCurrentView={(view) => {
-          setCurrentView(view);
-          if (typeof window !== 'undefined') {
-            const url = new URL(window.location.href);
-            url.searchParams.set('view', view);
-            window.history.pushState({}, '', url.toString());
-          }
-        }}
-        title={session?.title}
-        pin={session?.pin}
-      />
+    <div className="min-h-screen bg-[#07132a] text-slate-100 flex flex-col font-sans selection:bg-[#d4af37] selection:text-blue-950 w-full overflow-x-hidden">
+      {/* Notificação Flutuante caso o navegador bloqueie popup automático */}
+      {showPopupBlockedToast && currentView !== 'telao' && (
+        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-blue-950 px-4 py-3 flex items-center justify-between text-xs sm:text-sm font-bold shadow-xl border-b border-amber-400">
+          <div className="flex items-center gap-2">
+            <Tv className="w-5 h-5 shrink-0" />
+            <span>
+              O navegador solicitou permissão de tela. Clique no botão ao lado para abrir o <strong>Telão em 2ª Tela (Tela Cheia)</strong>:
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openSecondaryScreen}
+              className="px-3 py-1.5 bg-blue-950 text-amber-300 hover:text-white rounded-lg text-xs font-black shadow transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Abrir Telão Agora
+            </button>
+            <button
+              onClick={() => setShowPopupBlockedToast(false)}
+              className="p-1 hover:bg-black/10 rounded-md transition text-blue-950 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
-      {/* Conteúdo da Tela Selecionada */}
-      <main className="flex-1">
+      {/* Navbar com seleção rápida de tela (No Telão a tela fica 100% limpa para projeção) */}
+      {currentView !== 'telao' ? (
+        <Navbar
+          currentView={currentView}
+          setCurrentView={(view) => {
+            setCurrentView(view);
+            if (typeof window !== 'undefined') {
+              const url = new URL(window.location.href);
+              url.searchParams.set('view', view);
+              window.history.pushState({}, '', url.toString());
+            }
+          }}
+          title={session?.title}
+          pin={session?.pin}
+        />
+      ) : (
+        /* Controle discreto flutuante no topo do Telão visível apenas ao passar o mouse */
+        <div className="fixed top-3 right-4 z-50 flex items-center gap-2 opacity-20 hover:opacity-100 transition-opacity">
+          <button
+            onClick={() => {
+              setCurrentView('admin');
+              if (typeof window !== 'undefined') {
+                const url = new URL(window.location.href);
+                url.searchParams.set('view', 'admin');
+                window.history.pushState({}, '', url.toString());
+              }
+            }}
+            className="px-3 py-1.5 bg-[#001f47]/90 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-blue-800 shadow-lg backdrop-blur-md cursor-pointer"
+          >
+            Voltar ao Admin
+          </button>
+        </div>
+      )}
+
+      {/* Conteúdo da Tela Selecionada - 100% Fluido e Responsivo */}
+      <main className="flex-1 w-full">
         {currentView === 'voter' && <VoterView session={session} />}
         {currentView === 'telao' && <TelaoView session={session} />}
         {currentView === 'admin' && <AdminView session={session} />}
       </main>
 
-      {/* Rodapé discreto da igreja */}
-      <footer className="py-4 text-center text-xs text-blue-300/40 border-t border-blue-900/40">
-        <p>Sistema VOTA IASD • Desenvolvido para Votações Transparentes e Seguras</p>
-      </footer>
+      {/* Rodapé discreto da igreja (oculto no Telão de projeção) */}
+      {currentView !== 'telao' && (
+        <footer className="py-4 text-center text-xs text-blue-300/40 border-t border-blue-900/40 w-full">
+          <p>Sistema VOTA IASD • Desenvolvido para Votações Transparentes e Seguras</p>
+        </footer>
+      )}
     </div>
   );
 }

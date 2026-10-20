@@ -8,6 +8,8 @@ import {
   EyeOff,
   QrCode,
   CheckCircle,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 
@@ -17,6 +19,7 @@ interface TelaoViewProps {
 
 export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const [currentUrl, setCurrentUrl] = useState('');
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Identifica se estamos em rodada de desempate
   const isTieBreak = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
@@ -37,10 +40,37 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const maxVotesRecorded = Math.max(...optionsToDisplay.map((o) => o.votesCount || 0), 1);
   const totalVotesCast = optionsToDisplay.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
 
-  // Pega a URL do navegador para o QR Code
+  // Alterna Modo Tela Cheia (Fullscreen API)
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+        setIsFullscreen(false);
+      }
+    }
+  };
+
+  // Monitora alterações de tela cheia pelo teclado (F11 ou Esc)
+  useEffect(() => {
+    const handleFsChange = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+    document.addEventListener('fullscreenchange', handleFsChange);
+    return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  // Pega a URL do navegador para o QR Code e verifica se deve solicitar tela cheia
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setCurrentUrl(window.location.origin);
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('fullscreen') === 'true' && !document.fullscreenElement) {
+        // Tenta acionar tela cheia se permitido
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
     }
   }, []);
 
@@ -111,7 +141,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
             </h1>
           </div>
 
-          {/* Cards de Métricas Rápidas */}
+          {/* Cards de Métricas Rápidas e Botão de Tela Cheia */}
           <div className="flex items-center gap-3">
             <div className="bg-[#07132a] border border-blue-900 rounded-2xl px-5 py-3 text-center">
               <span className="text-[11px] font-medium text-blue-300 block">Vagas Disponíveis</span>
@@ -126,6 +156,16 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 {totalVotesCast}
               </span>
             </div>
+
+            {/* Botão de Tela Cheia (Fullscreen) */}
+            <button
+              onClick={toggleFullscreen}
+              title="Alternar Tela Cheia para o Projetor / TV (F11)"
+              className="bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black px-4 py-3.5 rounded-2xl flex items-center gap-2 shadow-xl transition active:scale-95 cursor-pointer text-xs uppercase tracking-wider"
+            >
+              {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+              <span className="hidden sm:inline">{isFullscreen ? 'Sair Tela Cheia' : 'Tela Cheia'}</span>
+            </button>
           </div>
         </div>
       </div>

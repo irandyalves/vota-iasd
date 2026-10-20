@@ -18,6 +18,8 @@ import {
   Flame,
   FileSpreadsheet,
   FileText,
+  Tv,
+  ExternalLink,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
@@ -429,7 +431,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="w-full px-3 sm:px-6 lg:px-8 xl:px-10 py-5">
       {/* Notificação Flutuante */}
       {notification && (
         <div
@@ -520,7 +522,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
 
         {/* BARRA DE GATILHOS DA ELEIÇÃO */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 border-t border-blue-900/80">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-4 border-t border-blue-900/80">
           <button
             onClick={handleStartVoting}
             disabled={session.status === 'VOTING'}
@@ -559,6 +561,26 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             {session.showResultsLive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
             {session.showResultsLive ? 'Telão: Ao Vivo' : 'Telão: Oculto'}
           </button>
+
+          {/* Botão de 2ª Tela para o Projetor / TV */}
+          <button
+            onClick={() => {
+              const url = `${window.location.origin}/?view=telao&fullscreen=true`;
+              const screenWidth = window.screen.availWidth || 1920;
+              const screenHeight = window.screen.availHeight || 1080;
+              const popup = window.open(
+                url,
+                'VotaIASDTelaoProjetor',
+                `width=${screenWidth},height=${screenHeight},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
+              );
+              if (popup) popup.focus();
+            }}
+            className="col-span-2 sm:col-span-1 p-3.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-amber-900/30 transition active:scale-95 cursor-pointer"
+          >
+            <Tv className="w-5 h-5" />
+            <span>2ª TELA (TELÃO)</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+          </button>
         </div>
       </div>
 
@@ -588,7 +610,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               Selecione quais candidatos participarão da rodada de desempate e quantas vagas estão em disputa:
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 mb-4">
               {session.options.map((opt) => {
                 const isSelected = selectedTieCandidateIds.includes(opt.id);
                 return (
@@ -852,7 +874,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               <span className="text-xs font-normal text-blue-300">Toque na câmera para carregar foto</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5">
               {session.options.map((option) => (
                 <div
                   key={option.id}
@@ -919,7 +941,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               Parâmetros da Sessão de Votação
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
               <div>
                 <label className="text-xs font-semibold text-blue-200 block mb-1">Título da Pauta:</label>
                 <input

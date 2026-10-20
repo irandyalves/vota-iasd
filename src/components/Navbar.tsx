@@ -1,5 +1,5 @@
 import React from 'react';
-import { Vote, Tv, ShieldCheck, Volume2, Database, Wifi } from 'lucide-react';
+import { Vote, Tv, ShieldCheck, Volume2, Database, Wifi, ExternalLink } from 'lucide-react';
 import { isFirebaseConfigured } from '../services/firebase';
 import { urnaAudio } from '../utils/audio';
 
@@ -16,12 +16,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   title,
   pin,
 }) => {
+  // Abre o Telão em uma 2ª janela/tela dedicada para projetor ou TV
+  const handleOpenSecondaryScreen = () => {
+    if (typeof window === 'undefined') return;
+    const url = `${window.location.origin}/?view=telao&fullscreen=true`;
+    const screenWidth = window.screen.availWidth || 1920;
+    const screenHeight = window.screen.availHeight || 1080;
+    
+    const popup = window.open(
+      url,
+      'VotaIASDTelaoProjetor',
+      `width=${screenWidth},height=${screenHeight},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
+    );
+    if (popup) {
+      popup.focus();
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-4 py-3">
-      <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-3 w-full">
+      <div className="w-full flex flex-wrap items-center justify-between gap-3">
         {/* Marca / Identidade IASD */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#d4af37] to-amber-300 flex items-center justify-center shadow-md shadow-amber-900/30">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#d4af37] to-amber-300 flex items-center justify-center shadow-md shadow-amber-900/30 shrink-0">
             <Vote className="w-6 h-6 text-[#001f47] font-bold" />
           </div>
           <div>
@@ -35,7 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </div>
             {title && (
-              <p className="text-xs text-blue-200/80 truncate max-w-[200px] sm:max-w-xs">
+              <p className="text-xs text-blue-200/80 truncate max-w-[200px] sm:max-w-xs md:max-w-md">
                 {title} {pin && <span className="text-amber-300 font-mono font-bold ml-1">PIN: {pin}</span>}
               </p>
             )}
@@ -46,7 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900/80 shadow-inner">
           <button
             onClick={() => setCurrentView('voter')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
               currentView === 'voter'
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-blue-950/50'
@@ -58,7 +75,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setCurrentView('telao')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
               currentView === 'telao'
                 ? 'bg-amber-600 text-white shadow-md shadow-amber-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-blue-950/50'
@@ -70,7 +87,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <button
             onClick={() => setCurrentView('admin')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 cursor-pointer ${
               currentView === 'admin'
                 ? 'bg-purple-600 text-white shadow-md shadow-purple-600/30'
                 : 'text-slate-300 hover:text-white hover:bg-blue-950/50'
@@ -81,15 +98,26 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        {/* Teste do Som da Urna e Status da Conexão */}
+        {/* Ações Rápidas: 2ª Tela (Telão), Som da Urna e Conexão */}
         <div className="flex items-center gap-2">
+          {/* Botão de Destaque: Abrir 2ª Tela (Telão / Projetor) */}
+          <button
+            onClick={handleOpenSecondaryScreen}
+            title="Abrir o Telão em Tela Cheia no 2º monitor ou projetor da igreja"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-lg text-xs font-black shadow-md shadow-amber-900/30 transition cursor-pointer active:scale-95"
+          >
+            <Tv className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Projetar 2ª Tela</span>
+            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+          </button>
+
           <button
             onClick={() => urnaAudio.playTseConfirma()}
             title="Ouvir som oficial da urna eletrônica do TSE"
             className="flex items-center gap-1.5 px-2.5 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700/50 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
           >
             <Volume2 className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-            <span className="hidden sm:inline">Som Urna TSE</span>
+            <span className="hidden lg:inline">Som Urna TSE</span>
           </button>
 
           <div
@@ -98,7 +126,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           >
             <Database className={`w-3 h-3 ${isFirebaseConfigured ? 'text-emerald-400' : 'text-amber-400'}`} />
             <span className="hidden md:inline font-mono">
-              {isFirebaseConfigured ? 'Firebase Nuvem' : 'Modo Local'}
+              {isFirebaseConfigured ? 'Firebase' : 'Local'}
             </span>
           </div>
         </div>
