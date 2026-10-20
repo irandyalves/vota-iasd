@@ -214,14 +214,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             <h2 className="text-sm font-black text-white uppercase tracking-tight leading-tight">
               {session.title}
             </h2>
-            <p className="text-[10px] text-blue-200 mt-0.5">
-              Total de votos: <strong className="text-amber-300 font-mono font-bold">{totalVotesCast}</strong>
-              {live && (
-                <span className="ml-2 text-emerald-400 font-bold inline-flex items-center gap-0.5">
-                  <CheckCircle2 className="w-3 h-3" /> Seu voto foi computado
-                </span>
-              )}
-            </p>
+            {live && (
+              <p className="text-[10px] text-emerald-400 font-bold mt-0.5 inline-flex items-center gap-0.5">
+                <CheckCircle2 className="w-3 h-3" /> Seu voto foi computado
+              </p>
+            )}
           </div>
 
           {/* Banner de Empate (somente no resultado oficial) */}
