@@ -376,78 +376,89 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         )}
       </AnimatePresence>
 
-      {/* Lista de Cards Grandes (Touch Acessível) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {options.map((option) => {
-          const isSelected = selectedIds.includes(option.id);
+      {/* Lista de Cards Compactos (Touch Acessível - 2 colunas no mobile ou 1 centralizada se poucos) */}
+      {(() => {
+        const isFewCandidates = options.length <= 3;
+        return (
+          <div
+            className={
+              isFewCandidates
+                ? 'grid grid-cols-1 max-w-sm mx-auto gap-2.5 w-full'
+                : 'grid grid-cols-2 gap-2 sm:gap-2.5 w-full'
+            }
+          >
+            {options.map((option) => {
+              const isSelected = selectedIds.includes(option.id);
 
-          return (
-            <motion.div
-              key={option.id}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => handleToggleCandidate(option.id)}
-              className={`p-4 rounded-2xl border-2 transition-all duration-200 cursor-pointer select-none flex items-center gap-3.5 shadow-md relative overflow-hidden ${
-                isSelected
-                  ? 'bg-gradient-to-r from-blue-900/90 to-[#002f6c] border-[#d4af37] ring-2 ring-[#d4af37]/40 shadow-amber-900/20'
-                  : 'bg-[#001f47]/70 hover:bg-[#001f47] border-blue-900/80 text-slate-200'
-              }`}
-            >
-              {/* Foto ou Avatar com Iniciais */}
-              <div className="relative shrink-0">
-                {option.photoUrl ? (
-                  <img
-                    src={option.photoUrl}
-                    alt={option.name}
-                    className="w-14 h-14 rounded-2xl object-cover border-2 border-blue-600/50 shadow"
-                  />
-                ) : (
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-800 to-indigo-900 border-2 border-blue-500/40 flex items-center justify-center text-amber-300 font-extrabold text-lg shadow">
-                    {option.name
-                      .split(' ')
-                      .map((n) => n[0])
-                      .slice(0, 2)
-                      .join('')}
-                  </div>
-                )}
-
-                {/* Badge de Selecionado */}
-                {isSelected && (
-                  <div className="absolute -top-1 -right-1 w-6 h-6 bg-[#d4af37] text-blue-950 rounded-full flex items-center justify-center shadow-lg border border-white">
-                    <CheckCircle2 className="w-4 h-4 font-bold" />
-                  </div>
-                )}
-              </div>
-
-              {/* Informações do Candidato */}
-              <div className="flex-1 min-w-0">
-                <h4
-                  className={`font-bold text-base leading-tight truncate ${
-                    isSelected ? 'text-white' : 'text-slate-100'
+              return (
+                <motion.div
+                  key={option.id}
+                  whileTap={{ scale: 0.96 }}
+                  onClick={() => handleToggleCandidate(option.id)}
+                  className={`p-2.5 sm:p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer select-none flex items-center gap-2 sm:gap-2.5 shadow-md relative overflow-hidden active:scale-95 ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-blue-900/90 to-[#002f6c] border-[#d4af37] ring-2 ring-[#d4af37]/40 shadow-amber-900/20'
+                      : 'bg-[#001f47]/70 hover:bg-[#001f47] border-blue-900/80 text-slate-200'
                   }`}
                 >
-                  {option.name}
-                </h4>
-                {option.subtitle && (
-                  <p className="text-xs text-blue-200/75 mt-0.5 truncate">
-                    {option.subtitle}
-                  </p>
-                )}
-              </div>
+                  {/* Foto ou Avatar com Iniciais */}
+                  <div className="relative shrink-0">
+                    {option.photoUrl ? (
+                      <img
+                        src={option.photoUrl}
+                        alt={option.name}
+                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover border-2 border-blue-600/50 shadow"
+                      />
+                    ) : (
+                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-800 to-indigo-900 border-2 border-blue-500/40 flex items-center justify-center text-amber-300 font-extrabold text-xs sm:text-sm shadow">
+                        {option.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .slice(0, 2)
+                          .join('')}
+                      </div>
+                    )}
 
-              {/* Indicador Touch */}
-              <div
-                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
-                  isSelected
-                    ? 'border-[#d4af37] bg-[#d4af37] text-blue-950'
-                    : 'border-blue-700 bg-blue-950/60'
-                }`}
-              >
-                {isSelected && <CheckCircle2 className="w-4 h-4 font-extrabold" />}
-              </div>
-            </motion.div>
-          );
-        })}
-      </div>
+                    {/* Badge de Selecionado */}
+                    {isSelected && (
+                      <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#d4af37] text-blue-950 rounded-full flex items-center justify-center shadow-lg border border-white">
+                        <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 font-bold" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Informações do Candidato */}
+                  <div className="flex-1 min-w-0">
+                    <h4
+                      className={`font-bold text-xs sm:text-sm leading-snug line-clamp-2 ${
+                        isSelected ? 'text-white' : 'text-slate-100'
+                      }`}
+                    >
+                      {option.name}
+                    </h4>
+                    {option.subtitle && (
+                      <p className="text-[10px] sm:text-xs text-blue-200/75 mt-0.5 truncate">
+                        {option.subtitle}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Indicador Touch */}
+                  <div
+                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                      isSelected
+                        ? 'border-[#d4af37] bg-[#d4af37] text-blue-950'
+                        : 'border-blue-700 bg-blue-950/60'
+                    }`}
+                  >
+                    {isSelected && <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 font-extrabold" />}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* BARRA FLUTUANTE INFERIOR COM O BOTÃO CONFIRMA (RÉPLICA DA TECLA VERDE DA URNA DO TSE) */}
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-[#00132b]/95 backdrop-blur-lg border-t border-blue-900/80 z-40">
