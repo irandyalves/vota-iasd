@@ -1380,9 +1380,9 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 )}
               </div>
 
-              {/* SEÇÃO DA DIREITA: SEM BORDINHA EXTERNA, BOTÕES 25% MENORES, E SEM BOLD EM MOSTRAR TELÃO E QR.CODE TELÃO */}
-              <div className="flex flex-col gap-2 shrink-0 w-full lg:w-48 justify-between">
-                {/* 1. Botão MOSTRAR NO TELÃO (SEM BOLD) */}
+              {/* SEÇÃO DA DIREITA: SEM BORDINHA EXTERNA, BOTÕES COM ALTURA REDUZIDA EM 35%, E SEM BOLD EM MOSTRAR TELÃO E QR.CODE TELÃO */}
+              <div className="flex flex-col gap-2.5 shrink-0 w-full lg:w-48 justify-center">
+                {/* 1. Botão MOSTRAR NO TELÃO (SEM BOLD, -35% ALTURA) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1396,7 +1396,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         : 'Exibindo Votação/Resultados no Telão!'
                     );
                   }}
-                  className={`flex-1 min-h-[30px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
+                  className={`h-[46px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
                     session.telaoMode === 'names'
                       ? 'bg-amber-500/50 hover:bg-amber-500/70 border-amber-300 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
                       : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_12px_rgba(96,165,250,0.3)] hover:shadow-[0_0_16px_rgba(96,165,250,0.5)]'
@@ -1409,7 +1409,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   </span>
                 </button>
 
-                {/* 4. Botão EXIBIR QR.CODE NO TELÃO (SEM BOLD) */}
+                {/* 2. Botão EXIBIR QR.CODE NO TELÃO (SEM BOLD, -35% ALTURA) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1419,7 +1419,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     });
                   }}
                   title="Mostrar ou ocultar o QR Code no Telão"
-                  className={`flex-1 min-h-[30px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
+                  className={`h-[46px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
                     session.showQrOnTelao !== false
                       ? 'bg-amber-500/25 hover:bg-amber-400/35 border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
                       : 'bg-[#1e293b]/80 hover:bg-amber-500/20 border-amber-400/80 text-amber-300'

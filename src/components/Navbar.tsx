@@ -204,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'Votação em andamento (clique para abrir a Apuração)'
                 : 'Iniciar Nova Votação mantendo os nomes em ordem A-Z'
             }
-            className={`px-6 py-3 min-h-[46px] rounded-xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 ${
+            className={`px-6 py-3.5 min-h-[53px] rounded-xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 ${
               showApuracaoCaption
                 ? 'bg-amber-500/30 hover:bg-amber-500/45 border-amber-300 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.45)] hover:shadow-[0_0_24px_rgba(251,191,36,0.65)]'
                 : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_22px_rgba(52,211,153,0.55)]'
