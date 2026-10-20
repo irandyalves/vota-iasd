@@ -220,11 +220,17 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
   // Disparo: "VOTAR AGORA"
   const handleStartVoting = () => {
-    const totalVotes = session.options.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
-    const nextIteration = totalVotes === 0 ? (session.votingIteration || 1) + 1 : (session.votingIteration || 1);
+    // Se a sessão estava encerrada (CLOSED), reinicia com os MESMOS nomes que já estão na tela, zerando os votos
+    let currentOptions = session.options;
+    if (session.status === 'CLOSED') {
+      currentOptions = session.options.map((o) => ({ ...o, votesCount: 0 }));
+    }
+
+    const nextIteration = (session.votingIteration || 1) + 1;
     saveSession({
       ...session,
       status: 'VOTING',
+      options: currentOptions,
       telaoMode: 'voting',
       votingIteration: nextIteration,
     });
@@ -249,9 +255,14 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     showNotification('success', 'Votação encerrada! Resultados consolidados no telão.');
   };
 
-  // Zerar Votos e Reiniciar Votação nos Celulares
+  // Zerar Votos e Reiniciar Votação mantendo os MESMOS nomes cadastrados
   const handleResetVotes = () => {
-    if (window.confirm('Tem certeza que deseja zerar a contagem de votos desta sessão? Isso reiniciará a votação e liberará todos os celulares imediatamente.')) {
+    if (
+      window.confirm(
+        'Deseja zerar os votos e reiniciar a votação? Todos os nomes atualmente cadastrados serão mantidos!'
+      )
+    ) {
+      // Preserva exatamente a lista de nomes já cadastrados, zerando apenas a apuração
       const resetOptions = session.options.map((o) => ({ ...o, votesCount: 0 }));
       const nextIteration = (session.votingIteration || 1) + 1;
       saveSession({
@@ -261,9 +272,17 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         tieBreak: undefined,
         votingIteration: nextIteration,
       });
-      // Limpa os registros de votos do navegador atual
-      localStorage.clear();
-      showNotification('success', 'Votação reiniciada! Todos os celulares foram liberados para votar novamente.');
+
+      // Limpa APENAS as travas locais de voto ('voted_*'), PRESERVANDO a sessão e todos os nomes!
+      try {
+        Object.keys(localStorage).forEach((key) => {
+          if (key.startsWith('voted_')) {
+            localStorage.removeItem(key);
+          }
+        });
+      } catch (_) {}
+
+      showNotification('success', 'Votação reiniciada! Nomes mantidos e votos zerados.');
     }
   };
 
@@ -1146,14 +1165,16 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
             <div>
               <h4 className="font-bold text-white text-sm">Zerar Apuração / Reiniciar Votação</h4>
-              <p className="text-[11px] text-blue-200">Zera todos os votos registrados e redefine o status para Sala de Espera.</p>
+              <p className="text-[11px] text-blue-200">
+                Zera a apuração dos votos mantendo <strong>intactos todos os nomes cadastrados na tela</strong> e libera os celulares para votar novamente.
+              </p>
             </div>
             <button
               onClick={handleResetVotes}
-              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow"
             >
               <RotateCcw className="w-3.5 h-3.5" />
-              Zerar Todos os Votos
+              Reiniciar com os Nomes Atuais
             </button>
           </div>
         </div>

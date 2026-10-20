@@ -4,12 +4,12 @@ import { VoterView } from './components/VoterView';
 import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
-import { subscribeToSession, saveSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
+import { subscribeToSession, saveSession, getLocalSession } from './services/votingService';
 import { openTelaoOnSecondMonitor, subscribeSecondaryScreen } from './utils/screen';
 import { ExternalLink, X, MonitorPlay } from 'lucide-react';
 
 export function App() {
-  const [session, setSession] = useState<VotingSession>(DEFAULT_INITIAL_SESSION);
+  const [session, setSession] = useState<VotingSession>(getLocalSession);
   const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('admin');
   const [showPopupBlockedToast, setShowPopupBlockedToast] = useState(false);
 

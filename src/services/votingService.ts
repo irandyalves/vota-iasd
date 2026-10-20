@@ -64,7 +64,7 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
 }
 
 // Armazena sessão localmente
-function getLocalSession(): VotingSession {
+export function getLocalSession(): VotingSession {
   try {
     const raw = localStorage.getItem(STORAGE_SESSION_KEY);
     if (raw) return JSON.parse(raw);
