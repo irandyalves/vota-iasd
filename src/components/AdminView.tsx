@@ -4,7 +4,6 @@ import {
   Mic,
   MicOff,
   Trash2,
-  StopCircle,
   RotateCcw,
   Download,
   Upload,
@@ -464,15 +463,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
     saveSession(updated);
     showNotification('success', `${newOptions.length} candidato(s) adicionado(s) por voz!`);
-  };
-
-  // Disparo: "ENCERRAR VOTAÇÃO"
-  const handleCloseVoting = () => {
-    saveSession({
-      ...session,
-      status: 'CLOSED',
-    });
-    showNotification('success', 'Votação encerrada! Resultados consolidados no telão.');
   };
 
   // Adicionar Candidato(s) por Texto ou Voz em Tempo Real (Maiúsculo)
@@ -1297,18 +1287,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
               {/* SEÇÃO DA DIREITA: SEM BORDINHA EXTERNA, BOTÕES 25% MENORES, E SEM BOLD EM MOSTRAR TELÃO E QR.CODE TELÃO */}
               <div className="flex flex-col gap-2 shrink-0 w-full lg:w-48 justify-between">
-                {/* 1. Botão ENCERRAR VOTAÇÃO (EM VERMELHO) */}
-                <button
-                  type="button"
-                  onClick={handleCloseVoting}
-                  className="flex-1 min-h-[30px] px-2.5 py-1.5 bg-rose-600/50 hover:bg-rose-600/70 border-2 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.3)] hover:shadow-[0_0_16px_rgba(244,63,94,0.5)] font-black text-[9.5px] rounded-lg transition-all duration-150 active:scale-95 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                  title="Encerrar Votação e consolidar resultados no Telão"
-                >
-                  <StopCircle className="w-3 h-3 shrink-0" />
-                  <span>ENCERRAR VOTAÇÃO</span>
-                </button>
-
-                {/* 3. Botão MOSTRAR NO TELÃO (SEM BOLD) */}
+                {/* 1. Botão MOSTRAR NO TELÃO (SEM BOLD) */}
                 <button
                   type="button"
                   onClick={() => {
