@@ -58,12 +58,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     };
 
     const handleMouseDown = (e: MouseEvent) => {
-      const target = e.target as Node;
+      const target = e.target as HTMLElement;
       if (isCreatingNewEvent) {
+        const clickedEditBtn = target.closest?.('[data-edit-event-btn="true"]');
         if (
           eventModalRef.current &&
           !eventModalRef.current.contains(target) &&
-          (!createEventBtnRef.current || !createEventBtnRef.current.contains(target))
+          (!createEventBtnRef.current || !createEventBtnRef.current.contains(target)) &&
+          !clickedEditBtn
         ) {
           setIsCreatingNewEvent(false);
           setEditingEventId(null);
@@ -645,9 +647,9 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <span>+ Criar Votação</span>
               </button>
 
-              {/* MODALZINHO REVELADO SUAVEMENTE PARA BAIXO SOBRE OS OUTROS (ESC OU CLICAR FORA SAI SEM SALVAR) */}
+              {/* MODALZINHO DE CRIAR VOTAÇÃO (EMBAIXO DO BOTÃO + CRIAR VOTAÇÃO) */}
               <AnimatePresence>
-                {isCreatingNewEvent && (
+                {isCreatingNewEvent && !editingEventId && (
                   <motion.div
                     ref={eventModalRef}
                     initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
@@ -657,8 +659,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     style={{ transformOrigin: 'top left' }}
                     className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
                   >
-                    <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl p-2.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
-                      <div className="flex items-center gap-1.5">
+                    <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl px-3.5 py-3.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
+                      <div className="flex items-center gap-2">
                         <input
                           type="text"
                           autoFocus
@@ -671,12 +673,12 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                               handleSaveEventModal();
                             }
                           }}
-                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-[#07132a] border border-emerald-500/70 focus:border-emerald-300 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
+                          className="flex-1 min-w-0 px-3 py-2 bg-[#07132a] border-0 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
                         />
                         <button
                           type="button"
                           onClick={handleSaveEventModal}
-                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
+                          className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
                         >
                           Salvar
                         </button>
@@ -687,55 +689,104 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </AnimatePresence>
             </div>
 
-            {/* À DIREITA DO BOTÃO "+ CRIAR VOTAÇÃO": EVENTOS CRIADOS (20% MAIS ALTOS + BOTÃO EDITAR) */}
+            {/* À DIREITA DO BOTÃO "+ CRIAR VOTAÇÃO": EVENTOS CRIADOS (20% MAIS ALTOS + BOTÃO EDITAR COM MODALZINHO NO LÁPIS) */}
             {eventsList.map((evt) => {
               const isSelected = evt.id === currentActiveEventId;
               const count = isSelected ? session.options.length : (evt.options?.length || 0);
               const displayName = isSelected ? (session.title || evt.name) : evt.name;
+              const isEditingThisEvt = isCreatingNewEvent && editingEventId === evt.id;
               return (
-                <div
-                  key={evt.id}
-                  onClick={() => handleSelectEventButton(evt)}
-                  title="Clique para abrir/recolher os nomes deste evento"
-                  className={`group px-2.5 py-1.5 rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
-                    isSelected
-                      ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
-                      : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
-                  }`}
-                >
-                  <span>{displayName}</span>
-                  <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
-                    {count}
-                  </span>
-                  <ChevronDown
-                    className={`w-3 h-3 transition-transform ${
-                      isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
+                <div key={evt.id} className="relative flex items-center">
+                  <div
+                    onClick={() => handleSelectEventButton(evt)}
+                    title="Clique para abrir/recolher os nomes deste evento"
+                    className={`group px-2.5 py-1.5 rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
+                      isSelected
+                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
+                        : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
                     }`}
-                  />
-                  {/* Botão Editar Nome do Evento */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingEventId(evt.id);
-                      setEventNameInput(displayName);
-                      setIsCreatingNewEvent(true);
-                    }}
-                    title="Editar nome deste evento"
-                    className="p-0.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
                   >
-                    <Pencil className="w-3 h-3" />
-                  </button>
-                  {eventsList.length > 1 && (
+                    <span>{displayName}</span>
+                    <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
+                      {count}
+                    </span>
+                    <ChevronDown
+                      className={`w-3 h-3 transition-transform ${
+                        isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
+                      }`}
+                    />
+                    {/* Botão Editar Nome do Evento (abre o modalzinho exatamente embaixo deste evento/lápis) */}
                     <button
                       type="button"
-                      onClick={(e) => handleDeleteEvent(evt.id, e)}
-                      title="Excluir este evento"
-                      className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                      data-edit-event-btn="true"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isEditingThisEvt) {
+                          setIsCreatingNewEvent(false);
+                          setEditingEventId(null);
+                        } else {
+                          setEditingEventId(evt.id);
+                          setEventNameInput(displayName);
+                          setIsCreatingNewEvent(true);
+                        }
+                      }}
+                      title="Editar nome deste evento"
+                      className="p-0.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
                     >
-                      <Trash2 className="w-3 h-3" />
+                      <Pencil className="w-3 h-3" />
                     </button>
-                  )}
+                    {eventsList.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={(e) => handleDeleteEvent(evt.id, e)}
+                        title="Excluir este evento"
+                        className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* MODALZINHO POSICIONADO ONDE FOI CLICADO NO LÁPIS DESTE EVENTO */}
+                  <AnimatePresence>
+                    {isEditingThisEvt && (
+                      <motion.div
+                        ref={eventModalRef}
+                        initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
+                        animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
+                        exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
+                        transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                        style={{ transformOrigin: 'top left' }}
+                        className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
+                      >
+                        <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl px-3.5 py-3.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              autoFocus
+                              placeholder="DIGITE O NOME DO EVENTO..."
+                              value={eventNameInput}
+                              onChange={(e) => setEventNameInput(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleSaveEventModal();
+                                }
+                              }}
+                              className="flex-1 min-w-0 px-3 py-2 bg-[#07132a] border-0 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleSaveEventModal}
+                              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
+                            >
+                              Salvar
+                            </button>
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
               );
             })}
