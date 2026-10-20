@@ -7,9 +7,39 @@ import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, getLocalSession } from './services/votingService';
 import { openTelaoOnSecondMonitor, isSecondaryScreenOpen } from './utils/screen';
 
+const CURRENT_BUILD_VERSION = import.meta.env.VITE_BUILD_VERSION || '';
+
 export function App() {
   const [session, setSession] = useState<VotingSession>(getLocalSession);
   const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('admin');
+
+  // Auto-atualização em tempo real no GitHub Pages / Firebase Hosting sem precisar dar Ctrl+F5 manual
+  useEffect(() => {
+    if (typeof window === 'undefined' || !CURRENT_BUILD_VERSION) return;
+    const isLocal =
+      window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    if (isLocal) return;
+
+    const checkNewVersion = async () => {
+      try {
+        const res = await fetch(`./version.json?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (data?.version && String(data.version) !== String(CURRENT_BUILD_VERSION)) {
+          const url = new URL(window.location.href);
+          url.searchParams.set('_v', String(data.version));
+          window.location.replace(url.toString());
+        }
+      } catch (_) {}
+    };
+
+    const interval = setInterval(checkNewVersion, 6000);
+    window.addEventListener('focus', checkNewVersion);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', checkNewVersion);
+    };
+  }, []);
 
   // Navegar de volta ao Admin
   const handleReturnToAdmin = () => {
