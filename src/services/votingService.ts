@@ -86,57 +86,66 @@ function setLocalSession(session: VotingSession) {
   }
 }
 
-// Salva ou atualiza a sessão (Firebase ou Local)
+// Salva ou atualiza a sessão (Firebase e Local simultâneos para ultra velocidade)
 export async function saveSession(session: VotingSession): Promise<void> {
   session.updatedAt = Date.now();
 
-  // Limpa campos undefined para compatibilidade com o Firestore
+  // Limpa campos undefined para total compatibilidade com Firestore
   const cleanSession = JSON.parse(JSON.stringify(session));
 
+  // 1. Atualiza o estado local imediatamente (0ms de latência para Telão e Admin na mesma máquina)
+  setLocalSession(cleanSession);
+
+  // 2. Transmite em tempo real para o Firestore para todos os celulares conectados
   if (isFirebaseConfigured && db) {
     try {
       const sessionRef = doc(db, 'sessions', session.id);
       await setDoc(sessionRef, cleanSession, { merge: true });
     } catch (error) {
       console.error('Erro ao salvar no Firestore:', error);
-      // Fallback local
-      setLocalSession(cleanSession);
     }
-  } else {
-    setLocalSession(cleanSession);
   }
 }
 
-// Inscrição em tempo real aos dados da sessão
+// Inscrição em tempo real aos dados da sessão (Firestore Cloud + Local Broadcast simultâneos)
 export function subscribeToSession(
   sessionId: string,
   onUpdate: (session: VotingSession | null) => void
 ): () => void {
-  // Se Firebase estiver configurado
-  if (isFirebaseConfigured && db) {
-    const sessionRef = doc(db, 'sessions', sessionId);
-    const unsubscribe = onSnapshot(
-      sessionRef,
-      (docSnap) => {
-        if (docSnap.exists()) {
-          onUpdate(docSnap.data() as VotingSession);
-        } else {
-          // Cria a sessão padrão se não existir no Firestore
-          saveSession({ ...DEFAULT_INITIAL_SESSION, id: sessionId });
-          onUpdate(DEFAULT_INITIAL_SESSION);
-        }
-      },
-      (error) => {
-        console.warn('Erro de escuta no Firestore, utilizando canal local:', error);
-        onUpdate(getLocalSession());
-      }
-    );
-    return unsubscribe;
-  }
-
-  // Fallback para modo local instantâneo
+  // Inicializa imediatamente com a cópia local mais recente para não haver tela em branco
   onUpdate(getLocalSession());
 
+  let unsubFirestore: (() => void) | null = null;
+
+  // 1. Inscrição Nuvem Firestore (para celulares e múltiplos dispositivos)
+  if (isFirebaseConfigured && db) {
+    try {
+      const sessionRef = doc(db, 'sessions', sessionId);
+      unsubFirestore = onSnapshot(
+        sessionRef,
+        (docSnap) => {
+          if (docSnap.exists()) {
+            const remoteData = docSnap.data() as VotingSession;
+            onUpdate(remoteData);
+            try {
+              localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(remoteData));
+            } catch (_) {}
+          } else {
+            // Inicializa a sessão inicial no Firestore caso ainda não exista
+            saveSession({ ...DEFAULT_INITIAL_SESSION, id: sessionId });
+            onUpdate(DEFAULT_INITIAL_SESSION);
+          }
+        },
+        (error) => {
+          console.warn('Erro de escuta no Firestore:', error);
+        }
+      );
+    } catch (err) {
+      console.warn('Falha ao conectar listener Firestore:', err);
+    }
+  }
+
+  // 2. Inscrição Local (BroadcastChannel + CustomEvents para abas e 2ª tela no mesmo PC com latência zero)
   const handleBroadcast = (e: MessageEvent) => {
     if (e.data && e.data.type === 'SESSION_UPDATE' && e.data.session) {
       onUpdate(e.data.session);
@@ -167,6 +176,9 @@ export function subscribeToSession(
   window.addEventListener('vota_iasd_session_update', handleCustom);
 
   return () => {
+    if (unsubFirestore) {
+      unsubFirestore();
+    }
     if (broadcastChannel) {
       broadcastChannel.removeEventListener('message', handleBroadcast);
     }

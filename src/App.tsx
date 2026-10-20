@@ -5,7 +5,8 @@ import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
-import { Tv, ExternalLink, X } from 'lucide-react';
+import { openTelaoOnSecondMonitor } from './utils/screen';
+import { ExternalLink, X, MonitorPlay } from 'lucide-react';
 
 export function App() {
   const [session, setSession] = useState<VotingSession>(DEFAULT_INITIAL_SESSION);
@@ -13,21 +14,12 @@ export function App() {
   const [showPopupBlockedToast, setShowPopupBlockedToast] = useState(false);
 
   // Função para abrir o Telão na 2ª Tela (Projetor/TV)
-  const openSecondaryScreen = () => {
-    if (typeof window === 'undefined') return;
-    const url = `${window.location.origin}/?view=telao&fullscreen=true`;
-    const screenWidth = window.screen.availWidth || 1920;
-    const screenHeight = window.screen.availHeight || 1080;
-    const popup = window.open(
-      url,
-      'VotaIASDTelaoProjetor',
-      `width=${screenWidth},height=${screenHeight},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
-    );
-    if (!popup) {
-      setShowPopupBlockedToast(true);
-    } else {
+  const handleOpenTelaoSecondScreen = async () => {
+    const opened = await openTelaoOnSecondMonitor();
+    if (opened) {
       setShowPopupBlockedToast(false);
-      popup.focus();
+    } else {
+      setShowPopupBlockedToast(true);
     }
   };
 
@@ -36,23 +28,34 @@ export function App() {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const viewParam = params.get('view');
-      if (viewParam === 'telao' || viewParam === 'admin' || viewParam === 'voter') {
-        setCurrentView(viewParam);
-      } else {
-        // Se acessado diretamente sem parâmetro num celular/tablet, abre a visão de votante
-        const isMobile = window.innerWidth <= 768;
-        if (isMobile) {
-          setCurrentView('voter');
-        }
-      }
+      const isMobile = window.innerWidth <= 768;
 
-      // Ao abrir o admin no notebook pela primeira vez, tenta abrir a 2ª tela automaticamente
-      const hasAttempted = sessionStorage.getItem('vota_iasd_telao_auto_launched');
-      if (viewParam === 'admin' && !hasAttempted) {
-        sessionStorage.setItem('vota_iasd_telao_auto_launched', 'true');
-        setTimeout(() => {
-          openSecondaryScreen();
-        }, 500);
+      let effectiveView: 'voter' | 'telao' | 'admin' = 'admin';
+      if (viewParam === 'telao' || viewParam === 'admin' || viewParam === 'voter') {
+        effectiveView = viewParam;
+      } else if (isMobile) {
+        effectiveView = 'voter';
+      }
+      setCurrentView(effectiveView);
+
+      // Se for Admin no Desktop/Notebook, inicializa abertura automática no 2º monitor
+      if (effectiveView === 'admin') {
+        // Tenta abrir imediatamente
+        openTelaoOnSecondMonitor().then((opened) => {
+          if (!opened) {
+            setShowPopupBlockedToast(true);
+
+            // Adiciona gatilho no primeiro clique do usuário para contornar bloqueador de popups do navegador
+            const handleFirstUserGesture = () => {
+              openTelaoOnSecondMonitor().then((res) => {
+                if (res) {
+                  setShowPopupBlockedToast(false);
+                }
+              });
+            };
+            window.addEventListener('click', handleFirstUserGesture, { once: true });
+          }
+        });
       }
     }
   }, []);
@@ -74,20 +77,20 @@ export function App() {
     <div className="min-h-screen bg-[#07132a] text-slate-100 flex flex-col font-sans selection:bg-[#d4af37] selection:text-blue-950 w-full overflow-x-hidden">
       {/* Notificação Flutuante caso o navegador bloqueie popup automático (apenas no Admin) */}
       {showPopupBlockedToast && currentView === 'admin' && (
-        <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-blue-950 px-4 py-3 flex items-center justify-between text-xs sm:text-sm font-bold shadow-xl border-b border-amber-400">
+        <div className="bg-gradient-to-r from-amber-500 via-amber-400 to-amber-500 text-blue-950 px-4 py-2.5 flex items-center justify-between text-xs sm:text-sm font-bold shadow-xl border-b border-amber-300">
           <div className="flex items-center gap-2">
-            <Tv className="w-5 h-5 shrink-0" />
+            <MonitorPlay className="w-5 h-5 shrink-0 text-blue-950 animate-bounce" />
             <span>
-              O navegador solicitou permissão de tela. Clique para projetar o <strong>Telão em 2ª Tela (Tela Cheia)</strong>:
+              2 Telas Detectadas: Clique para projetar o <strong>Telão no 2º Monitor (Projetor / TV)</strong>:
             </span>
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={openSecondaryScreen}
-              className="px-3 py-1.5 bg-blue-950 text-amber-300 hover:text-white rounded-lg text-xs font-black shadow transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+              onClick={handleOpenTelaoSecondScreen}
+              className="px-4 py-1.5 bg-blue-950 text-amber-300 hover:text-white rounded-lg text-xs font-black shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5 border border-amber-400/40"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              Abrir Telão Agora
+              ABRIR NO MONITOR 2 AGORA
             </button>
             <button
               onClick={() => setShowPopupBlockedToast(false)}

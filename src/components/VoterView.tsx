@@ -42,8 +42,17 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   // Verifica se o dispositivo já votou
   const alreadyVoted = hasVoted(session.id, currentRound);
 
-  // Auto-login se já autenticado antes nesta sessão
+  // Auto-login se já autenticado antes nesta sessão ou se o QR Code já trouxe o PIN na URL
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const urlPin = params.get('pin');
+      if (urlPin && urlPin === session.pin) {
+        setIsAuthenticated(true);
+        sessionStorage.setItem(`auth_pin_${session.id}`, session.pin);
+        return;
+      }
+    }
     const savedPin = sessionStorage.getItem(`auth_pin_${session.id}`);
     if (savedPin === session.pin) {
       setIsAuthenticated(true);

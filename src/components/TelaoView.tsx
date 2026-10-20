@@ -66,13 +66,13 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setVoterUrl(`${window.location.origin}/?view=voter`);
+      setVoterUrl(`${window.location.origin}/?view=voter&pin=${session.pin}`);
       const params = new URLSearchParams(window.location.search);
       if (params.get('fullscreen') === 'true' && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
       }
     }
-  }, []);
+  }, [session.pin]);
 
   // Disparo de confetes se o status mudar para CLOSED (Resultado Final)
   useEffect(() => {
@@ -201,7 +201,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 {/* QR Code Reduzido em 35% */}
                 <div className="p-2 bg-white rounded-xl shadow-lg mb-2 border-2 border-[#d4af37]">
                   <QRCodeSVG
-                    value={voterUrl || 'https://vota-iasd-central.web.app/?view=voter'}
+                    value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
                     size={110}
                     level="M"
                     includeMargin={false}

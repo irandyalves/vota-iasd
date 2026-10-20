@@ -4,6 +4,8 @@ import { isFirebaseConfigured } from '../services/firebase';
 import { urnaAudio } from '../utils/audio';
 import { IasdLogo } from './IasdLogo';
 
+import { openTelaoOnSecondMonitor } from '../utils/screen';
+
 interface NavbarProps {
   currentView: 'voter' | 'telao' | 'admin';
   setCurrentView: (view: 'voter' | 'telao' | 'admin') => void;
@@ -46,21 +48,9 @@ export const Navbar: React.FC<NavbarProps> = ({
     reader.readAsDataURL(file);
   };
 
-  // Abre o Telão em uma 2ª janela/tela dedicada para projetor ou TV
+  // Abre o Telão no 2º monitor ou projetor da igreja
   const handleOpenSecondaryScreen = () => {
-    if (typeof window === 'undefined') return;
-    const url = `${window.location.origin}/?view=telao&fullscreen=true`;
-    const screenWidth = window.screen.availWidth || 1920;
-    const screenHeight = window.screen.availHeight || 1080;
-
-    const popup = window.open(
-      url,
-      'VotaIASDTelaoProjetor',
-      `width=${screenWidth},height=${screenHeight},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
-    );
-    if (popup) {
-      popup.focus();
-    }
+    openTelaoOnSecondMonitor();
   };
 
   return (

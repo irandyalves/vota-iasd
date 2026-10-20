@@ -1,15 +1,15 @@
 import { initializeApp, getApps, type FirebaseApp } from 'firebase/app';
 import { getFirestore, type Firestore } from 'firebase/firestore';
 
-// Configurações carregadas do .env (Vite)
-// Permite migração instantânea apenas trocando o arquivo .env
+// Configurações padrão do projeto vota-iasd-central
+// Permite migração instantânea apenas trocando o arquivo .env se desejado
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || 'AIzaSyDpgZyFqlNPdP1NFQ6OpE_PhLtZoydkO5A',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || 'vota-iasd-central.firebaseapp.com',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || 'vota-iasd-central',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || 'vota-iasd-central.firebasestorage.app',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '359677815162',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '1:359677815162:web:9406eaf58d6260de6f8ec3',
 };
 
 export const isFirebaseConfigured = Boolean(

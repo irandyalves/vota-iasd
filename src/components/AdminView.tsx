@@ -26,6 +26,7 @@ import {
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
+import { openTelaoOnSecondMonitor } from '../utils/screen';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -627,15 +628,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           {/* Botão de 2ª Tela para o Projetor / TV */}
           <button
             onClick={() => {
-              const url = `${window.location.origin}/?view=telao&fullscreen=true`;
-              const screenWidth = window.screen.availWidth || 1920;
-              const screenHeight = window.screen.availHeight || 1080;
-              const popup = window.open(
-                url,
-                'VotaIASDTelaoProjetor',
-                `width=${screenWidth},height=${screenHeight},menubar=no,toolbar=no,location=no,status=no,resizable=yes`
-              );
-              if (popup) popup.focus();
+              openTelaoOnSecondMonitor();
             }}
             className="p-2.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-900/20 transition active:scale-95 cursor-pointer"
           >
