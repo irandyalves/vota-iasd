@@ -243,7 +243,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               {/* QR Code Grande Quase Encostando nas Bordas Dir e Esq */}
               <div className="w-full p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37] flex items-center justify-center">
                 <QRCodeSVG
-                  value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
+                  value={voterUrl || `https://irandyalves.github.io/vota-iasd/?view=voter&pin=${session.pin}`}
                   size={240}
                   level="M"
                   includeMargin={false}
