@@ -3,7 +3,6 @@ import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import {
-  Trophy,
   CheckCircle,
   Maximize,
   Minimize,
@@ -228,21 +227,110 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   </div>
                 )}
               </div>
-            ) : !session.showResultsLive && session.status === 'VOTING' ? (
-              <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center p-6 bg-[#001f47]/80 rounded-2xl border border-blue-800/60 shadow-xl">
-                <div className="w-16 h-16 rounded-full bg-blue-900/40 border-2 border-blue-500/40 flex items-center justify-center mb-4">
-                  <Trophy className="w-8 h-8 text-amber-300 animate-pulse" />
+            ) : session.status === 'VOTING' || session.status === 'TIE_BREAK' ? (
+              <div className="h-full min-h-[460px] flex flex-col justify-between p-4 sm:p-6 bg-[#001f47]/85 rounded-2xl border border-blue-800/60 shadow-2xl relative overflow-hidden">
+                {/* Brilho suave de fundo */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="w-80 h-80 rounded-full bg-blue-500/10 blur-3xl" />
                 </div>
-                <h2 className="text-2xl font-extrabold text-white mb-2 font-serif">
-                  Votação em Andamento (Voto Secreto)
-                </h2>
-                <p className="text-xs text-blue-200 max-w-md mb-4 leading-relaxed">
-                  Os votos estão sendo computados com total sigilo. A apuração oficial será revelada nesta tela assim que o líder encerrar a votação.
-                </p>
-                <div className="flex items-center gap-2 px-4 py-2 bg-[#07132a] rounded-xl border border-blue-800 font-mono text-emerald-400 font-bold text-sm">
-                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                  {totalVotesCast} votos já registrados
+
+                {/* Cabeçalho no topo: XX JÁ VOTARAM | Ícone de Tela Cheia */}
+                <div className="flex items-center justify-between border-b border-blue-800/70 pb-3 z-10">
+                  <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-md">
+                    <div className="flex items-center gap-1.5 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
+                        {totalVotersVoted}
+                      </strong>
+                      <span>{totalVotersVoted === 1 ? 'JÁ VOTOU' : 'JÁ VOTARAM'}</span>
+                    </div>
+
+                    <span className="text-blue-600/80 font-light text-base select-none">|</span>
+
+                    <button
+                      type="button"
+                      onClick={toggleFullscreen}
+                      title={isFullscreen ? 'Sair da Tela Cheia (ESC)' : 'Alternar Tela Cheia (F11)'}
+                      className="p-1 rounded-lg hover:bg-blue-900/70 text-amber-300 hover:text-amber-200 transition cursor-pointer active:scale-90 flex items-center justify-center"
+                    >
+                      {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  <span className="text-xs font-bold uppercase tracking-widest text-blue-300/80">
+                    {isTieBreak ? 'Rodada de Desempate' : session.title}
+                  </span>
                 </div>
+
+                {/* Centro: Roda pulsante suave e girando + Contador de quantas pessoas já votaram */}
+                <div className="flex-1 flex flex-col items-center justify-center text-center py-8 z-10">
+                  <div className="relative w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center mb-6">
+                    {/* Halo externo pulsante suave */}
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.18, 1],
+                        opacity: [0.2, 0.5, 0.2],
+                      }}
+                      transition={{
+                        duration: 3.2,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                      className="absolute inset-0 rounded-full bg-gradient-to-tr from-[#d4af37]/20 via-blue-400/20 to-emerald-400/20 border-2 border-[#d4af37]/40"
+                    />
+
+                    {/* Anel girando em sentido horário */}
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 8,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                      className="absolute inset-2 rounded-full border-4 border-blue-800/40 border-t-[#d4af37] border-r-emerald-400/80"
+                    />
+
+                    {/* Segundo anel tracejado girando suavemente no sentido oposto */}
+                    <motion.div
+                      animate={{ rotate: -360 }}
+                      transition={{
+                        duration: 14,
+                        repeat: Infinity,
+                        ease: 'linear',
+                      }}
+                      className="absolute inset-6 rounded-full border-2 border-dashed border-blue-400/50"
+                    />
+
+                    {/* Núcleo central com contador em destaque */}
+                    <motion.div
+                      animate={{ scale: [1, 1.04, 1] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+                      className="w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-[#07132a]/95 border-2 border-blue-600/60 shadow-[0_0_30px_rgba(16,185,129,0.2)] flex flex-col items-center justify-center px-2"
+                    >
+                      <motion.span
+                        key={totalVotersVoted}
+                        initial={{ scale: 1.35, opacity: 0.5 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', damping: 14, stiffness: 240 }}
+                        className="font-mono font-black text-3xl sm:text-4xl text-amber-300 leading-none"
+                      >
+                        {totalVotersVoted}
+                      </motion.span>
+                      <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-300 mt-1">
+                        {totalVotersVoted === 1 ? 'pessoa votou' : 'já votaram'}
+                      </span>
+                    </motion.div>
+                  </div>
+
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white uppercase tracking-wide mb-2">
+                    Aguardando o resultado...
+                  </h2>
+                  <p className="text-xs sm:text-sm text-blue-200/85 max-w-md">
+                    Votação em andamento. O resultado oficial será exibido nesta tela assim que a votação for encerrada.
+                  </p>
+                </div>
+
+                <div className="h-2" />
               </div>
             ) : (
               <div className="bg-[#001f47]/80 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-xl">

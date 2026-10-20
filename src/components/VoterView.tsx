@@ -260,13 +260,21 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
               const tiedGroup = detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id));
 
+              const isFirstSuplente1 = suplentesCount > 0 && rank === vacancies + 1;
+              const isFirstSuplente2 =
+                segundoSuplentesCount > 0 && rank === vacancies + suplentesCount + 1;
+              const isFirstNaoClassificado =
+                rank > 1 && rank === vacancies + suplentesCount + segundoSuplentesCount + 1;
+              const hasCategorySeparator =
+                isFirstSuplente1 || isFirstSuplente2 || isFirstNaoClassificado;
+
               return (
                 <motion.div
                   layout
                   transition={{ type: 'spring', damping: 25, stiffness: 180 }}
                   key={option.id}
                   style={{ gridTemplateColumns: '20ch minmax(0,1fr) auto 5ch' }}
-                  className={`py-1 px-2 rounded-lg border relative overflow-hidden grid items-center text-[10px] min-h-[26px] ${
+                  className={`${hasCategorySeparator ? 'mt-3' : ''} py-1 px-2 rounded-lg border relative overflow-hidden grid items-center text-[10px] min-h-[26px] ${
                     tiedGroup
                       ? 'bg-[#351e06] border-amber-400 ring-1 ring-amber-400/50'
                       : isElected
