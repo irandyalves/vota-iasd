@@ -121,51 +121,68 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   return (
     <div className="min-h-screen bg-[#07132a] text-white p-2 sm:p-3 lg:p-3.5 flex flex-col justify-between select-none">
-      {/* ÁREA CENTRAL: QR CODE À ESQUERDA E NOMES NA COLUNA DA DIREITA */}
+      {/* ÁREA CENTRAL: QR CODE À ESQUERDA (REVELANDO SUAVE DA ESQUERDA P/ DIREITA) E SEÇÃO DA DIREITA SENDO EMPURRADA/ESMAGADA */}
       <div className="flex-1 w-full">
-        <div className={`grid gap-4 items-start ${showQrCode ? 'grid-cols-1 md:grid-cols-12' : 'grid-cols-1'}`}>
+        <div className="flex flex-col md:flex-row items-start w-full">
           {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA */}
-          {showQrCode && (
-            <div className="md:col-span-4 lg:col-span-3 xl:col-span-3 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center sticky top-2">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2 shadow-inner">
-                <QrIcon className="w-5 h-5" />
-              </div>
+          <AnimatePresence initial={false}>
+            {showQrCode && (
+              <motion.div
+                key="telao-qr-panel"
+                initial={{ width: 0, marginRight: 0, opacity: 0 }}
+                animate={{ width: 280, marginRight: 16, opacity: 1 }}
+                exit={{ width: 0, marginRight: 0, opacity: 0 }}
+                transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                className="overflow-hidden shrink-0 sticky top-2 max-w-full"
+              >
+                <motion.div
+                  initial={{ x: -60, opacity: 0 }}
+                  animate={{ x: 0, opacity: 1 }}
+                  exit={{ x: -60, opacity: 0 }}
+                  transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+                  className="w-[280px] bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2 shadow-inner">
+                    <QrIcon className="w-5 h-5" />
+                  </div>
 
-              <h3 className="font-extrabold text-white text-sm font-serif tracking-tight mb-0.5">
-                VOTE PELO CELULAR
-              </h3>
-              <p className="text-[11px] text-blue-200/90 mb-3">
-                Aponte a câmera para o QR Code:
-              </p>
+                  <h3 className="font-extrabold text-white text-sm font-serif tracking-tight mb-0.5">
+                    VOTE PELO CELULAR
+                  </h3>
+                  <p className="text-[11px] text-blue-200/90 mb-3">
+                    Aponte a câmera para o QR Code:
+                  </p>
 
-              {/* QR Code Nítido e Limpo */}
-              <div className="p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37]">
-                <QRCodeSVG
-                  value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
-                  size={135}
-                  level="M"
-                  includeMargin={false}
-                />
-              </div>
+                  {/* QR Code Nítido e Limpo */}
+                  <div className="p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37]">
+                    <QRCodeSVG
+                      value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
+                      size={135}
+                      level="M"
+                      includeMargin={false}
+                    />
+                  </div>
 
-              {/* Caixa da Senha em Grande Destaque */}
-              <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-2 shadow-inner mb-2">
-                <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
-                  SENHA DE ACESSO
-                </span>
-                <span className="text-2xl font-mono font-black text-[#d4af37] tracking-widest">
-                  {session.pin}
-                </span>
-              </div>
+                  {/* Caixa da Senha em Grande Destaque */}
+                  <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-2 shadow-inner mb-2">
+                    <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
+                      SENHA DE ACESSO
+                    </span>
+                    <span className="text-2xl font-mono font-black text-[#d4af37] tracking-widest">
+                      {session.pin}
+                    </span>
+                  </div>
 
-              <p className="text-[10px] text-blue-300/70 font-mono">
-                vota-iasd-central.web.app
-              </p>
-            </div>
-          )}
+                  <p className="text-[10px] text-blue-300/70 font-mono">
+                    vota-iasd-central.web.app
+                  </p>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {/* COLUNA DA DIREITA: LISTA DE CANDIDATOS / CORRIDA DE BARRAS OU VOTO SECRETO */}
-          <div className={`${showQrCode ? 'md:col-span-8 lg:col-span-9 xl:col-span-9' : 'w-full'}`}>
+          <div className="flex-1 min-w-0 w-full">
             {session.telaoMode === 'names' ? (
               /* MODO: NOMES PARA ESCOLHA (PRINT 2 REDIMENSIONADO PARA O TELÃO) */
               <div className="bg-[#001f47]/90 border border-blue-700/70 rounded-2xl p-4 sm:p-5 shadow-2xl">
@@ -208,7 +225,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       {optionsToDisplay.map((option) => (
                         <motion.div
                           key={option.id}
-                          layout
+                          layout="position"
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
@@ -433,14 +450,14 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     return (
                       <motion.div
                         key={option.id}
-                        layout
+                        layout="position"
                         layoutId={`telao-card-${option.id}`}
                         transition={{
                           type: 'spring',
                           damping: 25,
                           stiffness: 180,
                         }}
-                        className={`border transition-all duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 min-h-[36px] sm:min-h-[38px] shadow-sm ${
+                        className={`border transition-colors duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 min-h-[36px] sm:min-h-[38px] shadow-sm ${
                           tiedGroup
                             ? 'bg-[#3b2105]/95 border-2 border-amber-400 text-amber-100 shadow-md ring-2 ring-amber-400/50'
                             : isElected
@@ -577,7 +594,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     <LayoutGroup>
                     <div className="space-y-2">
                       {/* 1. SEÇÃO DE TITULARES */}
-                      <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1'}`}>
+                      <div className="space-y-1">
                         <AnimatePresence>
                           {titulares.map((option, idx) => renderCandidateCard(option, idx + 1, 'titular'))}
                         </AnimatePresence>
@@ -633,7 +650,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 </span>
                                 <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
                               </div>
-                              <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2' : 'space-y-1'}`}>
+                              <div className="space-y-1">
                                 <AnimatePresence>
                                   {suplentes1.map((option, idx) =>
                                     renderCandidateCard(option, vacancies + idx + 1, 'suplente1')
@@ -655,7 +672,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             </span>
                             <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
                           </div>
-                          <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2' : 'space-y-1'}`}>
+                          <div className="space-y-1">
                             <AnimatePresence>
                               {naoClassificados.map((option, idx) =>
                                 renderCandidateCard(
