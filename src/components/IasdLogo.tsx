@@ -12,7 +12,7 @@ export const IasdLogo: React.FC<IasdLogoProps> = ({ className = 'w-10 h-10', cus
     <img
       src={imgSrc}
       alt="Logo Igreja Adventista do Sétimo Dia"
-      className={`${className} object-contain rounded-xl shadow-md bg-white p-0.5 border border-amber-400/40`}
+      className={`${className} object-contain drop-shadow-md`}
       onError={(e) => {
         // Fallback caso a imagem não carregue
         e.currentTarget.style.display = 'none';

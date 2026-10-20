@@ -103,10 +103,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
     }
   }, [session.status]);
 
-  // Título e subtítulo públicos configuráveis
-  const displayTitle = session.publicTitle || `VOTAÇÃO ESCOLHA ${session.title.toUpperCase()}`;
-  const instructionText = `ESCOLHA ${session.maxVotesPerVoter === 1 ? '1 NOME' : `ATÉ ${session.maxVotesPerVoter} NOMES`} • ${vacancies} ${vacancies === 1 ? 'VAGA TITULAR' : 'VAGAS TITULARES'}${suplentesCount > 0 ? ` (+ ${suplentesCount} SUPLENTES)` : ''}`;
-
   return (
     <div className="min-h-screen bg-[#07132a] text-white p-2.5 sm:p-3.5 lg:p-4 flex flex-col justify-between select-none">
       {/* BOTÃO DISCRETO DE TELA CHEIA NO TOPO DIREITO */}
@@ -121,45 +117,38 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
         </button>
       </div>
 
-      {/* ÁREA SUPERIOR CENTRAL: TÍTULO LIMPO DO PÚBLICO (REDUZIDO EM 35%) */}
-      <div className="text-center mb-3 pt-1">
-        <div className="flex items-center justify-center gap-2 mb-1">
-          <IasdLogo className="w-8 h-8 shadow-md" customUrl={session.logoUrl} />
-          <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-serif tracking-tight drop-shadow-sm">
-            {displayTitle}
+      {/* ÁREA SUPERIOR: CABEÇALHO EM UMA LINHA, COR BRANCA, FONTE MODERNA */}
+      <div className="mb-3.5 pt-1 px-1 flex flex-wrap items-center justify-between gap-3 text-white">
+        {/* Lado Esquerdo: Logo + Título Digitado + Badge 'Escolha X Nomes' na mesma linha */}
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Logo 15% maior e sem fundo branco */}
+          <IasdLogo className="w-10 h-10 shrink-0" customUrl={session.logoUrl} />
+
+          {/* Título: O que foi digitado (sem 'Votação Escolha'), 35% menor, fonte moderna redonda */}
+          <h1 className="text-base sm:text-lg lg:text-xl font-extrabold text-white font-sans tracking-tight">
+            {session.title.toUpperCase()}
           </h1>
+
+          {/* Em frente, na mesma linha: Fundo azul, letra branca, quantidade em amarelo */}
+          <span className="px-3.5 py-1 rounded-full bg-blue-900 border border-blue-600/80 text-white font-bold text-xs sm:text-sm tracking-wide uppercase flex items-center gap-1.5 shadow-md">
+            <span>ESCOLHA</span>
+            <span className="text-amber-400 font-black text-sm sm:text-base">
+              {session.maxVotesPerVoter}
+            </span>
+            <span>{session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}</span>
+          </span>
         </div>
 
-        {/* INFORMAÇÃO ABAIXO: ESCOLHA 1 OU X NOMES (COMPACTO) */}
-        <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
-          <span className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-[#d4af37] text-blue-950 font-black text-[11px] sm:text-xs tracking-wider uppercase shadow-sm">
-            {instructionText}
-          </span>
-
-          <span
-            className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
-              session.status === 'VOTING'
-                ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500 animate-pulse'
-                : session.status === 'TIE_BREAK'
-                ? 'bg-amber-950/90 text-amber-300 border border-amber-500 animate-pulse'
-                : session.status === 'CLOSED'
-                ? 'bg-purple-950/90 text-purple-300 border border-purple-500'
-                : 'bg-blue-950/90 text-blue-300 border border-blue-600'
-            }`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-current" />
-            {session.status === 'VOTING' && 'Votação em Andamento'}
-            {session.status === 'TIE_BREAK' && 'Rodada de Desempate'}
-            {session.status === 'CLOSED' && 'Resultado Final'}
-            {session.status === 'WAITING' && 'Aguardando Início'}
-          </span>
-
-          <span className="px-2.5 py-0.5 rounded-full bg-[#07132a] text-blue-200 border border-blue-800 text-[10px] sm:text-[11px] font-mono font-bold">
-            SENHA: <strong className="text-amber-300 text-xs tracking-widest ml-1">{session.pin}</strong>
-          </span>
-
-          <span className="px-2.5 py-0.5 rounded-full bg-[#07132a] text-emerald-400 border border-blue-800 text-[10px] sm:text-[11px] font-mono font-bold">
-            {totalVotesCast} votos
+        {/* Mais à direita: 'X já votaram' */}
+        <div className="flex items-center gap-2">
+          <span className="px-3.5 py-1 rounded-full bg-[#001f47] border border-blue-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-inner">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>
+              <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
+                {totalVotesCast}
+              </strong>{' '}
+              {totalVotesCast === 1 ? 'já votou' : 'já votaram'}
+            </span>
           </span>
         </div>
       </div>
@@ -228,10 +217,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
             ) : (
               <div className="bg-[#001f47]/80 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-xl">
                 <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-blue-900/80">
-                  <div className="flex items-center gap-1.5">
+                  <div className="flex items-center gap-2">
                     <Trophy className="w-4 h-4 text-[#d4af37]" />
-                    <h3 className="font-extrabold text-sm text-white font-serif uppercase tracking-wider">
-                      {session.status === 'CLOSED' ? 'Resultado Final Oficial' : 'NOMES PARA A ESCOLHA'}
+                    <h3 className="font-extrabold text-sm sm:text-base text-white font-sans tracking-tight">
+                      Tempo real
                     </h3>
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-semibold">
@@ -280,7 +269,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             }}
                             className={`p-2 sm:p-2.5 rounded-xl border transition-all duration-300 relative overflow-hidden flex items-center gap-2.5 ${
                               isElected
-                                ? 'bg-[#002855] border-emerald-500/70 shadow-md shadow-emerald-950/20'
+                                ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/50 text-white'
                                 : isSuplente
                                 ? 'bg-[#002244] border-cyan-500/50 shadow-sm'
                                 : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400'
