@@ -229,8 +229,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       Titulares ({vacancies})
                     </span>
                     {suplentesCount > 0 && (
-                      <span className="flex items-center gap-1 text-cyan-400">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/30 border border-cyan-400 inline-block" />
+                      <span className="flex items-center gap-1 text-red-400">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-[#3a0d14] border border-red-500 inline-block" />
                         Suplentes ({suplentesCount})
                       </span>
                     )}
@@ -238,7 +238,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 </div>
 
                 {/* LISTA ANIMADA DE CANDIDATOS */}
-                <div className={`gap-2 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1.5'}`}>
+                <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1'}`}>
                   <AnimatePresence>
                     {sortedOptions.map((option, index) => {
                       const rank = index + 1;
@@ -248,14 +248,37 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                       return (
                         <React.Fragment key={option.id}>
-                          {/* Linha de Corte dos Eleitos */}
-                          {showQrCode && rank === vacancies + 1 && (
-                            <div className="py-0.5 flex items-center gap-2 text-[10px] font-bold text-emerald-400/90 my-1">
-                              <div className="flex-1 border-t border-dashed border-emerald-500/50" />
-                              <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/60 uppercase text-[9px] tracking-wider">
-                                ▲ Limite dos Eleitos ({vacancies} Vagas) ▲
+                          {/* Linha Tracejada Separadora: Eleitos -> Suplentes (ou Não Eleitos se não houver suplentes) */}
+                          {rank === vacancies + 1 && (
+                            <div className="col-span-full py-0.5 flex items-center gap-2 text-[10px] font-bold my-1">
+                              {suplentesCount > 0 ? (
+                                <>
+                                  <div className="flex-1 border-t border-dashed border-red-600/60" />
+                                  <span className="px-2.5 py-0.5 rounded-full bg-[#2a0e12] border border-red-700/80 uppercase text-[9px] tracking-wider text-red-300 shadow">
+                                    ▲ Fim dos Titulares / Início dos Suplentes ({suplentesCount} {suplentesCount === 1 ? 'Vaga' : 'Vagas'}) ▲
+                                  </span>
+                                  <div className="flex-1 border-t border-dashed border-red-600/60" />
+                                </>
+                              ) : (
+                                <>
+                                  <div className="flex-1 border-t border-dashed border-emerald-500/50" />
+                                  <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/60 uppercase text-[9px] tracking-wider text-emerald-300">
+                                    ▲ Limite dos Eleitos ({vacancies} Vagas) ▲
+                                  </span>
+                                  <div className="flex-1 border-t border-dashed border-emerald-500/50" />
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Linha Tracejada Separadora: Suplentes -> Não Eleitos */}
+                          {suplentesCount > 0 && rank === vacancies + suplentesCount + 1 && (
+                            <div className="col-span-full py-0.5 flex items-center gap-2 text-[10px] font-semibold text-slate-500 my-1">
+                              <div className="flex-1 border-t border-dashed border-slate-700/60" />
+                              <span className="px-2.5 py-0.5 rounded-full bg-slate-900/90 border border-slate-700/60 uppercase text-[9px] tracking-wider text-slate-400">
+                                Demais Candidatos ({sortedOptions.length - (vacancies + suplentesCount)})
                               </span>
-                              <div className="flex-1 border-t border-dashed border-emerald-500/50" />
+                              <div className="flex-1 border-t border-dashed border-slate-700/60" />
                             </div>
                           )}
 
@@ -267,12 +290,12 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               damping: 25,
                               stiffness: 180,
                             }}
-                            className={`p-2 sm:p-2.5 rounded-xl border transition-all duration-300 relative overflow-hidden flex items-center gap-2.5 ${
+                            className={`border transition-all duration-300 relative overflow-hidden flex items-center ${
                               isElected
-                                ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/50 text-white'
+                                ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/50 text-white py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl gap-2.5'
                                 : isSuplente
-                                ? 'bg-[#002244] border-cyan-500/50 shadow-sm'
-                                : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400'
+                                ? 'bg-[#2b0c10]/95 border-red-700/70 shadow-sm text-red-100 py-1 px-2 sm:py-1 sm:px-2.5 rounded-lg gap-2'
+                                : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400 py-0.5 px-2 sm:py-0.5 sm:px-2 rounded-md gap-1.5'
                             }`}
                           >
                             {/* Barra de Progresso Animada no Fundo */}
@@ -284,25 +307,25 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 isElected
                                   ? 'bg-gradient-to-r from-emerald-500 to-green-400'
                                   : isSuplente
-                                  ? 'bg-gradient-to-r from-cyan-500 to-blue-400'
-                                  : 'bg-slate-600'
+                                  ? 'bg-gradient-to-r from-red-700 to-red-500'
+                                  : 'bg-slate-700'
                               }`}
                             />
 
                             {/* Posição / Rank (1º, 2º, 3º...) */}
                             <div
-                              className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs sm:text-sm shrink-0 shadow-sm ${
-                                rank === 1
-                                  ? 'bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
-                                  : rank === 2
-                                  ? 'bg-slate-300 text-slate-900'
-                                  : rank === 3
-                                  ? 'bg-amber-700 text-white'
-                                  : isElected
-                                  ? 'bg-emerald-900 text-emerald-200 border border-emerald-600/50'
+                              className={`flex items-center justify-center font-black shrink-0 shadow-sm ${
+                                isElected
+                                  ? rank === 1
+                                    ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
+                                    : rank === 2
+                                    ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-slate-300 text-slate-900'
+                                    : rank === 3
+                                    ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-amber-700 text-white'
+                                    : 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-emerald-900 text-emerald-200 border border-emerald-600/50'
                                   : isSuplente
-                                  ? 'bg-cyan-950 text-cyan-200 border border-cyan-600/50'
-                                  : 'bg-slate-800 text-slate-400'
+                                  ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[11px] sm:text-xs bg-[#451119] text-red-200 border border-red-600/60'
+                                  : 'w-5 h-5 sm:w-5.5 sm:h-5.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700/50'
                               }`}
                             >
                               {rank}º
@@ -314,17 +337,21 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 <img
                                   src={option.photoUrl}
                                   alt={option.name}
-                                  className="w-9 h-9 rounded-lg object-cover border border-blue-500/50 shadow"
+                                  className={`${isElected ? 'w-8 h-8' : isSuplente ? 'w-6.5 h-6.5' : 'w-5 h-5'} rounded-lg object-cover border border-blue-500/50 shadow`}
                                 />
                               </div>
                             )}
 
-                            {/* Nome do Candidato em Destaque (Sem subtítulo de sonoplastia/membro) */}
+                            {/* Nome do Candidato em Destaque */}
                             <div className="flex-1 min-w-0 z-10">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-1.5">
                                 <h4
-                                  className={`font-black text-xs sm:text-sm lg:text-base leading-tight truncate uppercase tracking-wide ${
-                                    isElected ? 'text-white' : 'text-slate-100'
+                                  className={`leading-tight truncate uppercase tracking-wide ${
+                                    isElected
+                                      ? 'font-black text-xs sm:text-sm text-white'
+                                      : isSuplente
+                                      ? 'font-bold text-[11px] sm:text-xs text-red-100'
+                                      : 'font-semibold text-[10px] sm:text-[11px] text-slate-300'
                                   }`}
                                 >
                                   {option.name}
@@ -336,7 +363,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   </span>
                                 )}
                                 {isSuplente && (
-                                  <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-cyan-950 text-cyan-300 border border-cyan-600/50">
+                                  <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#421016] text-red-200 border border-red-600/60">
                                     Suplente
                                   </span>
                                 )}
@@ -345,11 +372,19 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                             {/* Contador Numérico de Votos */}
                             <div className="text-right z-10 shrink-0">
-                              <div className="text-lg font-mono font-black text-white leading-none">
+                              <div
+                                className={`font-mono font-black leading-none ${
+                                  isElected
+                                    ? 'text-base sm:text-lg text-white'
+                                    : isSuplente
+                                    ? 'text-sm sm:text-base text-red-100'
+                                    : 'text-xs sm:text-sm text-slate-300'
+                                }`}
+                              >
                                 {option.votesCount || 0}
                                 <span className="text-[9px] text-blue-300 font-normal ml-0.5">v</span>
                               </div>
-                              <span className="text-[10px] font-mono text-blue-300/80">
+                              <span className="text-[9px] font-mono text-blue-300/80">
                                 {totalVotesCast > 0
                                   ? `${Math.round(((option.votesCount || 0) / totalVotesCast) * 100)}%`
                                   : '0%'}
