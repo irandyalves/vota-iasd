@@ -552,39 +552,42 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         </motion.div>
       )}
 
-      {/* TÍTULO LIMPO CONFORME SOLICITADO PELO USUÁRIO (SEM O BOX ANTERIOR) */}
-      <div className="mb-5 text-center pt-1">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-white font-serif tracking-tight flex flex-wrap items-center justify-center gap-2">
-          <span>VOTA IASD</span>
-          <span className="text-slate-500 font-light">|</span>
-          <span>
-            Escolha <span className="text-amber-400 font-black text-2xl sm:text-3xl underline decoration-amber-500 underline-offset-4">{maxVotes}</span> {maxVotes === 1 ? 'nome' : 'nomes'}
-          </span>
-        </h1>
+      {/* CABEÇALHO: ARIAL NARROW, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ */}
+      <div
+        className={`${isTieBreak ? 'rounded-xl' : '-mx-4 -mt-5'} mb-4 px-4 py-3 border-b-[3px] border-[#e6d3a8] shadow-lg`}
+        style={{
+          fontFamily: '"Arial Narrow", "Roboto Condensed", "Helvetica Neue Condensed", Arial, sans-serif',
+          backgroundColor: '#0b4a4a',
+          backgroundImage:
+            'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 5px), linear-gradient(180deg, #0f5c5a 0%, #083b3c 100%)',
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h1 className="text-white uppercase tracking-wide text-xl sm:text-2xl leading-none flex items-baseline gap-2">
+            <span>Escolha</span>
+            <span className="font-black text-amber-300" style={{ fontSize: '1.15em' }}>
+              {maxVotes}
+            </span>
+            <span>{maxVotes === 1 ? 'nome' : 'nomes'}</span>
+          </h1>
 
-        {/* Indicador de Status dos Votos */}
-        <div className="flex items-center justify-center gap-2 mt-2">
-          <span
-            className={`text-xs px-3.5 py-1 rounded-full font-bold transition-all ${
-              isReadyToConfirm
-                ? 'bg-emerald-950 text-emerald-300 border-2 border-emerald-500 shadow-md animate-pulse'
-                : 'bg-blue-950 text-blue-200 border border-blue-800'
+          {/* Contador de selecionados: o número da esquerda aumenta a cada clique */}
+          <div
+            className={`text-sm font-bold tabular-nums flex items-baseline shrink-0 ${
+              isReadyToConfirm ? 'text-emerald-300' : 'text-[#e6d3a8]'
             }`}
           >
-            {isReadyToConfirm ? (
-              <span className="flex items-center gap-1.5 font-extrabold text-emerald-300">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                Meta atingida ({selectedIds.length} de {maxVotes}) • Clique em CONFIRMA abaixo
-              </span>
-            ) : (
-              <span>
-                Selecionados: <strong className="text-amber-300 font-bold">{selectedIds.length}</strong> de <strong className="text-white">{maxVotes}</strong>
-                <span className="text-slate-300 ml-1.5">
-                  (Marque mais {maxVotes - selectedIds.length} {maxVotes - selectedIds.length === 1 ? 'nome' : 'nomes'} para liberar o CONFIRMA)
-                </span>
-              </span>
-            )}
-          </span>
+            <motion.span
+              key={selectedIds.length}
+              initial={{ scale: 1.6, opacity: 0.4 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', damping: 12, stiffness: 300 }}
+              className="inline-block font-black text-base"
+            >
+              {selectedIds.length}
+            </motion.span>
+            <span className="opacity-80">/{maxVotes}</span>
+          </div>
         </div>
       </div>
 
