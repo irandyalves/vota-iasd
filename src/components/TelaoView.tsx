@@ -281,8 +281,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       </span>
                     )}
                     {segundoSuplentesCount > 0 && (
-                      <span className="flex items-center gap-1 text-sky-400">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-[#0a2e4c] border border-sky-400 inline-block" />
+                      <span className="flex items-center gap-1 text-slate-300">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-slate-700/80 border border-slate-500 inline-block" />
                         2º Suplentes ({segundoSuplentesCount})
                       </span>
                     )}
@@ -358,7 +358,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             : isSuplente1
                             ? 'bg-[#092350]/95 border-blue-500/80 text-blue-100 ring-1 ring-blue-500/30'
                             : isSuplente2
-                            ? 'bg-[#0a2e4c]/95 border-sky-500/80 text-sky-100 ring-1 ring-sky-500/30'
+                            ? 'bg-slate-800/85 border-slate-600/80 text-slate-200 ring-1 ring-slate-500/30'
                             : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400 py-0.5 px-2 rounded-md'
                         }`}
                       >
@@ -375,7 +375,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               : isSuplente1
                               ? 'bg-gradient-to-r from-blue-600 to-blue-400'
                               : isSuplente2
-                              ? 'bg-gradient-to-r from-sky-600 to-sky-400'
+                              ? 'bg-gradient-to-r from-slate-600 to-slate-500'
                               : 'bg-slate-700'
                           }`}
                         />
@@ -396,7 +396,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               : isSuplente1
                               ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-blue-900 text-blue-200 border border-blue-500/60'
                               : isSuplente2
-                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-sky-900 text-sky-200 border border-sky-500/60'
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-slate-700 text-slate-200 border border-slate-500/60'
                               : 'w-5 h-5 sm:w-5.5 sm:h-5.5 rounded text-[9.5px] bg-slate-800 text-slate-400 border border-slate-700/50'
                           }`}
                         >
@@ -426,7 +426,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   : isSuplente1
                                   ? 'font-bold text-[11px] sm:text-xs text-blue-100'
                                   : isSuplente2
-                                  ? 'font-bold text-[11px] sm:text-xs text-sky-100'
+                                  ? 'font-bold text-[11px] sm:text-xs text-slate-200'
                                   : 'font-semibold text-[10px] sm:text-[11px] text-slate-300'
                               }`}
                             >
@@ -458,7 +458,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   </span>
                                 )}
                                 {isSuplente2 && (
-                                  <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold bg-sky-950 text-sky-200 border border-sky-500/60">
+                                  <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold bg-slate-900/90 text-slate-300 border border-slate-600/60">
                                     {isClosed ? '2º Suplente Eleito' : '2º Suplente'}
                                   </span>
                                 )}
@@ -515,14 +515,14 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 </div>
                               </div>
 
-                              {/* COLUNA 2: 2º SUPLENTE (MESMO TAMANHO DO 1º) */}
+                              {/* COLUNA 2: 2º SUPLENTE (CINZA ESMAECIDO, MESMO TAMANHO DO 1º) */}
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2 py-0.5">
-                                  <div className="flex-1 border-t-2 border-dashed border-sky-500/70" />
-                                  <span className="text-sky-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                  <div className="flex-1 border-t-2 border-dashed border-slate-600/70" />
+                                  <span className="text-slate-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
                                     2º SUPLENTES ({segundoSuplentesCount})
                                   </span>
-                                  <div className="flex-1 border-t-2 border-dashed border-sky-500/70" />
+                                  <div className="flex-1 border-t-2 border-dashed border-slate-600/70" />
                                 </div>
                                 <div className="space-y-1">
                                   <AnimatePresence>

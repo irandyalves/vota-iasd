@@ -8,7 +8,6 @@ import {
   Flame,
   Trophy,
   AlertTriangle,
-  CheckCircle,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { submitBallot, hasVoted } from '../services/votingService';
@@ -42,16 +41,25 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     ? (session.tieBreak?.maxVotesPerVoter || 1)
     : session.maxVotesPerVoter;
 
-  // Total de votos registrados na rodada atual
-  const totalVotesRecorded = options.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
 
-  // Verifica se o dispositivo já votou nesta iteração específica:
-  // Se estiver em WAITING ou CLOSED, ou apuração zerada, não trava como "já votou"
+  // Verifica se o dispositivo já votou nesta iteração específica (trava rígida: nunca permite votar 2x)
+  // Cada início/reinício/desempate gera nova iteração, liberando o aparelho somente para a nova rodada
   const alreadyVoted =
     session.status !== 'WAITING' &&
     session.status !== 'CLOSED' &&
-    totalVotesRecorded > 0 &&
     hasVoted(session.id, currentRound, session.votingIteration || 1);
+
+  // Após votar, mostra "SEU VOTO FOI COMPUTADO" por 5s e depois os resultados em tempo real
+  const [showLiveResults, setShowLiveResults] = useState(false);
+  const hasVotedNow = alreadyVoted || submitSuccess;
+  useEffect(() => {
+    if (!hasVotedNow) {
+      setShowLiveResults(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowLiveResults(true), 5000);
+    return () => clearTimeout(timer);
+  }, [hasVotedNow]);
 
   // Auto-login se já autenticado antes nesta sessão ou se o QR Code já trouxe o PIN na URL
   useEffect(() => {
@@ -76,15 +84,6 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     setErrorMessage('');
     setSubmitSuccess(false);
   }, [session.status, currentRound, session.votingIteration]);
-
-  // Se a apuração for zerada pelo líder, destrava o aparelho imediatamente e limpa seleções
-  useEffect(() => {
-    if (totalVotesRecorded === 0) {
-      setSubmitSuccess(false);
-      setSelectedIds([]);
-      setErrorMessage('');
-    }
-  }, [totalVotesRecorded]);
 
   const handleVerifyPin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,6 +113,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   };
 
   const handleConfirmVote = async () => {
+    // Bloqueia duplo toque / reenvio
+    if (isSubmitting || submitSuccess || alreadyVoted) return;
     // Só permite confirmar se atingiu exatamente a quantidade definida
     if (selectedIds.length !== maxVotes) {
       setErrorMessage(`É obrigatório selecionar exatamente ${maxVotes} ${maxVotes === 1 ? 'nome' : 'nomes'} para confirmar.`);
@@ -142,6 +143,209 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     }
 
     setIsSubmitting(false);
+  };
+
+  // RENDERIZAÇÃO DA TELA DE RESULTADOS (oficial ao encerrar OU parcial em tempo real após votar)
+  const renderResults = (live: boolean) => {
+    const liveTie = live && isTieBreak;
+    const resultOptions = liveTie ? (session.tieBreak?.options || []) : session.options;
+    const { s1Count, s2Count } = getEffectiveSuplentes(session);
+    const vacancies = liveTie ? (session.tieBreak?.vacancies || 1) : (session.vacancies || 1);
+    const suplentesCount = liveTie ? 0 : s1Count;
+    const segundoSuplentesCount = liveTie ? 0 : s2Count;
+    const detectedTies = live ? [] : detectVotingTies(session);
+    const hasTies = detectedTies.length > 0;
+
+    const sortedOptions = [...resultOptions].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
+    const maxVotesRecorded = Math.max(...resultOptions.map((o) => o.votesCount || 0), 1);
+    const totalVotesCast = resultOptions.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+
+    return (
+      <div className="max-w-xl mx-auto px-3 py-3 pb-12 min-h-[90vh]">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#001f47] border border-blue-800 rounded-2xl p-3 sm:p-4 shadow-2xl space-y-2.5"
+        >
+          {/* Cabeçalho de Resultados (compacto) */}
+          <div className="text-center pb-2 border-b border-blue-900/80">
+            <span
+              className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-1 shadow-sm ${
+                live
+                  ? 'bg-blue-950 text-sky-300 border-sky-500/60'
+                  : 'bg-emerald-950 text-emerald-300 border-emerald-500/60'
+              }`}
+            >
+              {live ? (
+                <>
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                  {liveTie ? 'Desempate • Parcial em Tempo Real' : 'Parcial em Tempo Real'}
+                </>
+              ) : (
+                <>
+                  <Trophy className="w-3 h-3 text-amber-400" />
+                  Resultado Oficial da Votação
+                </>
+              )}
+            </span>
+            <h2 className="text-sm font-black text-white uppercase tracking-tight leading-tight">
+              {session.title}
+            </h2>
+            <p className="text-[10px] text-blue-200 mt-0.5">
+              Total de votos: <strong className="text-amber-300 font-mono font-bold">{totalVotesCast}</strong>
+              {live && (
+                <span className="ml-2 text-emerald-400 font-bold inline-flex items-center gap-0.5">
+                  <CheckCircle2 className="w-3 h-3" /> Seu voto foi computado
+                </span>
+              )}
+            </p>
+          </div>
+
+          {/* Banner de Empate (somente no resultado oficial) */}
+          {hasTies && (
+            <div className="p-2 rounded-xl bg-amber-950/90 border-2 border-amber-400 text-amber-200 shadow-xl space-y-1">
+              <div className="flex items-center gap-1.5">
+                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <h4 className="font-extrabold text-[10px] uppercase tracking-wide text-white">
+                  Empate Detectado na Apuração!
+                </h4>
+              </div>
+              <div className="text-[9px] text-amber-200/90 space-y-0.5 font-mono">
+                {detectedTies.map((t, idx) => (
+                  <div key={idx}>
+                    • <strong>{t.label}</strong> ({t.votesCount} {t.votesCount === 1 ? 'voto' : 'votos'}): {t.tiedCandidates.map((c) => c.name).join(', ')}
+                  </div>
+                ))}
+              </div>
+              <p className="text-[9px] text-amber-300 font-bold italic">
+                Aguarde o líder iniciar a rodada de desempate neste aparelho.
+              </p>
+            </div>
+          )}
+
+          {/* Lista de Candidatos (cards 30% menores em altura e fonte) */}
+          <div className="space-y-1">
+            {sortedOptions.map((option, index) => {
+              const rank = index + 1;
+              const isElected = rank <= vacancies;
+              const isSuplente = !isElected && rank <= vacancies + suplentesCount;
+              const isSegundoSuplente =
+                !isElected && !isSuplente && rank <= vacancies + suplentesCount + segundoSuplentesCount;
+              const barPercentage = Math.round(((option.votesCount || 0) / maxVotesRecorded) * 100);
+              const sharePercentage =
+                totalVotesCast > 0 ? Math.round(((option.votesCount || 0) / totalVotesCast) * 100) : 0;
+
+              const tiedGroup = detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id));
+
+              return (
+                <motion.div
+                  layout
+                  transition={{ type: 'spring', damping: 25, stiffness: 180 }}
+                  key={option.id}
+                  className={`py-1 px-2 rounded-lg border relative overflow-hidden flex items-center gap-1.5 min-h-[26px] ${
+                    tiedGroup
+                      ? 'bg-[#351e06] border-amber-400 ring-1 ring-amber-400/50'
+                      : isElected
+                      ? 'bg-[#052e1c] border-emerald-500/80 text-white'
+                      : isSuplente
+                      ? 'bg-[#092350]/95 border-blue-500/80 text-blue-100'
+                      : isSegundoSuplente
+                      ? 'bg-slate-800/85 border-slate-600/80 text-slate-200'
+                      : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400'
+                  }`}
+                >
+                  {/* Barra de Progresso no Fundo */}
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.max(barPercentage, 2)}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                    className={`absolute top-0 bottom-0 left-0 opacity-20 pointer-events-none ${
+                      tiedGroup
+                        ? 'bg-amber-400'
+                        : isElected
+                        ? 'bg-emerald-400'
+                        : isSuplente
+                        ? 'bg-blue-500'
+                        : isSegundoSuplente
+                        ? 'bg-slate-500'
+                        : 'bg-slate-600'
+                    }`}
+                  />
+
+                  {/* Posição */}
+                  <div
+                    className={`w-[18px] h-[18px] rounded text-[9px] font-black flex items-center justify-center shrink-0 z-10 ${
+                      tiedGroup
+                        ? 'bg-amber-400 text-blue-950'
+                        : isElected
+                        ? 'bg-emerald-500 text-blue-950'
+                        : isSuplente
+                        ? 'bg-blue-900 text-blue-200 border border-blue-500/60'
+                        : isSegundoSuplente
+                        ? 'bg-slate-700 text-slate-200 border border-slate-500/60'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {rank}º
+                  </div>
+
+                  {/* Nome e Badge */}
+                  <div className="flex-1 min-w-0 z-10 flex items-center gap-1">
+                    <h4
+                      className={`font-bold text-[10px] truncate uppercase leading-tight ${
+                        tiedGroup
+                          ? 'text-amber-200 font-black'
+                          : isElected
+                          ? 'text-white'
+                          : isSuplente
+                          ? 'text-blue-100'
+                          : isSegundoSuplente
+                          ? 'text-slate-200'
+                          : 'text-slate-300'
+                      }`}
+                    >
+                      {option.name}
+                    </h4>
+
+                    {tiedGroup ? (
+                      <span className="text-[7px] px-1 rounded-full font-black bg-amber-400 text-blue-950 uppercase shrink-0">
+                        Empate
+                      </span>
+                    ) : isElected ? (
+                      <span className="text-[7px] px-1 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50 shrink-0">
+                        {live ? 'Titular' : 'Eleito'}
+                      </span>
+                    ) : isSuplente ? (
+                      <span className="text-[7px] px-1 rounded-full font-bold bg-blue-950 text-blue-200 border border-blue-500/50 shrink-0">
+                        {segundoSuplentesCount > 0 ? '1º Supl.' : 'Supl.'}
+                      </span>
+                    ) : isSegundoSuplente ? (
+                      <span className="text-[7px] px-1 rounded-full font-bold bg-slate-900 text-slate-300 border border-slate-600/50 shrink-0">
+                        2º Supl.
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {/* Votos e Percentual */}
+                  <div className="text-right z-10 shrink-0 font-mono flex items-center gap-1">
+                    <span className="text-[8px] text-slate-300/80 uppercase font-bold">votos</span>
+                    <span className="font-extrabold text-[10px] text-white">{option.votesCount || 0}</span>
+                    <span className="text-[9px] font-black text-amber-300">{sharePercentage}%</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+
+          <div className="pt-1.5 text-center text-[9px] text-blue-300/70 border-t border-blue-900/60 flex items-center justify-center gap-1">
+            <Lock className="w-2.5 h-2.5" />
+            {live
+              ? 'Aparelho travado • Parcial atualizada em tempo real'
+              : 'Apuração Oficial Sincronizada em Tempo Real'}
+          </div>
+        </motion.div>
+      </div>
+    );
   };
 
   // 1. TELA DE AUTENTICAÇÃO POR PIN
@@ -206,187 +410,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
   // 2. VOTAÇÃO ENCERRADA -> MOSTRA OS RESULTADOS COMPLETOS NO MOBILE!
   if (session.status === 'CLOSED') {
-    const { s1Count, s2Count } = getEffectiveSuplentes(session);
-    const vacancies = session.vacancies || 1;
-    const suplentesCount = s1Count;
-    const segundoSuplentesCount = s2Count;
-    const detectedTies = detectVotingTies(session);
-    const hasTies = detectedTies.length > 0;
-
-    const sortedOptions = [...session.options].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
-    const maxVotesRecorded = Math.max(...session.options.map((o) => o.votesCount || 0), 1);
-    const totalVotesCast = session.options.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
-
-    return (
-      <div className="max-w-xl mx-auto px-3.5 py-4 pb-16 min-h-[90vh]">
-        <motion.div
-          initial={{ opacity: 0, y: 15 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-[#001f47] border border-blue-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4"
-        >
-          {/* Cabeçalho de Resultados */}
-          <div className="text-center pb-3 border-b border-blue-900/80">
-            <div className="flex justify-center mb-2">
-              <IasdLogo className="w-14 h-14" customUrl={session.logoUrl} />
-            </div>
-            <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/60 mb-2 shadow-sm">
-              <Trophy className="w-3.5 h-3.5 text-amber-400" />
-              Resultado Oficial da Votação
-            </span>
-            <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
-              {session.title}
-            </h2>
-            <p className="text-xs text-blue-200 mt-1">
-              Total de Votos Registrados: <strong className="text-amber-300 font-mono font-bold">{totalVotesCast}</strong>
-            </p>
-          </div>
-
-          {/* Banner de Empate (se houver empate na fronteira) */}
-          {hasTies && (
-            <div className="p-3 rounded-2xl bg-amber-950/90 border-2 border-amber-400 text-amber-200 shadow-xl space-y-1.5 animate-pulse">
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
-                <h4 className="font-extrabold text-xs uppercase tracking-wide text-white">
-                  Empate Detectado na Apuração!
-                </h4>
-              </div>
-              <p className="text-[11px] leading-snug text-amber-100">
-                Há empate em: <strong>{detectedTies.map((t) => t.label).join(' • ')}</strong>.
-              </p>
-              <div className="text-[10px] text-amber-200/90 space-y-1 pt-1 border-t border-amber-700/60 font-mono">
-                {detectedTies.map((t, idx) => (
-                  <div key={idx}>
-                    • <strong>{t.label}</strong> ({t.votesCount} {t.votesCount === 1 ? 'voto' : 'votos'}): {t.tiedCandidates.map((c) => c.name).join(', ')}
-                  </div>
-                ))}
-              </div>
-              <p className="text-[10px] text-amber-300 font-bold italic pt-0.5">
-                Aguarde o líder iniciar a rodada de desempate neste aparelho.
-              </p>
-            </div>
-          )}
-
-          {/* Lista de Candidatos e Contagem de Votos */}
-          <div className="space-y-1.5">
-            {sortedOptions.map((option, index) => {
-              const rank = index + 1;
-              const isElected = rank <= vacancies;
-              const isSuplente = !isElected && rank <= vacancies + suplentesCount;
-              const isSegundoSuplente =
-                !isElected && !isSuplente && rank <= vacancies + suplentesCount + segundoSuplentesCount;
-              const percentage = Math.round(((option.votesCount || 0) / maxVotesRecorded) * 100);
-
-              const tiedGroup = detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id));
-
-              return (
-                <div
-                  key={option.id}
-                  className={`p-2.5 rounded-xl border relative overflow-hidden flex items-center gap-2.5 transition-all ${
-                    tiedGroup
-                      ? 'bg-[#351e06] border-amber-400 shadow-md ring-1 ring-amber-400/50'
-                      : isElected
-                      ? 'bg-[#052e1c] border-emerald-500/80 text-white shadow-sm'
-                      : isSuplente
-                      ? 'bg-[#2b0c10] border-red-700/70 text-red-100'
-                      : isSegundoSuplente
-                      ? 'bg-[#2b180a] border-amber-700/70 text-amber-100'
-                      : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400'
-                  }`}
-                >
-                  {/* Barra de Progresso Animada no Fundo */}
-                  <div
-                    style={{ width: `${Math.max(percentage, 2)}%` }}
-                    className={`absolute top-0 bottom-0 left-0 opacity-20 pointer-events-none ${
-                      tiedGroup
-                        ? 'bg-amber-400'
-                        : isElected
-                        ? 'bg-emerald-400'
-                        : isSuplente
-                        ? 'bg-red-500'
-                        : isSegundoSuplente
-                        ? 'bg-amber-500'
-                        : 'bg-slate-600'
-                    }`}
-                  />
-
-                  {/* Posição */}
-                  <div
-                    className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shrink-0 z-10 ${
-                      tiedGroup
-                        ? 'bg-amber-400 text-blue-950 ring-1 ring-amber-300'
-                        : isElected
-                        ? 'bg-emerald-500 text-blue-950 font-bold'
-                        : isSuplente
-                        ? 'bg-red-900 text-red-200 border border-red-700'
-                        : isSegundoSuplente
-                        ? 'bg-amber-900 text-amber-200 border border-amber-700'
-                        : 'bg-slate-800 text-slate-400'
-                    }`}
-                  >
-                    {rank}º
-                  </div>
-
-                  {/* Nome do Candidato e Badge */}
-                  <div className="flex-1 min-w-0 z-10">
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <h4
-                        className={`font-bold text-xs truncate uppercase leading-snug ${
-                          tiedGroup
-                            ? 'text-amber-200 font-black'
-                            : isElected
-                            ? 'text-white'
-                            : isSuplente
-                            ? 'text-red-100'
-                            : isSegundoSuplente
-                            ? 'text-amber-100'
-                            : 'text-slate-300'
-                        }`}
-                      >
-                        {option.name}
-                      </h4>
-
-                      {tiedGroup ? (
-                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-black bg-amber-400 text-blue-950 uppercase animate-pulse">
-                          Empate ({tiedGroup.label})
-                        </span>
-                      ) : isElected ? (
-                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50 flex items-center gap-0.5">
-                          <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
-                          Eleito Titular
-                        </span>
-                      ) : isSuplente ? (
-                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-red-950 text-red-300 border border-red-700/50">
-                          {segundoSuplentesCount > 0 ? '1º Suplente' : 'Suplente'}
-                        </span>
-                      ) : isSegundoSuplente ? (
-                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-700/50">
-                          2º Suplente
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {/* Quantidade de Votos */}
-                  <div className="text-right z-10 shrink-0 font-mono">
-                    <span className="font-extrabold text-xs text-white">
-                      {option.votesCount || 0}
-                    </span>
-                    <span className="text-[9.5px] text-blue-200 ml-0.5">
-                      {option.votesCount === 1 ? 'voto' : 'votos'}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="pt-2 text-center text-[10px] text-blue-300/70 border-t border-blue-900/60 flex items-center justify-center gap-1.5">
-            <Lock className="w-3 h-3" />
-            Apuração Oficial Sincronizada em Tempo Real
-          </div>
-        </motion.div>
-      </div>
-    );
+    return renderResults(false);
   }
 
   // 3. SALA DE ESPERA (Aguardando Admin Iniciar)
@@ -444,8 +468,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     );
   }
 
-  // 4. TELA DE SUCESSO / VOTO JÁ COMPUTADO NESTA RODADA
+  // 4. VOTO JÁ COMPUTADO NESTA RODADA -> CÍRCULO GIRANDO + MENSAGEM, E APÓS 5s ENTRA NOS RESULTADOS
   if (alreadyVoted || submitSuccess) {
+    if (showLiveResults) {
+      return renderResults(true);
+    }
+
     return (
       <div className="min-h-[90vh] flex items-center justify-center p-4">
         <motion.div
@@ -456,35 +484,45 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         >
           <div className="absolute -top-20 -right-20 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="w-24 h-24 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
-            <CheckCircle2 className="w-14 h-14 text-emerald-400" />
+          {/* Círculo com efeito de giro */}
+          <div className="relative w-28 h-28 mx-auto mb-6 flex items-center justify-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
+              className="absolute inset-0 rounded-full border-4 border-emerald-400/20 border-t-emerald-400 border-r-emerald-300"
+            />
+            <motion.div
+              animate={{ rotate: -360 }}
+              transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
+              className="absolute inset-3 rounded-full border-2 border-dashed border-[#d4af37]/60"
+            />
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: 'spring', damping: 12, stiffness: 160, delay: 0.2 }}
+              className="w-16 h-16 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center shadow-xl"
+            >
+              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
+            </motion.div>
           </div>
 
           <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-serif uppercase tracking-wide">
-            SEU VOTO FOI COMPUTADO!
+            SEU VOTO FOI COMPUTADO
           </h2>
 
-          <p className="text-sm text-blue-200 mb-6 leading-relaxed">
-            Seu voto foi registrado com sigilo e segurança. Seu aparelho foi travado para garantir a legitimidade da apuração.
+          <p className="text-xs text-blue-300/80 mt-4 italic">
+            Abrindo os resultados em tempo real...
           </p>
 
-          <div className="bg-[#07132a]/80 rounded-2xl p-4 border border-blue-900/80 text-left space-y-2">
-            <div className="flex items-center justify-between text-xs text-blue-300">
-              <span>Pauta:</span>
-              <span className="font-semibold text-white truncate max-w-[200px]">{session.title}</span>
-            </div>
-            <div className="flex items-center justify-between text-xs text-blue-300">
-              <span>Status:</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Voto Registrado
-              </span>
-            </div>
+          {/* Barra de progresso de 5 segundos */}
+          <div className="mt-3 h-1.5 w-full bg-blue-950 rounded-full overflow-hidden">
+            <motion.div
+              initial={{ width: '0%' }}
+              animate={{ width: '100%' }}
+              transition={{ duration: 5, ease: 'linear' }}
+              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300"
+            />
           </div>
-
-          <p className="text-xs text-blue-300/80 mt-6 italic">
-            Aguarde o encerramento da votação pelo líder para conferir os resultados oficiais nesta tela.
-          </p>
         </motion.div>
       </div>
     );
@@ -626,15 +664,6 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       {/* BARRA FLUTUANTE INFERIOR COM O BOTÃO CONFIRMA (RÉPLICA DA TECLA VERDE DA URNA DO TSE) */}
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-[#00132b]/95 backdrop-blur-lg border-t border-blue-900/80 z-40">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          <button
-            type="button"
-            onClick={() => setSelectedIds([])}
-            disabled={selectedIds.length === 0 || isSubmitting}
-            className="px-4 py-3.5 rounded-xl border border-rose-800/60 text-rose-300 hover:bg-rose-950/40 text-xs font-bold transition disabled:opacity-30 disabled:pointer-events-none active:scale-95 cursor-pointer uppercase"
-          >
-            CORRIGE
-          </button>
-
           {/* BOTÃO CONFIRMA - RÉPLICA OFICIAL DA URNA TSE (COM BRAILLE) */}
           <button
             type="button"

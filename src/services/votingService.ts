@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, runTransaction } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import type { VotingSession, VoterBallot } from '../types';
 
@@ -213,11 +213,12 @@ export async function submitBallot(
     return { success: false, message: `O limite máximo é de ${maxAllowed} votos!` };
   }
 
-  // Grava voto
+  // Grava voto na nuvem Firestore (tempo real para todos os dispositivos e Telão)
   if (isFirebaseConfigured && db) {
     try {
-      // 1. Grava a cédula na subcoleção para auditoria e trava
-      const ballotRef = doc(db, 'sessions', session.id, 'ballots', `${voterId}_${round}`);
+      const sessionRef = doc(db, 'sessions', session.id);
+      const ballotDocId = `${voterId}_${round}_i${iteration}`;
+      const ballotRef = doc(db, 'sessions', session.id, 'ballots', ballotDocId);
       const ballot: VoterBallot = {
         voterId,
         sessionId: session.id,
@@ -225,44 +226,97 @@ export async function submitBallot(
         timestamp: Date.now(),
         round,
       };
-      await setDoc(ballotRef, ballot);
 
-      // 2. Incrementa a contagem dos candidatos selecionados
-      const sessionRef = doc(db, 'sessions', session.id);
-      
-      if (round === 'MAIN') {
-        const updatedOptions = session.options.map((opt) => {
-          if (selectedOptionIds.includes(opt.id)) {
-            return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+      await runTransaction(db, async (transaction) => {
+        const sessionSnap = await transaction.get(sessionRef);
+        const existingBallot = await transaction.get(ballotRef);
+
+        // Trava no servidor: este aparelho já votou nesta rodada/iteração
+        if (existingBallot.exists()) {
+          throw new Error('ALREADY_VOTED');
+        }
+
+        let liveOptions = session.options;
+        let liveTieBreak = session.tieBreak;
+
+        if (sessionSnap.exists()) {
+          const liveData = sessionSnap.data() as VotingSession;
+          if (Array.isArray(liveData.options) && liveData.options.length > 0) {
+            liveOptions = liveData.options;
           }
-          return opt;
-        });
-        await updateDoc(sessionRef, {
-          options: updatedOptions,
-          updatedAt: Date.now(),
-        });
-      } else if (session.tieBreak) {
-        const updatedTieOptions = session.tieBreak.options.map((opt) => {
-          if (selectedOptionIds.includes(opt.id)) {
-            return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+          if (liveData.tieBreak) {
+            liveTieBreak = liveData.tieBreak;
           }
-          return opt;
-        });
-        await updateDoc(sessionRef, {
-          'tieBreak.options': updatedTieOptions,
-          updatedAt: Date.now(),
-        });
-      }
+        }
+
+        // 1. Grava a cédula de auditoria
+        transaction.set(ballotRef, ballot);
+
+        // 2. Incrementa a contagem de votos atomicamente no documento da sessão
+        if (round === 'MAIN') {
+          const updatedOptions = liveOptions.map((opt) => {
+            if (selectedOptionIds.includes(opt.id)) {
+              return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+            }
+            return opt;
+          });
+          transaction.update(sessionRef, {
+            options: updatedOptions,
+            updatedAt: Date.now(),
+          });
+        } else if (liveTieBreak) {
+          const updatedTieOptions = (liveTieBreak.options || []).map((opt) => {
+            if (selectedOptionIds.includes(opt.id)) {
+              return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+            }
+            return opt;
+          });
+          transaction.update(sessionRef, {
+            'tieBreak.options': updatedTieOptions,
+            updatedAt: Date.now(),
+          });
+        }
+      });
+
+      // Atualiza também o cache local/BroadcastChannel para abas no mesmo PC
+      try {
+        const currentSession = getLocalSession();
+        if (currentSession && currentSession.id === session.id) {
+          if (round === 'MAIN') {
+            currentSession.options = currentSession.options.map((opt) => {
+              if (selectedOptionIds.includes(opt.id)) {
+                return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+              }
+              return opt;
+            });
+          } else if (currentSession.tieBreak) {
+            currentSession.tieBreak.options = currentSession.tieBreak.options.map((opt) => {
+              if (selectedOptionIds.includes(opt.id)) {
+                return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+              }
+              return opt;
+            });
+          }
+          setLocalSession(currentSession);
+        }
+      } catch (_) {}
 
       markAsVoted(session.id, round, iteration);
       return { success: true };
     } catch (err: unknown) {
-      console.error('Erro ao enviar voto via Firebase:', err);
-      // fallback local
+      if (err instanceof Error && err.message === 'ALREADY_VOTED') {
+        markAsVoted(session.id, round, iteration);
+        return { success: false, message: 'Você já votou nesta rodada com este dispositivo!' };
+      }
+      console.error('Erro na transação Firebase ao computar voto:', err);
+      return {
+        success: false,
+        message: 'Falha na conexão com o servidor ao computar voto. Por favor, tente novamente.',
+      };
     }
   }
 
-  // Salva no modo Local/Demonstração
+  // Modo puramente Local / Demonstração (sem Firebase configurado)
   const currentSession = getLocalSession();
   if (round === 'MAIN') {
     currentSession.options = currentSession.options.map((opt) => {

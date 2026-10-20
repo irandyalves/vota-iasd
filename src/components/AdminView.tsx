@@ -18,6 +18,7 @@ import {
   QrCode,
   Tv,
   Sliders,
+  ArrowDownAZ,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
@@ -1410,6 +1411,22 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <span>Nomes para escolha ({session.options.length})</span>
               </h3>
               {session.options.length > 0 && (
+                <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const sorted = [...session.options].sort((a, b) =>
+                      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+                    );
+                    saveSession({ ...session, options: sorted });
+                    showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
+                  }}
+                  className="px-3 py-1.5 bg-blue-600/40 hover:bg-blue-600/60 border-2 border-blue-400 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.35)] hover:shadow-[0_0_18px_rgba(59,130,246,0.55)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 cursor-pointer"
+                  title="Ordenar nomes em ordem alfabética"
+                >
+                  <ArrowDownAZ className="w-3.5 h-3.5" />
+                  <span>Ordenar A-Z</span>
+                </button>
                 <button
                   type="button"
                   onClick={() => {
@@ -1424,6 +1441,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   <Trash2 className="w-3.5 h-3.5" />
                   <span>Limpar tudo</span>
                 </button>
+                </div>
               )}
             </div>
 
@@ -1440,15 +1458,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       key={option.id}
                       className="px-3 py-2 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800/80 hover:border-amber-400/80 rounded-xl flex items-center gap-2 shadow-sm transition group"
                     >
-                      {/* Inicial do Nome */}
-                      <div className="w-7 h-7 rounded-lg bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-xs shrink-0 select-none">
-                        {option.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join('')}
-                      </div>
-
                       {/* Nome Editável Inline */}
                       {isEditing ? (
                         <input
