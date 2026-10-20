@@ -288,14 +288,14 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       Titulares ({vacancies})
                     </span>
                     {suplentesCount > 0 && (
-                      <span className="flex items-center gap-1 text-red-400">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-[#3a0d14] border border-red-500 inline-block" />
+                      <span className="flex items-center gap-1 text-blue-400">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-[#0a2352] border border-blue-400 inline-block" />
                         {segundoSuplentesCount > 0 ? `1º Suplentes (${suplentesCount})` : `Suplentes (${suplentesCount})`}
                       </span>
                     )}
                     {segundoSuplentesCount > 0 && (
-                      <span className="flex items-center gap-1 text-amber-400">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-[#3a220d] border border-amber-500 inline-block" />
+                      <span className="flex items-center gap-1 text-sky-400">
+                        <span className="w-2.5 h-2.5 rounded-sm bg-[#0a2e4c] border border-sky-400 inline-block" />
                         2º Suplentes ({segundoSuplentesCount})
                       </span>
                     )}
@@ -327,209 +327,272 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   </div>
                 )}
 
-                {/* LISTA ANIMADA DE CANDIDATOS */}
-                <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1'}`}>
-                  <AnimatePresence>
-                    {sortedOptions.map((option, index) => {
-                      const rank = index + 1;
-                      const isClosed = session.status === 'CLOSED';
-                      const isElected = rank <= vacancies;
-                      const isSuplente = !isElected && rank <= (vacancies + suplentesCount);
-                      const isSegundoSuplente = !isElected && !isSuplente && rank <= (vacancies + suplentesCount + segundoSuplentesCount);
-                      const percentage = Math.round(((option.votesCount || 0) / maxVotesRecorded) * 100);
+                {/* ESTRUTURA DOS CARDS DE VOTAÇÃO (ALTURA REDUZIDA EM 30%, ANIMAÇÃO FLUIDA LAYOUT) */}
+                {(() => {
+                  const titulares = sortedOptions.slice(0, vacancies);
+                  const suplentes1 = sortedOptions.slice(vacancies, vacancies + suplentesCount);
+                  const suplentes2 = sortedOptions.slice(
+                    vacancies + suplentesCount,
+                    vacancies + suplentesCount + segundoSuplentesCount
+                  );
+                  const naoClassificados = sortedOptions.slice(
+                    vacancies + suplentesCount + segundoSuplentesCount
+                  );
 
-                      // Verifica se este candidato específico está em empate
-                      const tiedGroup = isClosed
-                        ? detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id))
-                        : undefined;
+                  const renderCandidateCard = (
+                    option: typeof sortedOptions[0],
+                    rank: number,
+                    category: 'titular' | 'suplente1' | 'suplente2' | 'naoClassificado'
+                  ) => {
+                    const isClosed = session.status === 'CLOSED';
+                    const percentage = Math.round(((option.votesCount || 0) / maxVotesRecorded) * 100);
+                    const tiedGroup = isClosed
+                      ? detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id))
+                      : undefined;
 
-                      return (
-                        <React.Fragment key={option.id}>
-                          {/* Linha Separadora: SUPLENTES (ou 1º SUPLENTES) - Borda esquerda à borda direita */}
-                          {rank === vacancies + 1 && suplentesCount > 0 && (
-                            <div className="col-span-full py-1.5 flex items-center gap-3 w-full my-1">
-                              <div className="flex-1 border-t-2 border-dashed border-red-600/70" />
-                              <span className="text-red-400 font-black text-xs sm:text-sm uppercase tracking-widest px-2 select-none shrink-0">
-                                {segundoSuplentesCount > 0 ? '1º SUPLENTES' : 'SUPLENTES'}
-                              </span>
-                              <div className="flex-1 border-t-2 border-dashed border-red-600/70" />
-                            </div>
-                          )}
+                    const isElected = category === 'titular';
+                    const isSuplente1 = category === 'suplente1';
+                    const isSuplente2 = category === 'suplente2';
 
-                          {/* Linha Separadora: 2º SUPLENTES - Borda esquerda à borda direita */}
-                          {rank === vacancies + suplentesCount + 1 && segundoSuplentesCount > 0 && (
-                            <div className="col-span-full py-1.5 flex items-center gap-3 w-full my-1">
-                              <div className="flex-1 border-t-2 border-dashed border-amber-600/70" />
-                              <span className="text-amber-400 font-black text-xs sm:text-sm uppercase tracking-widest px-2 select-none shrink-0">
-                                2º SUPLENTES
-                              </span>
-                              <div className="flex-1 border-t-2 border-dashed border-amber-600/70" />
-                            </div>
-                          )}
+                    return (
+                      <motion.div
+                        key={option.id}
+                        layout
+                        transition={{
+                          type: 'spring',
+                          damping: 25,
+                          stiffness: 180,
+                        }}
+                        className={`border transition-all duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 min-h-[36px] sm:min-h-[38px] shadow-sm ${
+                          tiedGroup
+                            ? 'bg-[#3b2105]/95 border-2 border-amber-400 text-amber-100 shadow-md ring-2 ring-amber-400/50'
+                            : isElected
+                            ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/40 text-white'
+                            : isSuplente1
+                            ? 'bg-[#092350]/95 border-blue-500/80 text-blue-100 ring-1 ring-blue-500/30'
+                            : isSuplente2
+                            ? 'bg-[#0a2e4c]/95 border-sky-500/80 text-sky-100 ring-1 ring-sky-500/30'
+                            : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400 py-0.5 px-2 rounded-md'
+                        }`}
+                      >
+                        {/* Barra de Progresso Animada no Fundo */}
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.max(percentage, 2)}%` }}
+                          transition={{ duration: 0.6, ease: 'easeOut' }}
+                          className={`absolute top-0 bottom-0 left-0 opacity-25 pointer-events-none rounded-lg ${
+                            tiedGroup
+                              ? 'bg-gradient-to-r from-amber-600 to-amber-400'
+                              : isElected
+                              ? 'bg-gradient-to-r from-emerald-500 to-green-400'
+                              : isSuplente1
+                              ? 'bg-gradient-to-r from-blue-600 to-blue-400'
+                              : isSuplente2
+                              ? 'bg-gradient-to-r from-sky-600 to-sky-400'
+                              : 'bg-slate-700'
+                          }`}
+                        />
 
-                          {/* Linha Separadora: NÃO CLASSIFICADOS - Borda esquerda à borda direita */}
-                          {rank === vacancies + suplentesCount + segundoSuplentesCount + 1 && (
-                            <div className="col-span-full py-1.5 flex items-center gap-3 w-full my-1">
-                              <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
-                              <span className="text-slate-400 font-bold text-xs uppercase tracking-widest px-2 select-none shrink-0">
-                                NÃO CLASSIFICADOS
-                              </span>
-                              <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
-                            </div>
-                          )}
+                        {/* Posição / Rank (1º, 2º, 3º...) */}
+                        <div
+                          className={`flex items-center justify-center font-black shrink-0 shadow-sm ${
+                            tiedGroup
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-amber-400 text-blue-950 ring-2 ring-amber-300'
+                              : isElected
+                              ? rank === 1
+                                ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
+                                : rank === 2
+                                ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-slate-300 text-slate-900'
+                                : rank === 3
+                                ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-amber-700 text-white'
+                                : 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-emerald-900 text-emerald-200 border border-emerald-600/50'
+                              : isSuplente1
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-blue-900 text-blue-200 border border-blue-500/60'
+                              : isSuplente2
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-sky-900 text-sky-200 border border-sky-500/60'
+                              : 'w-5 h-5 sm:w-5.5 sm:h-5.5 rounded text-[9.5px] bg-slate-800 text-slate-400 border border-slate-700/50'
+                          }`}
+                        >
+                          {rank}º
+                        </div>
 
-                          {/* Card Animado de Corrida de Barras */}
-                          <motion.div
-                            layout
-                            transition={{
-                              type: 'spring',
-                              damping: 25,
-                              stiffness: 180,
-                            }}
-                            className={`border transition-all duration-300 relative overflow-hidden flex items-center ${
-                              tiedGroup
-                                ? 'bg-[#3b2105]/95 border-2 border-amber-400 text-amber-100 py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl gap-2.5 shadow-lg shadow-amber-950/60 ring-2 ring-amber-400/50'
-                                : isElected
-                                ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/50 text-white py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl gap-2.5'
-                                : isSuplente
-                                ? 'bg-[#2b0c10]/95 border-red-700/70 shadow-sm text-red-100 py-1 px-2 sm:py-1 sm:px-2.5 rounded-lg gap-2'
-                                : isSegundoSuplente
-                                ? 'bg-[#2b180a]/95 border-amber-700/70 shadow-sm text-amber-100 py-1 px-2 sm:py-1 sm:px-2.5 rounded-lg gap-2'
-                                : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400 py-0.5 px-2 sm:py-0.5 sm:px-2 rounded-md gap-1.5'
-                            }`}
-                          >
-                            {/* Barra de Progresso Animada no Fundo */}
-                            <motion.div
-                              initial={{ width: 0 }}
-                              animate={{ width: `${Math.max(percentage, 2)}%` }}
-                              transition={{ duration: 0.6, ease: 'easeOut' }}
-                              className={`absolute top-0 bottom-0 left-0 opacity-25 pointer-events-none rounded-xl ${
-                                tiedGroup
-                                  ? 'bg-gradient-to-r from-amber-600 to-amber-400'
-                                  : isElected
-                                  ? 'bg-gradient-to-r from-emerald-500 to-green-400'
-                                  : isSuplente
-                                  ? 'bg-gradient-to-r from-red-700 to-red-500'
-                                  : isSegundoSuplente
-                                  ? 'bg-gradient-to-r from-amber-700 to-amber-500'
-                                  : 'bg-slate-700'
-                              }`}
+                        {/* Foto (se houver) */}
+                        {option.photoUrl && (
+                          <div className="shrink-0">
+                            <img
+                              src={option.photoUrl}
+                              alt={option.name}
+                              className="w-6.5 h-6.5 rounded-md object-cover border border-blue-500/50 shadow"
                             />
+                          </div>
+                        )}
 
-                            {/* Posição / Rank (1º, 2º, 3º...) */}
-                            <div
-                              className={`flex items-center justify-center font-black shrink-0 shadow-sm ${
+                        {/* Nome do Candidato em Destaque */}
+                        <div className="flex-1 min-w-0 z-10">
+                          <div className="flex items-center gap-1.5">
+                            <h4
+                              className={`leading-tight truncate uppercase tracking-wide ${
                                 tiedGroup
-                                  ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-amber-400 text-blue-950 ring-2 ring-amber-300'
+                                  ? 'font-black text-xs sm:text-sm text-amber-200'
                                   : isElected
-                                  ? rank === 1
-                                    ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
-                                    : rank === 2
-                                    ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-slate-300 text-slate-900'
-                                    : rank === 3
-                                    ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-amber-700 text-white'
-                                    : 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-emerald-900 text-emerald-200 border border-emerald-600/50'
-                                  : isSuplente
-                                  ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[11px] sm:text-xs bg-[#451119] text-red-200 border border-red-600/60'
-                                  : isSegundoSuplente
-                                  ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[11px] sm:text-xs bg-[#45260f] text-amber-200 border border-amber-600/60'
-                                  : 'w-5 h-5 sm:w-5.5 sm:h-5.5 rounded text-[10px] bg-slate-800 text-slate-400 border border-slate-700/50'
+                                  ? 'font-black text-xs sm:text-sm text-white'
+                                  : isSuplente1
+                                  ? 'font-bold text-[11px] sm:text-xs text-blue-100'
+                                  : isSuplente2
+                                  ? 'font-bold text-[11px] sm:text-xs text-sky-100'
+                                  : 'font-semibold text-[10px] sm:text-[11px] text-slate-300'
                               }`}
                             >
-                              {rank}º
-                            </div>
+                              {option.name}
+                            </h4>
 
-                            {/* Foto (apenas se houver foto real carregada) */}
-                            {option.photoUrl && (
-                              <div className="shrink-0">
-                                <img
-                                  src={option.photoUrl}
-                                  alt={option.name}
-                                  className={`${isElected || tiedGroup ? 'w-8 h-8' : isSuplente || isSegundoSuplente ? 'w-6.5 h-6.5' : 'w-5 h-5'} rounded-lg object-cover border border-blue-500/50 shadow`}
-                                />
-                              </div>
-                            )}
-
-                            {/* Nome do Candidato em Destaque */}
-                            <div className="flex-1 min-w-0 z-10">
-                              <div className="flex items-center gap-1.5">
-                                <h4
-                                  className={`leading-tight truncate uppercase tracking-wide ${
-                                    tiedGroup
-                                      ? 'font-black text-xs sm:text-sm text-amber-200'
-                                      : isElected
-                                      ? 'font-black text-xs sm:text-sm text-white'
-                                      : isSuplente
-                                      ? 'font-bold text-[11px] sm:text-xs text-red-100'
-                                      : isSegundoSuplente
-                                      ? 'font-bold text-[11px] sm:text-xs text-amber-100'
-                                      : 'font-semibold text-[10px] sm:text-[11px] text-slate-300'
-                                  }`}
-                                >
-                                  {option.name}
-                                </h4>
-                                {tiedGroup ? (
-                                  <span className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-blue-950 animate-pulse uppercase shadow">
-                                    <AlertTriangle className="w-2.5 h-2.5" />
-                                    Empate ({tiedGroup.label})
-                                  </span>
-                                ) : (
-                                  <>
-                                    {isElected && (
-                                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
-                                        <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
-                                        {isClosed ? 'Eleito Titular' : 'Titular'}
-                                      </span>
-                                    )}
-                                    {isSuplente && (
-                                      <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#421016] text-red-200 border border-red-600/60">
-                                        {isClosed
-                                          ? segundoSuplentesCount > 0
-                                            ? '1º Suplente Eleito'
-                                            : 'Suplente Eleito'
-                                          : segundoSuplentesCount > 0
-                                          ? '1º Suplente'
-                                          : 'Suplente'}
-                                      </span>
-                                    )}
-                                    {isSegundoSuplente && (
-                                      <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#42240e] text-amber-200 border border-amber-600/60">
-                                        {isClosed ? '2º Suplente Eleito' : '2º Suplente'}
-                                      </span>
-                                    )}
-                                  </>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Contador Numérico de Votos */}
-                            <div className="text-right z-10 shrink-0">
-                              <div
-                                className={`font-mono font-black leading-none ${
-                                  isElected
-                                    ? 'text-base sm:text-lg text-white'
-                                    : isSuplente
-                                    ? 'text-sm sm:text-base text-red-100'
-                                    : isSegundoSuplente
-                                    ? 'text-sm sm:text-base text-amber-100'
-                                    : 'text-xs sm:text-sm text-slate-300'
-                                }`}
-                              >
-                                {option.votesCount || 0}
-                                <span className="text-[9px] text-blue-300 font-normal ml-0.5">v</span>
-                              </div>
-                              <span className="text-[9px] font-mono text-blue-300/80">
-                                {totalVotesCast > 0
-                                  ? `${Math.round(((option.votesCount || 0) / totalVotesCast) * 100)}%`
-                                  : '0%'}
+                            {tiedGroup ? (
+                              <span className="inline-flex items-center gap-1 text-[8.5px] px-1.5 py-0.2 rounded-full font-black bg-amber-400 text-blue-950 animate-pulse uppercase shadow">
+                                <AlertTriangle className="w-2.5 h-2.5" />
+                                Empate ({tiedGroup.label})
                               </span>
+                            ) : (
+                              <>
+                                {isElected && (
+                                  <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
+                                    <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
+                                    {isClosed ? 'Eleito Titular' : 'Titular'}
+                                  </span>
+                                )}
+                                {isSuplente1 && (
+                                  <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold bg-blue-950 text-blue-200 border border-blue-500/60">
+                                    {isClosed
+                                      ? segundoSuplentesCount > 0
+                                        ? '1º Suplente Eleito'
+                                        : 'Suplente Eleito'
+                                      : segundoSuplentesCount > 0
+                                      ? '1º Suplente'
+                                      : 'Suplente'}
+                                  </span>
+                                )}
+                                {isSuplente2 && (
+                                  <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold bg-sky-950 text-sky-200 border border-sky-500/60">
+                                    {isClosed ? '2º Suplente Eleito' : '2º Suplente'}
+                                  </span>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* CONTADOR NUMÉRICO: "votos" ANTES DO NÚMERO, SEM "v", E "% EM AMARELO BOLD" */}
+                        <div className="text-right z-10 shrink-0 flex items-center gap-1.5 font-mono">
+                          <span className="text-[10px] sm:text-[11px] font-bold text-slate-300/80 uppercase">
+                            votos
+                          </span>
+                          <span className="text-sm sm:text-base font-black text-white">
+                            {option.votesCount || 0}
+                          </span>
+                          <span className="text-xs sm:text-sm font-black text-amber-300 ml-1">
+                            {percentage}%
+                          </span>
+                        </div>
+                      </motion.div>
+                    );
+                  };
+
+                  return (
+                    <div className="space-y-2">
+                      {/* 1. SEÇÃO DE TITULARES */}
+                      <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1'}`}>
+                        <AnimatePresence>
+                          {titulares.map((option, idx) => renderCandidateCard(option, idx + 1, 'titular'))}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* 2. SEÇÃO DE SUPLENTES (1º E 2º SUPLENTE LADO A LADO EM 2 COLUNAS) */}
+                      {suplentesCount > 0 && (
+                        <div className="w-full pt-1">
+                          {segundoSuplentesCount > 0 ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-start">
+                              {/* COLUNA 1: 1º SUPLENTE */}
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 py-0.5">
+                                  <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
+                                  <span className="text-blue-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                    1º SUPLENTES ({suplentesCount})
+                                  </span>
+                                  <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
+                                </div>
+                                <div className="space-y-1">
+                                  <AnimatePresence>
+                                    {suplentes1.map((option, idx) =>
+                                      renderCandidateCard(option, vacancies + idx + 1, 'suplente1')
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              </div>
+
+                              {/* COLUNA 2: 2º SUPLENTE (MESMO TAMANHO DO 1º) */}
+                              <div className="space-y-1">
+                                <div className="flex items-center gap-2 py-0.5">
+                                  <div className="flex-1 border-t-2 border-dashed border-sky-500/70" />
+                                  <span className="text-sky-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                    2º SUPLENTES ({segundoSuplentesCount})
+                                  </span>
+                                  <div className="flex-1 border-t-2 border-dashed border-sky-500/70" />
+                                </div>
+                                <div className="space-y-1">
+                                  <AnimatePresence>
+                                    {suplentes2.map((option, idx) =>
+                                      renderCandidateCard(option, vacancies + suplentesCount + idx + 1, 'suplente2')
+                                    )}
+                                  </AnimatePresence>
+                                </div>
+                              </div>
                             </div>
-                          </motion.div>
-                        </React.Fragment>
-                      );
-                    })}
-                  </AnimatePresence>
-                </div>
+                          ) : (
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-3 py-0.5">
+                                <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
+                                <span className="text-blue-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                  SUPLENTES ({suplentesCount})
+                                </span>
+                                <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
+                              </div>
+                              <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2' : 'space-y-1'}`}>
+                                <AnimatePresence>
+                                  {suplentes1.map((option, idx) =>
+                                    renderCandidateCard(option, vacancies + idx + 1, 'suplente1')
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* 3. SEÇÃO DE NÃO CLASSIFICADOS */}
+                      {naoClassificados.length > 0 && (
+                        <div className="w-full space-y-1 pt-1">
+                          <div className="flex items-center gap-3 py-0.5">
+                            <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
+                            <span className="text-slate-400 font-bold text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                              NÃO CLASSIFICADOS
+                            </span>
+                            <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
+                          </div>
+                          <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2' : 'space-y-1'}`}>
+                            <AnimatePresence>
+                              {naoClassificados.map((option, idx) =>
+                                renderCandidateCard(
+                                  option,
+                                  vacancies + suplentesCount + segundoSuplentesCount + idx + 1,
+                                  'naoClassificado'
+                                )
+                              )}
+                            </AnimatePresence>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>
