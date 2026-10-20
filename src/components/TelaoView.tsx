@@ -120,8 +120,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
       {/* ÁREA SUPERIOR: CABEÇALHO EM UMA LINHA, COR BRANCA, FONTE MODERNA */}
       <div className="mb-3.5 pt-1 px-1 flex flex-wrap items-center justify-between gap-3 text-white">
-        {/* Lado Esquerdo: Logo + Título Digitado + Badge 'Escolha X Nomes' na mesma linha */}
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Lado Esquerdo: Logo + Título Digitado + 'Escolha X Nomes' + 'X já votaram' próximos na mesma linha */}
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {/* Logo 15% maior e sem fundo branco */}
           <IasdLogo className="w-10 h-10 shrink-0" customUrl={session.logoUrl} />
 
@@ -130,19 +130,17 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
             {session.title.toUpperCase()}
           </h1>
 
-          {/* Em frente, na mesma linha: Fundo azul, letra branca, quantidade em amarelo */}
-          <span className="px-3.5 py-1 rounded-full bg-blue-900 border border-blue-600/80 text-white font-bold text-xs sm:text-sm tracking-wide uppercase flex items-center gap-1.5 shadow-md">
+          {/* Card: Escolha X Nomes (Cantos com arredondamento reduzido: rounded-lg) */}
+          <span className="px-3 py-1 rounded-lg bg-blue-900 border border-blue-600/80 text-white font-bold text-xs sm:text-sm tracking-wide uppercase flex items-center gap-1.5 shadow-md">
             <span>ESCOLHA</span>
             <span className="text-amber-400 font-black text-sm sm:text-base">
               {session.maxVotesPerVoter}
             </span>
             <span>{session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}</span>
           </span>
-        </div>
 
-        {/* Mais à direita: 'X já votaram' */}
-        <div className="flex items-center gap-2">
-          <span className="px-3.5 py-1 rounded-full bg-[#001f47] border border-blue-800 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-inner">
+          {/* Card: X já votaram (Movido para próximo de 'Escolha de Nomes', cantos rounded-lg) */}
+          <span className="px-3 py-1 rounded-lg bg-[#001f47] border border-blue-700/80 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-inner">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>
               <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
@@ -210,7 +208,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     </h3>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="px-3.5 py-1 rounded-full bg-blue-900 border border-blue-600/80 text-white font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 shadow">
+                    <span className="px-3 py-1 rounded-lg bg-blue-900 border border-blue-600/80 text-white font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 shadow">
                       <span>ESCOLHA</span>
                       <span className="text-amber-400 font-black">
                         {session.maxVotesPerVoter}
