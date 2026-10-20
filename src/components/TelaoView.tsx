@@ -289,9 +289,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               }`}
                             />
 
-                            {/* Posição / Rank */}
+                            {/* Posição / Rank (1º, 2º, 3º...) */}
                             <div
-                              className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0 shadow-sm ${
+                              className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs sm:text-sm shrink-0 shadow-sm ${
                                 rank === 1
                                   ? 'bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
                                   : rank === 2
@@ -305,33 +305,25 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   : 'bg-slate-800 text-slate-400'
                               }`}
                             >
-                              #{rank}
+                              {rank}º
                             </div>
 
-                            {/* Foto ou Iniciais */}
-                            <div className="shrink-0">
-                              {option.photoUrl ? (
+                            {/* Foto (apenas se houver foto real carregada) */}
+                            {option.photoUrl && (
+                              <div className="shrink-0">
                                 <img
                                   src={option.photoUrl}
                                   alt={option.name}
                                   className="w-9 h-9 rounded-lg object-cover border border-blue-500/50 shadow"
                                 />
-                              ) : (
-                                <div className="w-9 h-9 rounded-lg bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-xs">
-                                  {option.name
-                                    .split(' ')
-                                    .map((n) => n[0])
-                                    .slice(0, 2)
-                                    .join('')}
-                                </div>
-                              )}
-                            </div>
+                              </div>
+                            )}
 
-                            {/* Nome e Cargo / Descrição */}
+                            {/* Nome do Candidato em Destaque (Sem subtítulo de sonoplastia/membro) */}
                             <div className="flex-1 min-w-0 z-10">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-2">
                                 <h4
-                                  className={`font-black text-xs sm:text-sm leading-tight truncate uppercase tracking-wide ${
+                                  className={`font-black text-xs sm:text-sm lg:text-base leading-tight truncate uppercase tracking-wide ${
                                     isElected ? 'text-white' : 'text-slate-100'
                                   }`}
                                 >
@@ -349,9 +341,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   </span>
                                 )}
                               </div>
-                              {option.subtitle && (
-                                <p className="text-[10px] text-blue-200/70 truncate">{option.subtitle}</p>
-                              )}
                             </div>
 
                             {/* Contador Numérico de Votos */}

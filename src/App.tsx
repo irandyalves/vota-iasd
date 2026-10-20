@@ -157,8 +157,8 @@ export function App() {
         />
       )}
 
-      {/* Botão de retorno superior direito quando estiver no Telão ou no Celular (ESC também volta) */}
-      {currentView !== 'admin' && (
+      {/* Botão de retorno superior direito (apenas para tela de votante/teste, NUNCA exibido no Telão) */}
+      {currentView === 'voter' && (
         <div className="fixed top-2.5 right-24 sm:right-28 z-50">
           <button
             onClick={handleReturnToAdmin}
