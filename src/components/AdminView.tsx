@@ -17,6 +17,7 @@ import {
   Pencil,
   FolderPlus,
   ChevronsRight,
+  X,
 } from 'lucide-react';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
@@ -34,6 +35,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [eventNameInput, setEventNameInput] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [confirmModal, setConfirmModal] = useState<{
+    title: string;
+    highlight?: string;
+    description: string;
+    confirmLabel?: string;
+    onConfirm: () => void;
+  } | null>(null);
   const gearPanelRef = useRef<HTMLDivElement>(null);
   const gearButtonRef = useRef<HTMLButtonElement>(null);
   const eventModalRef = useRef<HTMLDivElement>(null);
@@ -233,7 +241,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }
   };
 
-  // Excluir um evento
+  // Excluir um evento (abre modal bonito de confirmação)
   const handleDeleteEvent = (evtId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (eventsList.length <= 1) {
@@ -241,25 +249,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       return;
     }
     const targetEvt = eventsList.find((x) => x.id === evtId);
-    if (!window.confirm(`Deseja excluir o evento "${targetEvt?.name}"?`)) return;
+    setConfirmModal({
+      title: 'Excluir Votação / Evento',
+      highlight: targetEvt?.name || '',
+      description: 'Tem certeza que deseja excluir este evento e a lista de nomes vinculada a ele?',
+      confirmLabel: 'Sim, Excluir',
+      onConfirm: () => {
+        const remaining = eventsList.filter((x) => x.id !== evtId);
+        const nextActive = remaining[0];
 
-    const remaining = eventsList.filter((x) => x.id !== evtId);
-    const nextActive = remaining[0];
-
-    saveSession({
-      ...session,
-      activeEventId: nextActive.id,
-      title: nextActive.name,
-      options: nextActive.options || [],
-      vacancies: nextActive.vacancies || 1,
-      maxVotesPerVoter: nextActive.maxVotesPerVoter || nextActive.vacancies || 1,
-      suplentesCount: nextActive.suplentesCount ?? 0,
-      segundoSuplentesCount: nextActive.segundoSuplentesCount ?? 0,
-      habilitarSuplente1: nextActive.habilitarSuplente1,
-      habilitarSuplente2: nextActive.habilitarSuplente2,
-      events: remaining,
+        saveSession({
+          ...session,
+          activeEventId: nextActive.id,
+          title: nextActive.name,
+          options: nextActive.options || [],
+          vacancies: nextActive.vacancies || 1,
+          maxVotesPerVoter: nextActive.maxVotesPerVoter || nextActive.vacancies || 1,
+          suplentesCount: nextActive.suplentesCount ?? 0,
+          segundoSuplentesCount: nextActive.segundoSuplentesCount ?? 0,
+          habilitarSuplente1: nextActive.habilitarSuplente1,
+          habilitarSuplente2: nextActive.habilitarSuplente2,
+          events: remaining,
+        });
+        setConfirmModal(null);
+        showNotification('success', 'Evento removido com sucesso.');
+      },
     });
-    showNotification('success', 'Evento removido.');
   };
   const [isListening, setIsListening] = useState(false);
   const [speechTranscript, setSpeechTranscript] = useState('');
@@ -559,6 +574,86 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100">
+      {/* MODAL BONITO DE CONFIRMAÇÃO (SUBSTITUI O CONFIRM NATIVO DO NAVEGADOR) */}
+      <AnimatePresence>
+        {confirmModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setConfirmModal(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setConfirmModal(null);
+            }}
+            tabIndex={-1}
+            className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.88, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-gradient-to-b from-[#002657] to-[#07132a] border-2 border-rose-500/70 rounded-2xl p-6 shadow-[0_0_35px_rgba(244,63,94,0.35),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
+            >
+              {/* Brilho decorativo superior */}
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-56 h-28 bg-rose-500/20 blur-2xl pointer-events-none" />
+
+              {/* Botão Fechar (X) */}
+              <button
+                type="button"
+                onClick={() => setConfirmModal(null)}
+                className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                {/* Ícone em destaque */}
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-400/80 shadow-[0_0_20px_rgba(244,63,94,0.4)] flex items-center justify-center mb-3.5">
+                  <Trash2 className="w-7 h-7 text-rose-400" />
+                </div>
+
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-1.5">
+                  {confirmModal.title}
+                </h3>
+
+                {confirmModal.highlight && (
+                  <div className="px-3.5 py-1 rounded-lg bg-[#07132a] border border-amber-400/70 text-amber-300 font-black text-xs sm:text-sm uppercase tracking-wider mb-3 shadow-inner">
+                    "{confirmModal.highlight}"
+                  </div>
+                )}
+
+                <p className="text-xs sm:text-sm text-blue-100/85 leading-relaxed mb-6">
+                  {confirmModal.description}
+                </p>
+
+                <div className="flex items-center justify-center gap-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmModal(null)}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-[#07132a] hover:bg-blue-950 border border-blue-700/80 hover:border-blue-500 text-slate-200 hover:text-white font-black text-xs uppercase tracking-wider transition cursor-pointer active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={confirmModal.onConfirm}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 border border-rose-300/80 text-white font-black text-xs uppercase tracking-wider shadow-[0_0_18px_rgba(244,63,94,0.5)] hover:shadow-[0_0_25px_rgba(244,63,94,0.75)] transition cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>{confirmModal.confirmLabel || 'Excluir'}</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Notificação Flutuante */}
       {notification && (
         <div
@@ -1393,11 +1488,18 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       <button
                         type="button"
                         onClick={() => {
-                          if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
-                            setBackupNamesList(session.options.map((o) => o.name));
-                            saveSession({ ...session, options: [] });
-                            showNotification('success', 'Todos os nomes foram apagados.');
-                          }
+                          setConfirmModal({
+                            title: 'Limpar Todos os Nomes',
+                            highlight: `${session.options.length} NOMES CADASTRADOS`,
+                            description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
+                            confirmLabel: 'Sim, Limpar Tudo',
+                            onConfirm: () => {
+                              setBackupNamesList(session.options.map((o) => o.name));
+                              saveSession({ ...session, options: [] });
+                              setConfirmModal(null);
+                              showNotification('success', 'Todos os nomes foram apagados.');
+                            },
+                          });
                         }}
                         className="p-2 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.35)] hover:shadow-[0_0_18px_rgba(244,63,94,0.55)] rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer"
                         title="Apagar todos os nomes cadastrados"
