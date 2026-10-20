@@ -209,6 +209,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isListening, setIsListening] = useState(false);
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [newName, setNewName] = useState('');
+  const [backupNamesList, setBackupNamesList] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (session.options && session.options.length > 0) {
+      setBackupNamesList(session.options.map((o) => o.name));
+    }
+  }, [session.options]);
   const [editingCandidateId, setEditingCandidateId] = useState<string | null>(null);
   const [editingCandidateName, setEditingCandidateName] = useState('');
   const [glowingIds, setGlowingIds] = useState<Record<string, boolean>>({});
@@ -1492,12 +1499,11 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             <div className="flex flex-col lg:flex-row gap-4 items-stretch">
               {/* COLUNA DA ESQUERDA: CABEÇALHO + IMPORTAR DADOS + TEXTAREA */}
               <div className="flex-1 flex flex-col justify-between gap-3 min-w-0">
-                {/* CABEÇALHO NA MESMA LINHA: TÍTULO + SEÇÃO "IMPORTAR DADOS" LOGO À FRENTE */}
+                {/* CABEÇALHO NA MESMA LINHA: TÍTULO + SEÇÃO "IMPORTAR DADOS" LOGO À FRENTE (SEM FUNDO PRETO E SEM ÍCONE ANTES) */}
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                    <label className="text-xs sm:text-sm font-black text-white font-serif uppercase tracking-wide">
-                      Digite ou Fale os Nomes
+                    <label className="font-bold text-white text-sm sm:text-base font-sans tracking-tight">
+                      Digite ou fale os nomes
                     </label>
                     {isListening && (
                       <span className="text-[10px] font-bold text-rose-400 bg-rose-950/90 px-2 py-0.5 rounded-full border border-rose-600 animate-pulse flex items-center gap-1">
@@ -1507,7 +1513,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     )}
                   </div>
 
-                  {/* SEÇÃO IMPORTAR DADOS (NA FRENTE DE DIGITE OU FALE OS NOMES) */}
+                  {/* SEÇÃO IMPORTAR DADOS (SEM FUNDO PRETO E SEM ÍCONE ANTES DE IMPORTAR DADOS) */}
                   <div
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
@@ -1518,10 +1524,9 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         handleFileImport(syntheticEvent, 'append');
                       }
                     }}
-                    className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-inner"
+                    className="flex flex-wrap items-center gap-1.5 py-1"
                   >
-                    <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 pr-2 mr-0.5 border-r border-blue-800">
-                      <Upload className="w-3.5 h-3.5 text-amber-400" />
+                    <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center pr-2 mr-0.5 border-r border-blue-800">
                       <span>Importar dados:</span>
                     </span>
 
@@ -1616,7 +1621,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </div>
 
               {/* SEÇÃO DA DIREITA: DO TOPO ATÉ EMBAIXO, COM MAIS ESPAÇO ENTRE OS BOTÕES */}
-              <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-2xl p-3.5 flex flex-col gap-3.5 shrink-0 w-full lg:w-60 justify-between shadow-inner">
+              <div className="border border-blue-800/80 rounded-2xl p-3.5 flex flex-col gap-3.5 shrink-0 w-full lg:w-60 justify-between">
                 {/* 1. Botão NOVA VOTAÇÃO (EM VERDE) */}
                 <button
                   type="button"
@@ -1695,37 +1700,69 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               <h3 className="font-bold text-white text-sm sm:text-base font-sans tracking-tight flex items-center gap-2">
                 <span>Nomes para escolha ({session.options.length})</span>
               </h3>
-              {session.options.length > 0 && (
+              {(session.options.length > 0 || backupNamesList.length > 0) && (
                 <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    const sorted = [...session.options].sort((a, b) =>
-                      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
-                    );
-                    saveSession({ ...session, options: sorted });
-                    showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
-                  }}
-                  className="px-3 py-1.5 bg-blue-600/40 hover:bg-blue-600/60 border-2 border-blue-400 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.35)] hover:shadow-[0_0_18px_rgba(59,130,246,0.55)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 cursor-pointer"
-                  title="Ordenar nomes em ordem alfabética"
-                >
-                  <ArrowDownAZ className="w-3.5 h-3.5" />
-                  <span>Ordenar A-Z</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
-                      saveSession({ ...session, options: [] });
-                      showNotification('success', 'Todos os nomes foram apagados.');
-                    }
-                  }}
-                  className="px-3 py-1.5 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.35)] hover:shadow-[0_0_18px_rgba(244,63,94,0.55)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer"
-                  title="Apagar todos os nomes cadastrados"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                  <span>Limpar tudo</span>
-                </button>
+                  {/* Botão Recuperar Nomes: joga todos os nomes na seção de cima separados por vírgula */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const sourceNames =
+                        session.options.length > 0
+                          ? session.options.map((o) => o.name)
+                          : backupNamesList;
+                      if (sourceNames.length === 0) return;
+                      const commaSeparated = sourceNames.join(', ');
+                      setNewName((prev) =>
+                        prev.trim() ? `${prev.trim()}, ${commaSeparated}` : commaSeparated
+                      );
+                      showNotification(
+                        'success',
+                        `${sourceNames.length} nomes enviados para o campo de digitação acima (separados por vírgula)!`
+                      );
+                    }}
+                    className="px-3 py-1.5 bg-amber-500/30 hover:bg-amber-500/50 border-2 border-amber-400 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.3)] hover:shadow-[0_0_18px_rgba(251,191,36,0.5)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 cursor-pointer"
+                    title="Jogar todos os nomes na caixa de digitação acima separados por vírgula"
+                  >
+                    <RotateCcw className="w-3.5 h-3.5" />
+                    <span>Recuperar nomes</span>
+                  </button>
+
+                  {session.options.length > 0 && (
+                    <>
+                      {/* Botão A-Z */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sorted = [...session.options].sort((a, b) =>
+                            a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+                          );
+                          saveSession({ ...session, options: sorted });
+                          showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
+                        }}
+                        className="px-3 py-1.5 bg-blue-600/40 hover:bg-blue-600/60 border-2 border-blue-400 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.35)] hover:shadow-[0_0_18px_rgba(59,130,246,0.55)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 cursor-pointer"
+                        title="Ordenar nomes em ordem alfabética (A-Z)"
+                      >
+                        <ArrowDownAZ className="w-3.5 h-3.5" />
+                        <span>A-Z</span>
+                      </button>
+
+                      {/* Botão Limpar Tudo (Apenas o ícone de lixeira) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
+                            setBackupNamesList(session.options.map((o) => o.name));
+                            saveSession({ ...session, options: [] });
+                            showNotification('success', 'Todos os nomes foram apagados.');
+                          }
+                        }}
+                        className="p-2 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.35)] hover:shadow-[0_0_18px_rgba(244,63,94,0.55)] rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer"
+                        title="Apagar todos os nomes cadastrados"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
@@ -1735,7 +1772,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 Nenhum nome cadastrado ainda. Digite ou fale no campo acima para começar!
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-[3px]">
                 <AnimatePresence mode="popLayout">
                   {[...session.options]
                     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
