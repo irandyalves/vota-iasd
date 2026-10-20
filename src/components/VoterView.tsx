@@ -5,13 +5,16 @@ import {
   Lock,
   Sparkles,
   AlertCircle,
-  ShieldAlert,
   Flame,
+  Trophy,
+  AlertTriangle,
+  CheckCircle,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { submitBallot, hasVoted } from '../services/votingService';
 import { urnaAudio } from '../utils/audio';
 import { IasdLogo } from './IasdLogo';
+import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
 
 interface VoterViewProps {
   session: VotingSession;
@@ -43,8 +46,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const totalVotesRecorded = options.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
 
   // Verifica se o dispositivo já votou nesta iteração específica:
-  // Se a apuração estiver zerada (totalVotesRecorded === 0), o celular é liberado imediatamente
-  const alreadyVoted = totalVotesRecorded > 0 && hasVoted(session.id, currentRound, session.votingIteration || 1);
+  // Se estiver em WAITING ou CLOSED, ou apuração zerada, não trava como "já votou"
+  const alreadyVoted =
+    session.status !== 'WAITING' &&
+    session.status !== 'CLOSED' &&
+    totalVotesRecorded > 0 &&
+    hasVoted(session.id, currentRound, session.votingIteration || 1);
 
   // Auto-login se já autenticado antes nesta sessão ou se o QR Code já trouxe o PIN na URL
   useEffect(() => {
@@ -63,11 +70,19 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     }
   }, [session.id, session.pin]);
 
-  // Limpa seleções se a rodada, iteração ou status mudar
+  // Limpa seleções e reseta trava de sucesso se a rodada, iteração ou status mudar
   useEffect(() => {
     setSelectedIds([]);
     setErrorMessage('');
+    setSubmitSuccess(false);
   }, [session.status, currentRound, session.votingIteration]);
+
+  // Se a apuração for zerada pelo líder, destrava o aparelho imediatamente
+  useEffect(() => {
+    if (totalVotesRecorded === 0) {
+      setSubmitSuccess(false);
+    }
+  }, [totalVotesRecorded]);
 
   const handleVerifyPin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,42 +202,185 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     );
   }
 
-  // 2. TELA DE SUCESSO / VOTO JÁ COMPUTADO
-  if (alreadyVoted || submitSuccess) {
-    return (
-      <div className="min-h-[90vh] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 20 }}
-          className="max-w-md w-full bg-[#001f47] border border-emerald-500/40 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden"
-        >
-          <div className="absolute -top-20 -right-20 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+  // 2. VOTAÇÃO ENCERRADA -> MOSTRA OS RESULTADOS COMPLETOS NO MOBILE!
+  if (session.status === 'CLOSED') {
+    const { s1Count, s2Count } = getEffectiveSuplentes(session);
+    const vacancies = session.vacancies || 1;
+    const suplentesCount = s1Count;
+    const segundoSuplentesCount = s2Count;
+    const detectedTies = detectVotingTies(session);
+    const hasTies = detectedTies.length > 0;
 
-          <div className="w-24 h-24 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
-            <CheckCircle2 className="w-14 h-14 text-emerald-400" />
+    const sortedOptions = [...session.options].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
+    const maxVotesRecorded = Math.max(...session.options.map((o) => o.votesCount || 0), 1);
+    const totalVotesCast = session.options.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+
+    return (
+      <div className="max-w-xl mx-auto px-3.5 py-4 pb-16 min-h-[90vh]">
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-[#001f47] border border-blue-800 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-4"
+        >
+          {/* Cabeçalho de Resultados */}
+          <div className="text-center pb-3 border-b border-blue-900/80">
+            <div className="flex justify-center mb-2">
+              <IasdLogo className="w-14 h-14" customUrl={session.logoUrl} />
+            </div>
+            <span className="inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-wider px-3.5 py-1 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-500/60 mb-2 shadow-sm">
+              <Trophy className="w-3.5 h-3.5 text-amber-400" />
+              Resultado Oficial da Votação
+            </span>
+            <h2 className="text-base sm:text-lg font-black text-white uppercase tracking-tight">
+              {session.title}
+            </h2>
+            <p className="text-xs text-blue-200 mt-1">
+              Total de Votos Registrados: <strong className="text-amber-300 font-mono font-bold">{totalVotesCast}</strong>
+            </p>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-serif uppercase tracking-wide">
-            SEU VOTO FOI COMPUTADO!
-          </h2>
-
-          <p className="text-sm text-blue-200 mb-6 leading-relaxed">
-            Seu voto foi registrado com sigilo e segurança. Seu aparelho foi travado para garantir a legitimidade da apuração.
-          </p>
-
-          <div className="bg-[#07132a]/80 rounded-2xl p-4 border border-blue-900/80 text-left space-y-2">
-            <div className="flex items-center justify-between text-xs text-blue-300">
-              <span>Pauta:</span>
-              <span className="font-semibold text-white truncate max-w-[200px]">{session.title}</span>
+          {/* Banner de Empate (se houver empate na fronteira) */}
+          {hasTies && (
+            <div className="p-3 rounded-2xl bg-amber-950/90 border-2 border-amber-400 text-amber-200 shadow-xl space-y-1.5 animate-pulse">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                <h4 className="font-extrabold text-xs uppercase tracking-wide text-white">
+                  Empate Detectado na Apuração!
+                </h4>
+              </div>
+              <p className="text-[11px] leading-snug text-amber-100">
+                Há empate em: <strong>{detectedTies.map((t) => t.label).join(' • ')}</strong>.
+              </p>
+              <div className="text-[10px] text-amber-200/90 space-y-1 pt-1 border-t border-amber-700/60 font-mono">
+                {detectedTies.map((t, idx) => (
+                  <div key={idx}>
+                    • <strong>{t.label}</strong> ({t.votesCount} {t.votesCount === 1 ? 'voto' : 'votos'}): {t.tiedCandidates.map((c) => c.name).join(', ')}
+                  </div>
+                ))}
+              </div>
+              <p className="text-[10px] text-amber-300 font-bold italic pt-0.5">
+                Aguarde o líder iniciar a rodada de desempate neste aparelho.
+              </p>
             </div>
-            <div className="flex items-center justify-between text-xs text-blue-300">
-              <span>Status:</span>
-              <span className="text-emerald-400 font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                Voto Registrado
-              </span>
-            </div>
+          )}
+
+          {/* Lista de Candidatos e Contagem de Votos */}
+          <div className="space-y-1.5">
+            {sortedOptions.map((option, index) => {
+              const rank = index + 1;
+              const isElected = rank <= vacancies;
+              const isSuplente = !isElected && rank <= vacancies + suplentesCount;
+              const isSegundoSuplente =
+                !isElected && !isSuplente && rank <= vacancies + suplentesCount + segundoSuplentesCount;
+              const percentage = Math.round(((option.votesCount || 0) / maxVotesRecorded) * 100);
+
+              const tiedGroup = detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id));
+
+              return (
+                <div
+                  key={option.id}
+                  className={`p-2.5 rounded-xl border relative overflow-hidden flex items-center gap-2.5 transition-all ${
+                    tiedGroup
+                      ? 'bg-[#351e06] border-amber-400 shadow-md ring-1 ring-amber-400/50'
+                      : isElected
+                      ? 'bg-[#052e1c] border-emerald-500/80 text-white shadow-sm'
+                      : isSuplente
+                      ? 'bg-[#2b0c10] border-red-700/70 text-red-100'
+                      : isSegundoSuplente
+                      ? 'bg-[#2b180a] border-amber-700/70 text-amber-100'
+                      : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400'
+                  }`}
+                >
+                  {/* Barra de Progresso Animada no Fundo */}
+                  <div
+                    style={{ width: `${Math.max(percentage, 2)}%` }}
+                    className={`absolute top-0 bottom-0 left-0 opacity-20 pointer-events-none ${
+                      tiedGroup
+                        ? 'bg-amber-400'
+                        : isElected
+                        ? 'bg-emerald-400'
+                        : isSuplente
+                        ? 'bg-red-500'
+                        : isSegundoSuplente
+                        ? 'bg-amber-500'
+                        : 'bg-slate-600'
+                    }`}
+                  />
+
+                  {/* Posição */}
+                  <div
+                    className={`w-6 h-6 rounded-lg text-xs font-black flex items-center justify-center shrink-0 z-10 ${
+                      tiedGroup
+                        ? 'bg-amber-400 text-blue-950 ring-1 ring-amber-300'
+                        : isElected
+                        ? 'bg-emerald-500 text-blue-950 font-bold'
+                        : isSuplente
+                        ? 'bg-red-900 text-red-200 border border-red-700'
+                        : isSegundoSuplente
+                        ? 'bg-amber-900 text-amber-200 border border-amber-700'
+                        : 'bg-slate-800 text-slate-400'
+                    }`}
+                  >
+                    {rank}º
+                  </div>
+
+                  {/* Nome do Candidato e Badge */}
+                  <div className="flex-1 min-w-0 z-10">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <h4
+                        className={`font-bold text-xs truncate uppercase leading-snug ${
+                          tiedGroup
+                            ? 'text-amber-200 font-black'
+                            : isElected
+                            ? 'text-white'
+                            : isSuplente
+                            ? 'text-red-100'
+                            : isSegundoSuplente
+                            ? 'text-amber-100'
+                            : 'text-slate-300'
+                        }`}
+                      >
+                        {option.name}
+                      </h4>
+
+                      {tiedGroup ? (
+                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-black bg-amber-400 text-blue-950 uppercase animate-pulse">
+                          Empate ({tiedGroup.label})
+                        </span>
+                      ) : isElected ? (
+                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50 flex items-center gap-0.5">
+                          <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
+                          Eleito Titular
+                        </span>
+                      ) : isSuplente ? (
+                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-red-950 text-red-300 border border-red-700/50">
+                          {segundoSuplentesCount > 0 ? '1º Suplente' : 'Suplente'}
+                        </span>
+                      ) : isSegundoSuplente ? (
+                        <span className="text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-amber-950 text-amber-300 border border-amber-700/50">
+                          2º Suplente
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {/* Quantidade de Votos */}
+                  <div className="text-right z-10 shrink-0 font-mono">
+                    <span className="font-extrabold text-xs text-white">
+                      {option.votesCount || 0}
+                    </span>
+                    <span className="text-[9.5px] text-blue-200 ml-0.5">
+                      {option.votesCount === 1 ? 'voto' : 'votos'}
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="pt-2 text-center text-[10px] text-blue-300/70 border-t border-blue-900/60 flex items-center justify-center gap-1.5">
+            <Lock className="w-3 h-3" />
+            Apuração Oficial Sincronizada em Tempo Real
           </div>
         </motion.div>
       </div>
@@ -284,19 +442,48 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     );
   }
 
-  // 4. VOTAÇÃO ENCERRADA
-  if (session.status === 'CLOSED') {
+  // 4. TELA DE SUCESSO / VOTO JÁ COMPUTADO NESTA RODADA
+  if (alreadyVoted || submitSuccess) {
     return (
       <div className="min-h-[90vh] flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-[#001f47] border border-blue-800 rounded-3xl p-8 text-center shadow-2xl">
-          <div className="w-20 h-20 bg-blue-900/40 border border-blue-600/40 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-10 h-10 text-amber-400" />
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', damping: 20 }}
+          className="max-w-md w-full bg-[#001f47] border border-emerald-500/40 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden"
+        >
+          <div className="absolute -top-20 -right-20 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="w-24 h-24 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl">
+            <CheckCircle2 className="w-14 h-14 text-emerald-400" />
           </div>
-          <h2 className="text-2xl font-bold text-white mb-2 font-serif">Votação Encerrada</h2>
-          <p className="text-sm text-blue-200 mb-6">
-            O período de votação desta sessão foi finalizado. Confira a apuração e o resultado final no telão da igreja!
+
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-serif uppercase tracking-wide">
+            SEU VOTO FOI COMPUTADO!
+          </h2>
+
+          <p className="text-sm text-blue-200 mb-6 leading-relaxed">
+            Seu voto foi registrado com sigilo e segurança. Seu aparelho foi travado para garantir a legitimidade da apuração.
           </p>
-        </div>
+
+          <div className="bg-[#07132a]/80 rounded-2xl p-4 border border-blue-900/80 text-left space-y-2">
+            <div className="flex items-center justify-between text-xs text-blue-300">
+              <span>Pauta:</span>
+              <span className="font-semibold text-white truncate max-w-[200px]">{session.title}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-blue-300">
+              <span>Status:</span>
+              <span className="text-emerald-400 font-semibold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                Voto Registrado
+              </span>
+            </div>
+          </div>
+
+          <p className="text-xs text-blue-300/80 mt-6 italic">
+            Aguarde o encerramento da votação pelo líder para conferir os resultados oficiais nesta tela.
+          </p>
+        </motion.div>
       </div>
     );
   }

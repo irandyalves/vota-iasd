@@ -9,9 +9,11 @@ import {
   Minimize,
   QrCode as QrIcon,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { IasdLogo } from './IasdLogo';
+import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
 
 interface TelaoViewProps {
   session: VotingSession;
@@ -31,8 +33,13 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
     ? (session.tieBreak?.vacancies || 1)
     : session.vacancies;
 
-  const suplentesCount = isTieBreak ? 0 : (session.suplentesCount || 0);
-  const segundoSuplentesCount = isTieBreak ? 0 : (session.segundoSuplentesCount || 0);
+  const { s1Count, s2Count } = getEffectiveSuplentes(session);
+  const suplentesCount = isTieBreak ? 0 : s1Count;
+  const segundoSuplentesCount = isTieBreak ? 0 : s2Count;
+
+  // Detecção de empates que afetam a classificação
+  const detectedTies = detectVotingTies(session);
+  const hasTies = session.status === 'CLOSED' && detectedTies.length > 0;
 
   // Lógica do QR Code: Sempre visível na coluna da esquerda por padrão no Telão
   const showQrCode = session.showQrOnTelao !== false;
@@ -295,15 +302,46 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   </div>
                 </div>
 
+                {/* ALERTA DE EMPATE NO TELÃO AO ENCERRAR VOTAÇÃO */}
+                {hasTies && (
+                  <div className="mb-3 p-2.5 sm:p-3 rounded-xl bg-amber-950/90 border-2 border-amber-400 text-amber-200 shadow-2xl flex items-center justify-between gap-3 animate-pulse">
+                    <div className="flex items-center gap-2.5">
+                      <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 shrink-0 animate-bounce" />
+                      <div>
+                        <h4 className="font-black text-xs sm:text-sm lg:text-base text-white uppercase tracking-wide">
+                          EMPATE DETECTADO: {detectedTies.map((t) => t.label).join(' • ')}
+                        </h4>
+                        <p className="text-[11px] sm:text-xs text-amber-200/90 font-medium">
+                          {detectedTies
+                            .map(
+                              (t) =>
+                                `${t.label} (${t.votesCount} ${t.votesCount === 1 ? 'voto' : 'votos'}): ${t.tiedCandidates.map((c) => c.name).join(', ')}`
+                            )
+                            .join(' | ')}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="px-2.5 py-1 bg-amber-400 text-blue-950 font-black text-[10px] sm:text-xs uppercase tracking-wider rounded-lg shrink-0 shadow">
+                      Aguardando Desempate
+                    </span>
+                  </div>
+                )}
+
                 {/* LISTA ANIMADA DE CANDIDATOS */}
                 <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1'}`}>
                   <AnimatePresence>
                     {sortedOptions.map((option, index) => {
                       const rank = index + 1;
+                      const isClosed = session.status === 'CLOSED';
                       const isElected = rank <= vacancies;
                       const isSuplente = !isElected && rank <= (vacancies + suplentesCount);
                       const isSegundoSuplente = !isElected && !isSuplente && rank <= (vacancies + suplentesCount + segundoSuplentesCount);
                       const percentage = Math.round(((option.votesCount || 0) / maxVotesRecorded) * 100);
+
+                      // Verifica se este candidato específico está em empate
+                      const tiedGroup = isClosed
+                        ? detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id))
+                        : undefined;
 
                       return (
                         <React.Fragment key={option.id}>
@@ -349,7 +387,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               stiffness: 180,
                             }}
                             className={`border transition-all duration-300 relative overflow-hidden flex items-center ${
-                              isElected
+                              tiedGroup
+                                ? 'bg-[#3b2105]/95 border-2 border-amber-400 text-amber-100 py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl gap-2.5 shadow-lg shadow-amber-950/60 ring-2 ring-amber-400/50'
+                                : isElected
                                 ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/50 text-white py-1.5 px-2.5 sm:py-2 sm:px-3 rounded-xl gap-2.5'
                                 : isSuplente
                                 ? 'bg-[#2b0c10]/95 border-red-700/70 shadow-sm text-red-100 py-1 px-2 sm:py-1 sm:px-2.5 rounded-lg gap-2'
@@ -364,7 +404,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               animate={{ width: `${Math.max(percentage, 2)}%` }}
                               transition={{ duration: 0.6, ease: 'easeOut' }}
                               className={`absolute top-0 bottom-0 left-0 opacity-25 pointer-events-none rounded-xl ${
-                                isElected
+                                tiedGroup
+                                  ? 'bg-gradient-to-r from-amber-600 to-amber-400'
+                                  : isElected
                                   ? 'bg-gradient-to-r from-emerald-500 to-green-400'
                                   : isSuplente
                                   ? 'bg-gradient-to-r from-red-700 to-red-500'
@@ -377,7 +419,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             {/* Posição / Rank (1º, 2º, 3º...) */}
                             <div
                               className={`flex items-center justify-center font-black shrink-0 shadow-sm ${
-                                isElected
+                                tiedGroup
+                                  ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-amber-400 text-blue-950 ring-2 ring-amber-300'
+                                  : isElected
                                   ? rank === 1
                                     ? 'w-7 h-7 sm:w-7.5 sm:h-7.5 rounded-lg text-xs sm:text-sm bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
                                     : rank === 2
@@ -401,7 +445,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 <img
                                   src={option.photoUrl}
                                   alt={option.name}
-                                  className={`${isElected ? 'w-8 h-8' : isSuplente || isSegundoSuplente ? 'w-6.5 h-6.5' : 'w-5 h-5'} rounded-lg object-cover border border-blue-500/50 shadow`}
+                                  className={`${isElected || tiedGroup ? 'w-8 h-8' : isSuplente || isSegundoSuplente ? 'w-6.5 h-6.5' : 'w-5 h-5'} rounded-lg object-cover border border-blue-500/50 shadow`}
                                 />
                               </div>
                             )}
@@ -411,7 +455,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               <div className="flex items-center gap-1.5">
                                 <h4
                                   className={`leading-tight truncate uppercase tracking-wide ${
-                                    isElected
+                                    tiedGroup
+                                      ? 'font-black text-xs sm:text-sm text-amber-200'
+                                      : isElected
                                       ? 'font-black text-xs sm:text-sm text-white'
                                       : isSuplente
                                       ? 'font-bold text-[11px] sm:text-xs text-red-100'
@@ -422,21 +468,36 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 >
                                   {option.name}
                                 </h4>
-                                {isElected && (
-                                  <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
-                                    <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
-                                    Titular
+                                {tiedGroup ? (
+                                  <span className="inline-flex items-center gap-1 text-[9px] px-2 py-0.5 rounded-full font-black bg-amber-400 text-blue-950 animate-pulse uppercase shadow">
+                                    <AlertTriangle className="w-2.5 h-2.5" />
+                                    Empate ({tiedGroup.label})
                                   </span>
-                                )}
-                                {isSuplente && (
-                                  <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#421016] text-red-200 border border-red-600/60">
-                                    {segundoSuplentesCount > 0 ? '1º Suplente' : 'Suplente'}
-                                  </span>
-                                )}
-                                {isSegundoSuplente && (
-                                  <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#42240e] text-amber-200 border border-amber-600/60">
-                                    2º Suplente
-                                  </span>
+                                ) : (
+                                  <>
+                                    {isElected && (
+                                      <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
+                                        <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
+                                        {isClosed ? 'Eleito Titular' : 'Titular'}
+                                      </span>
+                                    )}
+                                    {isSuplente && (
+                                      <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#421016] text-red-200 border border-red-600/60">
+                                        {isClosed
+                                          ? segundoSuplentesCount > 0
+                                            ? '1º Suplente Eleito'
+                                            : 'Suplente Eleito'
+                                          : segundoSuplentesCount > 0
+                                          ? '1º Suplente'
+                                          : 'Suplente'}
+                                      </span>
+                                    )}
+                                    {isSegundoSuplente && (
+                                      <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-[#42240e] text-amber-200 border border-amber-600/60">
+                                        {isClosed ? '2º Suplente Eleito' : '2º Suplente'}
+                                      </span>
+                                    )}
+                                  </>
                                 )}
                               </div>
                             </div>

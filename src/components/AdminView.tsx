@@ -23,6 +23,7 @@ import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
 import { openTelaoOnSecondMonitor } from '../utils/screen';
+import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -328,9 +329,13 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
       .filter((o) => selectedTieCandidateIds.includes(o.id))
       .map((o) => ({ ...o, votesCount: 0 }));
 
+    const nextIteration = (session.votingIteration || 1) + 1;
+
     saveSession({
       ...session,
       status: 'TIE_BREAK',
+      votingIteration: nextIteration,
+      telaoMode: 'voting',
       tieBreak: {
         active: true,
         title: `Desempate: ${tieVacancies} ${tieVacancies === 1 ? 'Vaga' : 'Vagas'}`,
@@ -398,6 +403,39 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         >
           <CheckCircle className="w-4 h-4 text-current shrink-0" />
           <span>{notification.message}</span>
+        </div>
+      )}
+
+      {/* BANNER DE ALERTA DE EMPATE PARA O LÍDER (SOMENTE PARA ADMIN) */}
+      {session.status === 'CLOSED' && detectVotingTies(session).length > 0 && (
+        <div className="mb-3.5 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-950/90 to-red-950/90 border-2 border-amber-400 text-white shadow-xl flex flex-wrap items-center justify-between gap-3 animate-pulse">
+          <div className="flex items-center gap-2.5">
+            <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
+            <div>
+              <h4 className="font-black text-sm sm:text-base text-amber-300 uppercase tracking-wide">
+                Atenção: Empate Detectado na Apuração!
+              </h4>
+              <p className="text-xs text-slate-200">
+                Há empate em: <strong className="text-white">{detectVotingTies(session).map((t) => t.label).join(', ')}</strong>.
+                Configure e inicie a rodada de desempate abaixo.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab('control');
+              const firstTie = detectVotingTies(session)[0];
+              if (firstTie) {
+                setSelectedTieCandidateIds(firstTie.tiedCandidates.map((c) => c.id));
+                setTieVacancies(firstTie.vacanciesInDispute);
+              }
+            }}
+            className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow transition cursor-pointer active:scale-95 flex items-center gap-1.5"
+          >
+            <Flame className="w-4 h-4" />
+            Configurar Desempate
+          </button>
         </div>
       )}
 
@@ -666,148 +704,234 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </div>
 
               {/* 2. 1º SUPLENTE */}
-              <div className="bg-[#07132a]/90 border border-red-600/50 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-400 animate-pulse shrink-0" />
-                    <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
-                      1º Suplente
-                    </h4>
-                  </div>
-                  <p className="text-[10px] text-blue-200/80 mb-3">
-                    Substitutos imediatos
-                  </p>
-                </div>
+              {(() => {
+                const { s1Enabled, s2Enabled } = getEffectiveSuplentes(session);
+                return (
+                  <>
+                    <div className={`bg-[#07132a]/90 border rounded-2xl p-3.5 flex flex-col justify-between shadow-inner transition-all ${
+                      s1Enabled ? 'border-red-600/50' : 'border-slate-800 opacity-75'
+                    }`}>
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s1Enabled ? 'bg-red-400 animate-pulse' : 'bg-slate-600'}`} />
+                            <h4 className={`text-xs sm:text-sm font-bold uppercase tracking-wide ${s1Enabled ? 'text-white' : 'text-slate-400'}`}>
+                              1º Suplente
+                            </h4>
+                          </div>
 
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => saveSession({ ...session, suplentesCount: Math.max(0, (session.suplentesCount || 0) - 1) })}
-                      disabled={(session.suplentesCount || 0) <= 0}
-                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                    >
-                      -
-                    </button>
+                          {/* BOTÃO HABILITAR / DESABILITAR 1º SUPLENTE */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const nextState = !s1Enabled;
+                              if (!nextState) {
+                                // Se desabilitado 1º, automaticamente desabilita o 2º!
+                                saveSession({
+                                  ...session,
+                                  habilitarSuplente1: false,
+                                  habilitarSuplente2: false,
+                                  suplentesCount: 0,
+                                  segundoSuplentesCount: 0,
+                                });
+                                showNotification('success', '1º e 2º Suplentes desabilitados.');
+                              } else {
+                                saveSession({
+                                  ...session,
+                                  habilitarSuplente1: true,
+                                  suplentesCount: (session.suplentesCount && session.suplentesCount > 0) ? session.suplentesCount : 2,
+                                });
+                                showNotification('success', '1º Suplente habilitado.');
+                              }
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 border shadow-sm ${
+                              s1Enabled
+                                ? 'bg-red-500/20 text-red-300 border-red-500 hover:bg-red-500/30'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
+                            }`}
+                          >
+                            {s1Enabled ? '● Habilitado' : '○ Desabilitado'}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-blue-200/80 mb-3">
+                          {s1Enabled ? 'Substitutos imediatos' : 'Desabilitado (não aparecerá no telão)'}
+                        </p>
+                      </div>
 
-                    <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-red-400 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
-                      <input
-                        type="number"
-                        min={0}
-                        max={20}
-                        value={session.suplentesCount || 0}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (!isNaN(val)) saveSession({ ...session, suplentesCount: Math.max(0, Math.min(20, val)) });
-                        }}
-                        className="w-full text-center bg-transparent text-2xl font-black font-mono text-red-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
-                      />
-                      <span className="text-[8.5px] font-bold text-red-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                        {(session.suplentesCount || 0) === 1 ? 'Suplente' : 'Suplentes'}
-                      </span>
+                      <div className={`flex flex-col gap-2.5 transition-opacity ${!s1Enabled ? 'opacity-30 pointer-events-none select-none' : ''}`}>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => saveSession({ ...session, suplentesCount: Math.max(0, (session.suplentesCount || 0) - 1) })}
+                            disabled={!s1Enabled || (session.suplentesCount || 0) <= 0}
+                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                          >
+                            -
+                          </button>
+
+                          <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-red-400 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                            <input
+                              type="number"
+                              min={0}
+                              max={20}
+                              disabled={!s1Enabled}
+                              value={s1Enabled ? (session.suplentesCount || 0) : 0}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val)) saveSession({ ...session, suplentesCount: Math.max(0, Math.min(20, val)) });
+                              }}
+                              className="w-full text-center bg-transparent text-2xl font-black font-mono text-red-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                            />
+                            <span className="text-[8.5px] font-bold text-red-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                              {(session.suplentesCount || 0) === 1 ? 'Suplente' : 'Suplentes'}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => saveSession({ ...session, suplentesCount: Math.min(20, (session.suplentesCount || 0) + 1) })}
+                            disabled={!s1Enabled || (session.suplentesCount || 0) >= 20}
+                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col gap-1 px-1">
+                          <div className="flex justify-between text-[10px] font-bold text-blue-200">
+                            <span>0 suplentes</span>
+                            <span className="text-red-300 font-mono">
+                              Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{s1Enabled ? (session.suplentesCount || 0) : 0}</strong>
+                            </span>
+                            <span>10 suplentes</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={10}
+                            disabled={!s1Enabled}
+                            value={s1Enabled ? (session.suplentesCount || 0) : 0}
+                            onChange={(e) => saveSession({ ...session, suplentesCount: Number(e.target.value) })}
+                            className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-red-400 border border-blue-700"
+                          />
+                        </div>
+                      </div>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => saveSession({ ...session, suplentesCount: Math.min(20, (session.suplentesCount || 0) + 1) })}
-                      disabled={(session.suplentesCount || 0) >= 20}
-                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                    >
-                      +
-                    </button>
-                  </div>
+                    {/* 3. 2º SUPLENTE */}
+                    <div className={`bg-[#07132a]/90 border rounded-2xl p-3.5 flex flex-col justify-between shadow-inner transition-all ${
+                      s2Enabled ? 'border-amber-600/50' : 'border-slate-800 opacity-75'
+                    }`}>
+                      <div>
+                        <div className="flex items-center justify-between gap-2 mb-1.5">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s2Enabled ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
+                            <h4 className={`text-xs sm:text-sm font-bold uppercase tracking-wide ${s2Enabled ? 'text-white' : 'text-slate-400'}`}>
+                              2º Suplente
+                            </h4>
+                          </div>
 
-                  <div className="flex flex-col gap-1 px-1">
-                    <div className="flex justify-between text-[10px] font-bold text-blue-200">
-                      <span>0 suplentes</span>
-                      <span className="text-red-300 font-mono">
-                        Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{session.suplentesCount || 0}</strong>
-                      </span>
-                      <span>10 suplentes</span>
+                          {/* BOTÃO HABILITAR / DESABILITAR 2º SUPLENTE */}
+                          <button
+                            type="button"
+                            disabled={!s1Enabled}
+                            onClick={() => {
+                              if (!s1Enabled) {
+                                showNotification('error', 'Para habilitar o 2º Suplente, habilite primeiro o 1º Suplente.');
+                                return;
+                              }
+                              const nextState = !s2Enabled;
+                              saveSession({
+                                ...session,
+                                habilitarSuplente2: nextState,
+                                segundoSuplentesCount: nextState
+                                  ? ((session.segundoSuplentesCount && session.segundoSuplentesCount > 0) ? session.segundoSuplentesCount : 1)
+                                  : 0,
+                              });
+                              showNotification('success', nextState ? '2º Suplente habilitado.' : '2º Suplente desabilitado.');
+                            }}
+                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-150 border shadow-sm ${
+                              !s1Enabled
+                                ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500 border-slate-800'
+                                : s2Enabled
+                                ? 'bg-amber-500/20 text-amber-300 border-amber-500 hover:bg-amber-500/30 cursor-pointer active:scale-95'
+                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 cursor-pointer active:scale-95'
+                            }`}
+                          >
+                            {!s1Enabled ? 'Bloqueado' : s2Enabled ? '● Habilitado' : '○ Desabilitado'}
+                          </button>
+                        </div>
+                        <p className="text-[10px] text-blue-200/80 mb-3">
+                          {!s1Enabled
+                            ? 'Requer 1º Suplente habilitado'
+                            : s2Enabled
+                            ? 'Segunda linha de suplência'
+                            : 'Desabilitado (não aparecerá no telão)'}
+                        </p>
+                      </div>
+
+                      <div className={`flex flex-col gap-2.5 transition-opacity ${!s2Enabled ? 'opacity-30 pointer-events-none select-none' : ''}`}>
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.max(0, (session.segundoSuplentesCount || 0) - 1) })}
+                            disabled={!s2Enabled || (session.segundoSuplentesCount || 0) <= 0}
+                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                          >
+                            -
+                          </button>
+
+                          <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
+                            <input
+                              type="number"
+                              min={0}
+                              max={20}
+                              disabled={!s2Enabled}
+                              value={s2Enabled ? (session.segundoSuplentesCount || 0) : 0}
+                              onChange={(e) => {
+                                const val = parseInt(e.target.value, 10);
+                                if (!isNaN(val)) saveSession({ ...session, segundoSuplentesCount: Math.max(0, Math.min(20, val)) });
+                              }}
+                              className="w-full text-center bg-transparent text-2xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
+                            />
+                            <span className="text-[8.5px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
+                              {(session.segundoSuplentesCount || 0) === 1 ? '2º Suplente' : '2º Suplentes'}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.min(20, (session.segundoSuplentesCount || 0) + 1) })}
+                            disabled={!s2Enabled || (session.segundoSuplentesCount || 0) >= 20}
+                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col gap-1 px-1">
+                          <div className="flex justify-between text-[10px] font-bold text-blue-200">
+                            <span>0 suplentes</span>
+                            <span className="text-amber-300 font-mono">
+                              Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{s2Enabled ? (session.segundoSuplentesCount || 0) : 0}</strong>
+                            </span>
+                            <span>10 suplentes</span>
+                          </div>
+                          <input
+                            type="range"
+                            min={0}
+                            max={10}
+                            disabled={!s2Enabled}
+                            value={s2Enabled ? (session.segundoSuplentesCount || 0) : 0}
+                            onChange={(e) => saveSession({ ...session, segundoSuplentesCount: Number(e.target.value) })}
+                            className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700"
+                          />
+                        </div>
+                      </div>
                     </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={10}
-                      value={session.suplentesCount || 0}
-                      onChange={(e) => saveSession({ ...session, suplentesCount: Number(e.target.value) })}
-                      className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-red-400 border border-blue-700"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. 2º SUPLENTE */}
-              <div className="bg-[#07132a]/90 border border-amber-600/50 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                    <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
-                      2º Suplente
-                    </h4>
-                  </div>
-                  <p className="text-[10px] text-blue-200/80 mb-3">
-                    Segunda linha de suplência
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2.5">
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.max(0, (session.segundoSuplentesCount || 0) - 1) })}
-                      disabled={(session.segundoSuplentesCount || 0) <= 0}
-                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                    >
-                      -
-                    </button>
-
-                    <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
-                      <input
-                        type="number"
-                        min={0}
-                        max={20}
-                        value={session.segundoSuplentesCount || 0}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (!isNaN(val)) saveSession({ ...session, segundoSuplentesCount: Math.max(0, Math.min(20, val)) });
-                        }}
-                        className="w-full text-center bg-transparent text-2xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
-                      />
-                      <span className="text-[8.5px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                        {(session.segundoSuplentesCount || 0) === 1 ? '2º Suplente' : '2º Suplentes'}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.min(20, (session.segundoSuplentesCount || 0) + 1) })}
-                      disabled={(session.segundoSuplentesCount || 0) >= 20}
-                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  <div className="flex flex-col gap-1 px-1">
-                    <div className="flex justify-between text-[10px] font-bold text-blue-200">
-                      <span>0 suplentes</span>
-                      <span className="text-amber-300 font-mono">
-                        Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{session.segundoSuplentesCount || 0}</strong>
-                      </span>
-                      <span>10 suplentes</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={10}
-                      value={session.segundoSuplentesCount || 0}
-                      onChange={(e) => saveSession({ ...session, segundoSuplentesCount: Number(e.target.value) })}
-                      className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700"
-                    />
-                  </div>
-                </div>
-              </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 
@@ -830,6 +954,55 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 </button>
               )}
             </div>
+
+            {/* CASOS DE EMPATE DETECTADOS AUTOMATICAMENTE */}
+            {(() => {
+              const detected = detectVotingTies(session);
+              if (detected.length === 0) return null;
+              return (
+                <div className="mb-4 p-3.5 bg-amber-950/80 border-2 border-amber-400 rounded-2xl shadow-xl">
+                  <div className="flex items-center gap-2 mb-2.5 text-amber-300 font-bold text-xs sm:text-sm">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 animate-bounce shrink-0" />
+                    <span>Empates Identificados na Apuração Oficial ({detected.length}):</span>
+                  </div>
+                  <div className="space-y-2">
+                    {detected.map((tie, idx) => (
+                      <div
+                        key={idx}
+                        className="flex flex-wrap items-center justify-between gap-3 p-2.5 bg-[#07132a] rounded-xl border border-amber-600/50 text-xs"
+                      >
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-extrabold text-amber-300 uppercase">{tie.label}</span>
+                            <span className="text-[10px] font-mono bg-amber-400 text-blue-950 px-1.5 py-0.2 rounded font-black">
+                              {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'} cada
+                            </span>
+                          </div>
+                          <p className="text-white font-semibold mt-1">
+                            Candidatos: {tie.tiedCandidates.map((c) => c.name).join(', ')}
+                          </p>
+                          <p className="text-[11px] text-blue-200 mt-0.5">
+                            Vagas restantes em disputa nesta categoria: <strong className="text-amber-300 font-bold">{tie.vacanciesInDispute}</strong>
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedTieCandidateIds(tie.tiedCandidates.map((c) => c.id));
+                            setTieVacancies(tie.vacanciesInDispute);
+                            showNotification('success', `Candidatos empatados para ${tie.label} carregados no motor!`);
+                          }}
+                          className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black rounded-xl text-xs transition cursor-pointer active:scale-95 shadow-md flex items-center gap-1.5"
+                        >
+                          <Flame className="w-3.5 h-3.5" />
+                          Carregar este Desempate
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* SEÇÃO DE VAGAS EM DISPUTA DO DESEMPATE (COM NÚMERO DIGITÁVEL) */}
             <div className="bg-[#07132a]/90 border border-amber-500/40 rounded-2xl p-4 mb-4 shadow-inner">

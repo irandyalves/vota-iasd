@@ -280,7 +280,7 @@ export async function submitBallot(
     });
   }
   setLocalSession(currentSession);
-  markAsVoted(session.id, round);
+  markAsVoted(session.id, round, iteration);
 
   return { success: true };
 }
