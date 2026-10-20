@@ -90,17 +90,20 @@ function setLocalSession(session: VotingSession) {
 export async function saveSession(session: VotingSession): Promise<void> {
   session.updatedAt = Date.now();
 
+  // Limpa campos undefined para compatibilidade com o Firestore
+  const cleanSession = JSON.parse(JSON.stringify(session));
+
   if (isFirebaseConfigured && db) {
     try {
       const sessionRef = doc(db, 'sessions', session.id);
-      await setDoc(sessionRef, session, { merge: true });
+      await setDoc(sessionRef, cleanSession, { merge: true });
     } catch (error) {
       console.error('Erro ao salvar no Firestore:', error);
       // Fallback local
-      setLocalSession(session);
+      setLocalSession(cleanSession);
     }
   } else {
-    setLocalSession(session);
+    setLocalSession(cleanSession);
   }
 }
 
