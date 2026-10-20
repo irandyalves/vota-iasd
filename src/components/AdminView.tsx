@@ -14,7 +14,6 @@ import {
   Flame,
   FileSpreadsheet,
   FileText,
-  Pause,
   QrCode,
   Tv,
   Sliders,
@@ -427,15 +426,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     showNotification('success', 'Votação iniciada! Telão em tempo real e celulares liberados.');
   };
 
-  // Disparo: "PAUSAR / SALA DE ESPERA"
-  const handlePauseVoting = () => {
-    saveSession({
-      ...session,
-      status: 'WAITING',
-    });
-    showNotification('success', 'Votação colocada em espera.');
-  };
-
   // Disparo: "ENCERRAR VOTAÇÃO"
   const handleCloseVoting = () => {
     saveSession({
@@ -659,7 +649,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* BARRA DE ABAS, EVENTOS (ESTILO BOTÕES) E COMANDOS RÁPIDOS DO ADMIN — ENCOSTA NAS BORDAS DA JANELA */}
+      {/* BARRA DE ABAS E EVENTOS (ESTILO BOTÕES) — ENCOSTA NAS BORDAS DA JANELA */}
       <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 px-4 sm:px-6 lg:px-8 py-3.5 shadow-xl mb-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           {/* ESQUERDA: Abas + Botões de Eventos Criados */}
@@ -677,14 +667,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 }`}
               >
                 <span>Nomes ({session.options.length})</span>
-              </button>
-              <button
-                onClick={() => setActiveTab('control')}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                  activeTab === 'control' ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                <span>Configurar Evento</span>
               </button>
               <button
                 type="button"
@@ -790,50 +772,74 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             </div>
           </div>
 
-          {/* DIREITA: Botões Retangulares (PAUSAR VOTAÇÃO, ENCERRAR VOTAÇÃO, EXIBIR QR.CODE NO TELÃO) */}
-          <div className="flex flex-wrap items-center gap-2">
+          {/* CANTO DIREITO: CONFIGURAR EVENTO (ENGRENAGEM COLORIDA: DENTES CINZA CLARO, CENTRO VERMELHO ESCURO, GIRA SUAVE SENTIDO HORÁRIO NO HOVER) */}
+          <div className="flex items-center ml-auto">
             <button
-              onClick={session.status === 'VOTING' ? handlePauseVoting : handleStartVoting}
-              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all duration-150 active:scale-95 cursor-pointer ${
-                session.status === 'VOTING'
-                  ? 'bg-transparent border-2 border-amber-500 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/25'
-                  : 'bg-transparent border-2 border-emerald-500 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 active:bg-emerald-500/25'
+              type="button"
+              onClick={() => setActiveTab(activeTab === 'control' ? 'candidates' : 'control')}
+              title="Configurar Evento (Vagas, Suplentes, Nome do Evento e Desempate)"
+              className={`group relative p-2 rounded-2xl border-2 transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center ${
+                activeTab === 'control'
+                  ? 'bg-[#07132a] border-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.45)]'
+                  : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 hover:border-amber-400/70 shadow-lg'
               }`}
             >
-              {session.status === 'VOTING' ? (
-                <Pause className="w-4 h-4 fill-current" />
-              ) : (
-                <Play className="w-4 h-4 fill-current" />
-              )}
-              <span>{session.status === 'VOTING' ? 'PAUSAR VOTAÇÃO' : 'INICIAR VOTAÇÃO'}</span>
-            </button>
-
-            <button
-              onClick={handleCloseVoting}
-              disabled={session.status === 'CLOSED'}
-              className="px-4 py-2 bg-transparent hover:bg-purple-500/10 border-2 border-purple-500 text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:pointer-events-none rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-95 active:bg-purple-500/25 cursor-pointer"
-            >
-              <StopCircle className="w-4 h-4 fill-current" />
-              <span>ENCERRAR VOTAÇÃO</span>
-            </button>
-
-            {/* Botão de Controle do QR Code no Telão */}
-            <button
-              onClick={() => {
-                saveSession({
-                  ...session,
-                  showQrOnTelao: session.showQrOnTelao === false ? true : false,
-                });
-              }}
-              title="Mostrar ou ocultar o QR Code no Telão"
-              className={`px-4 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-95 cursor-pointer ${
-                session.showQrOnTelao !== false
-                  ? 'bg-amber-500/15 hover:bg-amber-400/25 border-2 border-amber-400 text-amber-300 hover:text-amber-200'
-                  : 'bg-[#1e293b]/80 hover:bg-amber-500/15 border-2 border-amber-400 text-amber-300 hover:text-amber-200'
-              }`}
-            >
-              <QrCode className="w-4 h-4" />
-              <span>EXIBIR QR.CODE NO TELÃO</span>
+              <svg
+                viewBox="0 0 64 64"
+                className="w-8 h-8 transition-transform duration-1000 ease-in-out group-hover:rotate-[360deg] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+              >
+                {/* 8 Dentes Cinza Claro (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°) */}
+                {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+                  <g key={angle} transform={`rotate(${angle} 32 32)`}>
+                    <rect
+                      x="26"
+                      y="3"
+                      width="12"
+                      height="13"
+                      rx="2.5"
+                      fill="#e2e8f0"
+                      stroke="#94a3b8"
+                      strokeWidth="1.5"
+                    />
+                  </g>
+                ))}
+                {/* Corpo / Anel Metálico Cinza Claro da Engrenagem */}
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="21"
+                  fill="#cbd5e1"
+                  stroke="#94a3b8"
+                  strokeWidth="2"
+                />
+                {/* Anel Interno de Acabamento */}
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="15.5"
+                  fill="#94a3b8"
+                  stroke="#64748b"
+                  strokeWidth="1.2"
+                />
+                {/* Centro Vermelho Escuro */}
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="12.5"
+                  fill="#7f1d1d"
+                  stroke="#450a0a"
+                  strokeWidth="2"
+                />
+                {/* Brilho Sutil no Núcleo Vermelho Escuro */}
+                <circle
+                  cx="32"
+                  cy="32"
+                  r="6"
+                  fill="#991b1b"
+                  stroke="#b91c1c"
+                  strokeWidth="1"
+                />
+              </svg>
             </button>
           </div>
         </div>
@@ -1481,151 +1487,159 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             onChange={(e) => handleFileImport(e, 'replace')}
           />
 
-          {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ (3X MAIS ALTA, COM BOTÕES DE IMPORTAR NA MESMA LINHA DO CABEÇALHO) */}
+          {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ COM A SEÇÃO DA DIREITA INDO DO TOPO ATÉ EMBAIXO */}
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-xl">
-            {/* CABEÇALHO NA MESMA LINHA: TÍTULO + SEÇÃO "IMPORTAR DADOS" LOGO À FRENTE */}
-            <div className="flex flex-wrap items-center gap-3 sm:gap-4 mb-3">
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                <label className="text-xs sm:text-sm font-black text-white font-serif uppercase tracking-wide">
-                  Digite ou Fale os Nomes
-                </label>
-                {isListening && (
-                  <span className="text-[10px] font-bold text-rose-400 bg-rose-950/90 px-2 py-0.5 rounded-full border border-rose-600 animate-pulse flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
-                    Ouvindo...
-                  </span>
+            <div className="flex flex-col lg:flex-row gap-4 items-stretch">
+              {/* COLUNA DA ESQUERDA: CABEÇALHO + IMPORTAR DADOS + TEXTAREA */}
+              <div className="flex-1 flex flex-col justify-between gap-3 min-w-0">
+                {/* CABEÇALHO NA MESMA LINHA: TÍTULO + SEÇÃO "IMPORTAR DADOS" LOGO À FRENTE */}
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                    <label className="text-xs sm:text-sm font-black text-white font-serif uppercase tracking-wide">
+                      Digite ou Fale os Nomes
+                    </label>
+                    {isListening && (
+                      <span className="text-[10px] font-bold text-rose-400 bg-rose-950/90 px-2 py-0.5 rounded-full border border-rose-600 animate-pulse flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                        Ouvindo...
+                      </span>
+                    )}
+                  </div>
+
+                  {/* SEÇÃO IMPORTAR DADOS (NA FRENTE DE DIGITE OU FALE OS NOMES) */}
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        const syntheticEvent = { target: { files: [file] } } as any;
+                        handleFileImport(syntheticEvent, 'append');
+                      }
+                    }}
+                    className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-inner"
+                  >
+                    <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 pr-2 mr-0.5 border-r border-blue-800">
+                      <Upload className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Importar dados:</span>
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => fileUploadAppendRef.current?.click()}
+                      className="px-2.5 py-1 bg-transparent hover:bg-emerald-500/15 border border-emerald-500/80 text-emerald-400 hover:text-emerald-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-emerald-500/30 shadow-sm"
+                      title="Importar de arquivo Excel (.xlsx, .xls)"
+                    >
+                      <FileSpreadsheet className="w-3.5 h-3.5" />
+                      <span>Excel (.xlsx)</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileUploadAppendRef.current?.click()}
+                      className="px-2.5 py-1 bg-transparent hover:bg-blue-500/15 border border-blue-500/80 text-blue-400 hover:text-blue-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-blue-500/30 shadow-sm"
+                      title="Importar de arquivo CSV"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>CSV</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => fileUploadAppendRef.current?.click()}
+                      className="px-2.5 py-1 bg-transparent hover:bg-slate-400/15 border border-slate-500/80 text-slate-300 hover:text-white rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-slate-500/30 shadow-sm"
+                      title="Importar de arquivo TXT"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>TXT</span>
+                    </button>
+
+                    {/* Arrastar e Soltar */}
+                    <div
+                      onClick={() => fileUploadAppendRef.current?.click()}
+                      className="px-2.5 py-1 bg-[#001f47]/70 hover:bg-[#0c1f44] border border-dashed border-blue-500 hover:border-amber-400 rounded-lg text-[10px] text-blue-200 hover:text-amber-300 font-semibold transition cursor-pointer flex items-center gap-1"
+                      title="Arraste qualquer arquivo e solte aqui"
+                    >
+                      <Upload className="w-3 h-3 text-amber-400" />
+                      <span>ou arraste o arquivo aqui</span>
+                    </div>
+
+                    {/* Baixar Modelo */}
+                    <button
+                      type="button"
+                      onClick={handleDownloadSampleTemplate}
+                      className="px-2 py-1 text-blue-300/80 hover:text-white rounded-lg text-[10px] font-semibold transition flex items-center gap-0.5 cursor-pointer"
+                      title="Baixar arquivo modelo de exemplo"
+                    >
+                      <Download className="w-3 h-3" />
+                      <span>Modelo (.csv)</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Textarea com Microfone Verde no canto direito centralizado */}
+                <div className="flex-1 relative flex flex-col">
+                  <textarea
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleAddCandidateName(newName);
+                      }
+                    }}
+                    placeholder="DIGITE OU COLE OS NOMES AQUI (DÊ ENTER OU SEPARE POR VÍRGULA OU LINHA)..."
+                    className="w-full flex-1 min-h-[160px] sm:min-h-[175px] p-3.5 pr-16 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
+                  />
+
+                  {/* Microfone Verde no Canto Direito Centralizado */}
+                  <button
+                    type="button"
+                    onClick={() => setIsListening(!isListening)}
+                    title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
+                    className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full border-2 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                      isListening
+                        ? 'bg-rose-600/70 border-rose-300 text-white shadow-[0_0_20px_rgba(244,63,94,0.75)] animate-pulse'
+                        : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.45)] hover:shadow-[0_0_22px_rgba(52,211,153,0.65)]'
+                    }`}
+                  >
+                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </button>
+                </div>
+
+                {speechTranscript && isListening && (
+                  <p className="text-xs text-amber-300 font-mono bg-blue-950/80 p-2 rounded-lg border border-blue-800">
+                    Ouvindo: <span className="text-white font-bold">"{speechTranscript}"</span>
+                  </p>
                 )}
               </div>
 
-              {/* SEÇÃO IMPORTAR DADOS (NA FRENTE DE DIGITE OU FALE OS NOMES) */}
-              <div
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={(e) => {
-                  e.preventDefault();
-                  const file = e.dataTransfer.files?.[0];
-                  if (file) {
-                    const syntheticEvent = { target: { files: [file] } } as any;
-                    handleFileImport(syntheticEvent, 'append');
-                  }
-                }}
-                className="flex flex-wrap items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-inner"
-              >
-                <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-1.5 pr-2 mr-0.5 border-r border-blue-800">
-                  <Upload className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Importar dados:</span>
-                </span>
-
-                <button
-                  type="button"
-                  onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-2.5 py-1 bg-transparent hover:bg-emerald-500/15 border border-emerald-500/80 text-emerald-400 hover:text-emerald-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-emerald-500/30 shadow-sm"
-                  title="Importar de arquivo Excel (.xlsx, .xls)"
-                >
-                  <FileSpreadsheet className="w-3.5 h-3.5" />
-                  <span>Excel (.xlsx)</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-2.5 py-1 bg-transparent hover:bg-blue-500/15 border border-blue-500/80 text-blue-400 hover:text-blue-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-blue-500/30 shadow-sm"
-                  title="Importar de arquivo CSV"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>CSV</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-2.5 py-1 bg-transparent hover:bg-slate-400/15 border border-slate-500/80 text-slate-300 hover:text-white rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-slate-500/30 shadow-sm"
-                  title="Importar de arquivo TXT"
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>TXT</span>
-                </button>
-
-                {/* Arrastar e Soltar */}
-                <div
-                  onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-2.5 py-1 bg-[#001f47]/70 hover:bg-[#0c1f44] border border-dashed border-blue-500 hover:border-amber-400 rounded-lg text-[10px] text-blue-200 hover:text-amber-300 font-semibold transition cursor-pointer flex items-center gap-1"
-                  title="Arraste qualquer arquivo e solte aqui"
-                >
-                  <Upload className="w-3 h-3 text-amber-400" />
-                  <span>ou arraste o arquivo aqui</span>
-                </div>
-
-                {/* Baixar Modelo */}
-                <button
-                  type="button"
-                  onClick={handleDownloadSampleTemplate}
-                  className="px-2 py-1 text-blue-300/80 hover:text-white rounded-lg text-[10px] font-semibold transition flex items-center gap-0.5 cursor-pointer"
-                  title="Baixar arquivo modelo de exemplo"
-                >
-                  <Download className="w-3 h-3" />
-                  <span>Modelo (.csv)</span>
-                </button>
-              </div>
-            </div>
-
-            {/* CAMPO DE DIGITAÇÃO COM MICROFONE VERDE CENTRALIZADO À DIREITA + COLUNA DE BOTÕES NA PONTA */}
-            <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-              {/* Textarea com Microfone Verde no canto direito centralizado */}
-              <div className="flex-1 relative">
-                <textarea
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault();
-                      handleAddCandidateName(newName);
-                    }
-                  }}
-                  placeholder="DIGITE OU COLE OS NOMES AQUI (DÊ ENTER OU SEPARE POR VÍRGULA OU LINHA)..."
-                  className="w-full h-32 sm:h-36 p-3.5 pr-16 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
-                />
-
-                {/* Microfone Verde no Canto Direito Centralizado */}
-                <button
-                  type="button"
-                  onClick={() => setIsListening(!isListening)}
-                  title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
-                  className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full border-2 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
-                    isListening
-                      ? 'bg-rose-600/70 border-rose-300 text-white shadow-[0_0_20px_rgba(244,63,94,0.75)] animate-pulse'
-                      : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.45)] hover:shadow-[0_0_22px_rgba(52,211,153,0.65)]'
-                  }`}
-                >
-                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                </button>
-              </div>
-
-              {/* SEÇÃO À DIREITA: NOVA VOTAÇÃO (VERDE), ENCERRAR VOTAÇÃO (VERMELHO), MOSTRAR NO TELÃO */}
-              <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-2xl p-2.5 flex flex-col gap-2 shrink-0 w-44 sm:w-52 justify-between shadow-inner">
-                {/* Botão NOVA VOTAÇÃO (EM VERDE) */}
+              {/* SEÇÃO DA DIREITA: DO TOPO ATÉ EMBAIXO, COM MAIS ESPAÇO ENTRE OS BOTÕES */}
+              <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-2xl p-3.5 flex flex-col gap-3.5 shrink-0 w-full lg:w-60 justify-between shadow-inner">
+                {/* 1. Botão NOVA VOTAÇÃO (EM VERDE) */}
                 <button
                   type="button"
                   onClick={handleStartVoting}
-                  className="flex-1 min-h-[38px] px-3 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-[10.5px] rounded-xl transition-all duration-150 active:scale-90 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  className="flex-1 min-h-[42px] px-3.5 py-2.5 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-[11px] rounded-xl transition-all duration-150 active:scale-95 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
                   title="Iniciar Nova Votação mantendo os nomes em ordem A-Z"
                 >
-                  <Play className="w-3.5 h-3.5 shrink-0 fill-current" />
+                  <Play className="w-4 h-4 shrink-0 fill-current" />
                   <span>NOVA VOTAÇÃO</span>
                 </button>
 
-                {/* Botão ENCERRAR VOTAÇÃO (EM VERMELHO) */}
+                {/* 2. Botão ENCERRAR VOTAÇÃO (EM VERMELHO) */}
                 <button
                   type="button"
                   onClick={handleCloseVoting}
-                  className="flex-1 min-h-[38px] px-3 bg-rose-600/50 hover:bg-rose-600/70 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-black text-[10.5px] rounded-xl transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  className="flex-1 min-h-[42px] px-3.5 py-2.5 bg-rose-600/50 hover:bg-rose-600/70 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-black text-[11px] rounded-xl transition-all duration-150 active:scale-95 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
                   title="Encerrar Votação e consolidar resultados no Telão"
                 >
-                  <StopCircle className="w-3.5 h-3.5 shrink-0" />
+                  <StopCircle className="w-4 h-4 shrink-0" />
                   <span>ENCERRAR VOTAÇÃO</span>
                 </button>
 
-                {/* Botão MOSTRAR NO TELÃO */}
+                {/* 3. Botão MOSTRAR NO TELÃO */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1639,26 +1653,40 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         : 'Exibindo Votação/Resultados no Telão!'
                     );
                   }}
-                  className={`flex-1 min-h-[38px] px-2.5 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-black text-[10.5px] ${
+                  className={`flex-1 min-h-[42px] px-3 py-2.5 border-2 rounded-xl transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider font-black text-[11px] ${
                     session.telaoMode === 'names'
                       ? 'bg-amber-500/50 hover:bg-amber-500/70 border-amber-300 text-amber-100 shadow-[0_0_15px_rgba(251,191,36,0.45)]'
                       : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_20px_rgba(96,165,250,0.55)]'
                   }`}
                   title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
                 >
-                  <Tv className="w-3.5 h-3.5 shrink-0" />
+                  <Tv className="w-4 h-4 shrink-0" />
                   <span>
                     {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
                   </span>
                 </button>
+
+                {/* 4. Botão EXIBIR QR.CODE NO TELÃO (MOVIDO PARA A SEÇÃO DA DIREITA) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    saveSession({
+                      ...session,
+                      showQrOnTelao: session.showQrOnTelao === false ? true : false,
+                    });
+                  }}
+                  title="Mostrar ou ocultar o QR Code no Telão"
+                  className={`flex-1 min-h-[42px] px-3 py-2.5 border-2 rounded-xl transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider font-black text-[10.5px] ${
+                    session.showQrOnTelao !== false
+                      ? 'bg-amber-500/25 hover:bg-amber-400/35 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
+                      : 'bg-[#1e293b]/80 hover:bg-amber-500/20 border-amber-400/80 text-amber-300'
+                  }`}
+                >
+                  <QrCode className="w-4 h-4 shrink-0" />
+                  <span>EXIBIR QR.CODE NO TELÃO</span>
+                </button>
               </div>
             </div>
-
-            {speechTranscript && isListening && (
-              <p className="text-xs text-amber-300 font-mono mt-2 bg-blue-950/80 p-2 rounded-lg border border-blue-800">
-                Ouvindo: <span className="text-white font-bold">"{speechTranscript}"</span>
-              </p>
-            )}
           </div>
 
           {/* 3. NOMES CADASTRADOS (CARDS EM LINHA, SEM SUBTITULO, SEM VOTOS) */}
