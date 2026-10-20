@@ -10,7 +10,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
-import { submitBallot, hasVoted } from '../services/votingService';
+import { submitBallot, hasVoted, verifyBallotOnServer, clearVotedFlag } from '../services/votingService';
 import { urnaAudio } from '../utils/audio';
 import { IasdLogo } from './IasdLogo';
 import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
@@ -52,6 +52,25 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   // Após votar, mostra "SEU VOTO FOI COMPUTADO" por 5s e depois os resultados em tempo real
   const [showLiveResults, setShowLiveResults] = useState(false);
   const hasVotedNow = alreadyVoted || submitSuccess;
+
+  // Confere no servidor se a trava local corresponde a uma cédula real.
+  // Se a trava existir só no aparelho (voto nunca chegou ao servidor), libera para votar de verdade.
+  const [, forceRerender] = useState(0);
+  useEffect(() => {
+    if (!alreadyVoted) return;
+    let cancelled = false;
+    const iteration = session.votingIteration || 1;
+    verifyBallotOnServer(session.id, currentRound, iteration).then((exists) => {
+      if (!cancelled && exists === false) {
+        clearVotedFlag(session.id, currentRound, iteration);
+        setSubmitSuccess(false);
+        forceRerender((n) => n + 1);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [alreadyVoted, session.id, currentRound, session.votingIteration]);
   useEffect(() => {
     if (!hasVotedNow) {
       setShowLiveResults(false);
@@ -242,7 +261,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   layout
                   transition={{ type: 'spring', damping: 25, stiffness: 180 }}
                   key={option.id}
-                  className={`py-1 px-2 rounded-lg border relative overflow-hidden flex items-center gap-1.5 min-h-[26px] ${
+                  style={{ gridTemplateColumns: '20ch minmax(0,1fr) auto 5ch' }}
+                  className={`py-1 px-2 rounded-lg border relative overflow-hidden grid items-center text-[10px] min-h-[26px] ${
                     tiedGroup
                       ? 'bg-[#351e06] border-amber-400 ring-1 ring-amber-400/50'
                       : isElected
@@ -272,7 +292,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                     }`}
                   />
 
-                  {/* Posição */}
+                  {/* COLUNA 1 (20 caracteres fixos): Posição + Nome */}
+                  <div className="z-10 min-w-0 flex items-center gap-1 overflow-hidden">
                   <div
                     className={`w-[18px] h-[18px] rounded text-[9px] font-black flex items-center justify-center shrink-0 z-10 ${
                       tiedGroup
@@ -289,10 +310,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                     {rank}º
                   </div>
 
-                  {/* Nome e Badge */}
-                  <div className="flex-1 min-w-0 z-10 flex items-center gap-1">
                     <h4
-                      className={`font-bold text-[10px] truncate uppercase leading-tight ${
+                      className={`font-bold text-[10px] truncate uppercase leading-tight min-w-0 ${
                         tiedGroup
                           ? 'text-amber-200 font-black'
                           : isElected
@@ -306,7 +325,10 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                     >
                       {option.name}
                     </h4>
+                  </div>
 
+                  {/* COLUNA 2: Badge (coluna própria) */}
+                  <div className="z-10 min-w-0 flex items-center pl-1">
                     {tiedGroup ? (
                       <span className="text-[7px] px-1 rounded-full font-black bg-amber-400 text-blue-950 uppercase shrink-0">
                         Empate
@@ -326,11 +348,15 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                     ) : null}
                   </div>
 
-                  {/* Votos e Percentual */}
-                  <div className="text-right z-10 shrink-0 font-mono flex items-center gap-1">
+                  {/* COLUNA 3: Votos (puxado para a esquerda, 2 caracteres antes da %) */}
+                  <div className="z-10 font-mono flex items-center justify-end gap-1 whitespace-nowrap" style={{ marginRight: '2ch' }}>
                     <span className="text-[8px] text-slate-300/80 uppercase font-bold">votos</span>
                     <span className="font-extrabold text-[10px] text-white">{option.votesCount || 0}</span>
-                    <span className="text-[9px] font-black text-amber-300">{sharePercentage}%</span>
+                  </div>
+
+                  {/* COLUNA 4: % (5 caracteres fixos, alinhado à direita) */}
+                  <div className="z-10 font-mono text-right text-[10px] font-black text-amber-300 whitespace-nowrap">
+                    {sharePercentage}%
                   </div>
                 </motion.div>
               );

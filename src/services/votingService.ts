@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc, runTransaction } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import type { VotingSession, VoterBallot } from '../types';
 
@@ -27,6 +27,28 @@ export function markAsVoted(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MA
   if (typeof window === 'undefined') return;
   const key = `voted_${sessionId}_i${iteration}_${round}`;
   localStorage.setItem(key, 'true');
+}
+
+export function clearVotedFlag(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN', iteration: number = 1): void {
+  if (typeof window === 'undefined') return;
+  localStorage.removeItem(`voted_${sessionId}_i${iteration}_${round}`);
+}
+
+// Confere no servidor se a cédula deste aparelho existe de fato (fonte da verdade).
+// Retorna true/false, ou null se não foi possível verificar (offline / sem Firebase).
+export async function verifyBallotOnServer(
+  sessionId: string,
+  round: 'MAIN' | 'TIE_BREAK' = 'MAIN',
+  iteration: number = 1
+): Promise<boolean | null> {
+  if (!isFirebaseConfigured || !db) return null;
+  try {
+    const ballotRef = doc(db, 'sessions', sessionId, 'ballots', `${getDeviceId()}_${round}_i${iteration}`);
+    const snap = await getDoc(ballotRef);
+    return snap.exists();
+  } catch (_) {
+    return null;
+  }
 }
 
 // Sessão Padrão Inicial para demonstração imediata
@@ -92,6 +114,10 @@ export async function saveSession(session: VotingSession): Promise<void> {
 
   // Limpa campos undefined para total compatibilidade com Firestore
   const cleanSession = JSON.parse(JSON.stringify(session));
+  // tieBreak removido precisa ser gravado como null, senão o merge mantém o desempate antigo no Firestore
+  if (!session.tieBreak) {
+    cleanSession.tieBreak = null;
+  }
 
   // 1. Atualiza o estado local imediatamente (0ms de latência para Telão e Admin na mesma máquina)
   setLocalSession(cleanSession);
@@ -241,6 +267,12 @@ export async function submitBallot(
 
         if (sessionSnap.exists()) {
           const liveData = sessionSnap.data() as VotingSession;
+          // Rodada mudou/encerrou enquanto o eleitor escolhia -> não computa em rodada errada
+          const liveIteration = liveData.votingIteration || 1;
+          const expectedStatus = round === 'TIE_BREAK' ? 'TIE_BREAK' : 'VOTING';
+          if (liveIteration !== iteration || liveData.status !== expectedStatus) {
+            throw new Error('ROUND_CHANGED');
+          }
           if (Array.isArray(liveData.options) && liveData.options.length > 0) {
             liveOptions = liveData.options;
           }
@@ -307,6 +339,9 @@ export async function submitBallot(
       if (err instanceof Error && err.message === 'ALREADY_VOTED') {
         markAsVoted(session.id, round, iteration);
         return { success: false, message: 'Você já votou nesta rodada com este dispositivo!' };
+      }
+      if (err instanceof Error && err.message === 'ROUND_CHANGED') {
+        return { success: false, message: 'A votação foi alterada pelo líder. Aguarde a tela atualizar e vote novamente.' };
       }
       console.error('Erro na transação Firebase ao computar voto:', err);
       return {
