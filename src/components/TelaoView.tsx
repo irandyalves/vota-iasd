@@ -124,26 +124,27 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       {/* ÁREA CENTRAL: QR CODE À ESQUERDA (REVELANDO SUAVE DA ESQUERDA P/ DIREITA) E SEÇÃO DA DIREITA SENDO EMPURRADA/ESMAGADA */}
       <div className="flex-1 w-full">
         <div className="flex flex-col md:flex-row items-start w-full">
-          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (CENTRALIZADO VERTICALMENTE E COM ANIMAÇÃO 10X MAIS LENTA) */}
-          <motion.div
-            initial={false}
-            animate={{
-              width: showQrCode ? 280 : 0,
-              marginRight: showQrCode ? 16 : 0,
+          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (TRANSIÇÃO CSS NATIVA GARANTIDA DE 6 SEGUNDOS, CENTRALIZADO VERTICALMENTE) */}
+          <div
+            style={{
+              width: showQrCode ? '280px' : '0px',
+              marginRight: showQrCode ? '16px' : '0px',
               opacity: showQrCode ? 1 : 0,
+              transition:
+                'width 6000ms cubic-bezier(0.25, 0.1, 0.25, 1), margin-right 6000ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 6000ms ease-in-out',
+              pointerEvents: showQrCode ? 'auto' : 'none',
+              willChange: 'width, margin-right, opacity',
             }}
-            transition={{ duration: 4.5, ease: 'easeInOut' }}
-            style={{ pointerEvents: showQrCode ? 'auto' : 'none' }}
-            className="overflow-hidden shrink-0 sticky top-0 min-h-[calc(100vh-1.75rem)] flex items-center max-w-full"
+            className="overflow-hidden shrink-0 sticky top-0 min-h-[calc(100vh-1.75rem)] flex items-center"
           >
-            <motion.div
-              initial={false}
-              animate={{
-                x: showQrCode ? 0 : -280,
-                opacity: showQrCode ? 1 : 0,
+            <div
+              style={{
+                width: '280px',
+                transform: showQrCode ? 'translateX(0px)' : 'translateX(-280px)',
+                transition: 'transform 6000ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+                willChange: 'transform',
               }}
-              transition={{ duration: 4.5, ease: 'easeInOut' }}
-              className="w-[280px] bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
+              className="w-[280px] shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
             >
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2 shadow-inner">
                 <QrIcon className="w-5 h-5" />
@@ -179,8 +180,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               <p className="text-[10px] text-blue-300/70 font-mono">
                 vota-iasd-central.web.app
               </p>
-            </motion.div>
-          </motion.div>
+            </div>
+          </div>
 
           {/* COLUNA DA DIREITA: LISTA DE CANDIDATOS / CORRIDA DE BARRAS OU VOTO SECRETO */}
           <div className="flex-1 min-w-0 w-full">
@@ -226,7 +227,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       {optionsToDisplay.map((option) => (
                         <motion.div
                           key={option.id}
-                          layout="position"
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
@@ -451,13 +451,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     return (
                       <motion.div
                         key={option.id}
-                        layout="position"
-                        layoutId={`telao-card-${option.id}`}
-                        transition={{
-                          type: 'spring',
-                          damping: 25,
-                          stiffness: 180,
-                        }}
                         className={`border transition-colors duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 min-h-[36px] sm:min-h-[38px] shadow-sm ${
                           tiedGroup
                             ? 'bg-[#3b2105]/95 border-2 border-amber-400 text-amber-100 shadow-md ring-2 ring-amber-400/50'
