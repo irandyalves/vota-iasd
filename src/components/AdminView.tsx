@@ -1276,7 +1276,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   </div>
                 </div>
 
-                {/* Textarea com Microfone Verde no canto direito centralizado */}
+                {/* Textarea com Microfone Verde no canto direito centralizado (ALTURA REDUZIDA EM 25%) */}
                 <div className="flex-1 relative flex flex-col">
                   <textarea
                     value={newName}
@@ -1288,7 +1288,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       }
                     }}
                     placeholder="DIGITE OU COLE OS NOMES AQUI (DÊ ENTER OU SEPARE POR VÍRGULA OU LINHA)..."
-                    className="w-full flex-1 min-h-[160px] sm:min-h-[175px] p-3.5 pr-16 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
+                    className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
                   />
 
                   {/* Microfone Verde no Canto Direito Centralizado */}
@@ -1296,13 +1296,13 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     type="button"
                     onClick={() => setIsListening(!isListening)}
                     title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
-                    className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full border-2 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
                       isListening
                         ? 'bg-rose-600/70 border-rose-300 text-white shadow-[0_0_20px_rgba(244,63,94,0.75)] animate-pulse'
                         : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.45)] hover:shadow-[0_0_22px_rgba(52,211,153,0.65)]'
                     }`}
                   >
-                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </button>
                 </div>
 
@@ -1313,16 +1313,16 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 )}
               </div>
 
-              {/* SEÇÃO DA DIREITA: DO TOPO ATÉ EMBAIXO, COM MAIS ESPAÇO ENTRE OS BOTÕES */}
-              <div className="border border-blue-800/80 rounded-2xl p-3.5 flex flex-col gap-3.5 shrink-0 w-full lg:w-60 justify-between">
+              {/* SEÇÃO DA DIREITA: SEM BORDINHA EXTERNA, BOTÕES 25% MENORES, E SEM BOLD EM MOSTRAR TELÃO E QR.CODE TELÃO */}
+              <div className="flex flex-col gap-2 shrink-0 w-full lg:w-48 justify-between">
                 {/* 1. Botão NOVA VOTAÇÃO (EM VERDE) */}
                 <button
                   type="button"
                   onClick={handleStartVoting}
-                  className="flex-1 min-h-[42px] px-3.5 py-2.5 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-[11px] rounded-xl transition-all duration-150 active:scale-95 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
+                  className="flex-1 min-h-[30px] px-2.5 py-1.5 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_12px_rgba(52,211,153,0.3)] hover:shadow-[0_0_16px_rgba(52,211,153,0.5)] font-black text-[9.5px] rounded-lg transition-all duration-150 active:scale-95 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
                   title="Iniciar Nova Votação mantendo os nomes em ordem A-Z"
                 >
-                  <Play className="w-4 h-4 shrink-0 fill-current" />
+                  <Play className="w-3 h-3 shrink-0 fill-current" />
                   <span>NOVA VOTAÇÃO</span>
                 </button>
 
@@ -1330,14 +1330,14 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <button
                   type="button"
                   onClick={handleCloseVoting}
-                  className="flex-1 min-h-[42px] px-3.5 py-2.5 bg-rose-600/50 hover:bg-rose-600/70 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-black text-[11px] rounded-xl transition-all duration-150 active:scale-95 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider"
+                  className="flex-1 min-h-[30px] px-2.5 py-1.5 bg-rose-600/50 hover:bg-rose-600/70 border-2 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.3)] hover:shadow-[0_0_16px_rgba(244,63,94,0.5)] font-black text-[9.5px] rounded-lg transition-all duration-150 active:scale-95 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
                   title="Encerrar Votação e consolidar resultados no Telão"
                 >
-                  <StopCircle className="w-4 h-4 shrink-0" />
+                  <StopCircle className="w-3 h-3 shrink-0" />
                   <span>ENCERRAR VOTAÇÃO</span>
                 </button>
 
-                {/* 3. Botão MOSTRAR NO TELÃO */}
+                {/* 3. Botão MOSTRAR NO TELÃO (SEM BOLD) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1351,20 +1351,20 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         : 'Exibindo Votação/Resultados no Telão!'
                     );
                   }}
-                  className={`flex-1 min-h-[42px] px-3 py-2.5 border-2 rounded-xl transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider font-black text-[11px] ${
+                  className={`flex-1 min-h-[30px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
                     session.telaoMode === 'names'
-                      ? 'bg-amber-500/50 hover:bg-amber-500/70 border-amber-300 text-amber-100 shadow-[0_0_15px_rgba(251,191,36,0.45)]'
-                      : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_20px_rgba(96,165,250,0.55)]'
+                      ? 'bg-amber-500/50 hover:bg-amber-500/70 border-amber-300 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
+                      : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_12px_rgba(96,165,250,0.3)] hover:shadow-[0_0_16px_rgba(96,165,250,0.5)]'
                   }`}
                   title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
                 >
-                  <Tv className="w-4 h-4 shrink-0" />
+                  <Tv className="w-3 h-3 shrink-0" />
                   <span>
                     {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
                   </span>
                 </button>
 
-                {/* 4. Botão EXIBIR QR.CODE NO TELÃO (MOVIDO PARA A SEÇÃO DA DIREITA) */}
+                {/* 4. Botão EXIBIR QR.CODE NO TELÃO (SEM BOLD) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1374,13 +1374,13 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     });
                   }}
                   title="Mostrar ou ocultar o QR Code no Telão"
-                  className={`flex-1 min-h-[42px] px-3 py-2.5 border-2 rounded-xl transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 uppercase tracking-wider font-black text-[10.5px] ${
+                  className={`flex-1 min-h-[30px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
                     session.showQrOnTelao !== false
-                      ? 'bg-amber-500/25 hover:bg-amber-400/35 border-amber-400 text-amber-200 shadow-[0_0_15px_rgba(251,191,36,0.35)]'
+                      ? 'bg-amber-500/25 hover:bg-amber-400/35 border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
                       : 'bg-[#1e293b]/80 hover:bg-amber-500/20 border-amber-400/80 text-amber-300'
                   }`}
                 >
-                  <QrCode className="w-4 h-4 shrink-0" />
+                  <QrCode className="w-3 h-3 shrink-0" />
                   <span>EXIBIR QR.CODE NO TELÃO</span>
                 </button>
               </div>
