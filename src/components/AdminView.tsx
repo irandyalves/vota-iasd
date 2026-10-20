@@ -1208,13 +1208,16 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <button
                   type="button"
                   onClick={() => {
-                    if (window.confirm('Deseja limpar todos os nomes cadastrados?')) {
+                    if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
                       saveSession({ ...session, options: [] });
+                      showNotification('success', 'Todos os nomes foram apagados.');
                     }
                   }}
-                  className="text-[11px] text-rose-400 hover:text-rose-300 underline cursor-pointer"
+                  className="px-3 py-1.5 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.35)] hover:shadow-[0_0_18px_rgba(244,63,94,0.55)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer"
+                  title="Apagar todos os nomes cadastrados"
                 >
-                  Limpar todos
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>Limpar tudo</span>
                 </button>
               )}
             </div>
