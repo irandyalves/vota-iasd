@@ -18,7 +18,6 @@ import {
   ArrowDownAZ,
   Pencil,
   FolderPlus,
-  ChevronDown,
 } from 'lucide-react';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
@@ -57,16 +56,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       }
     };
 
-    const handleMouseDown = (e: MouseEvent) => {
-      const target = e.target as HTMLElement;
+    const handlePointerDown = (e: MouseEvent | PointerEvent) => {
+      const el = e.target instanceof Element ? e.target : null;
       if (isCreatingNewEvent) {
-        const clickedEditBtn = target.closest?.('[data-edit-event-btn="true"]');
-        if (
-          eventModalRef.current &&
-          !eventModalRef.current.contains(target) &&
-          (!createEventBtnRef.current || !createEventBtnRef.current.contains(target)) &&
-          !clickedEditBtn
-        ) {
+        const insideModal = Boolean(el?.closest('[data-event-modal="true"]'));
+        const insideCreateBtn = Boolean(el?.closest('[data-create-event-btn="true"]'));
+        const insideEditBtn = Boolean(el?.closest('[data-edit-event-btn="true"]'));
+        if (!insideModal && !insideCreateBtn && !insideEditBtn) {
           setIsCreatingNewEvent(false);
           setEditingEventId(null);
           setEventNameInput(session.title || '');
@@ -75,20 +71,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       if (isGearOpen) {
         if (
           gearPanelRef.current &&
-          !gearPanelRef.current.contains(target) &&
+          el &&
+          !gearPanelRef.current.contains(el) &&
           gearButtonRef.current &&
-          !gearButtonRef.current.contains(target)
+          !gearButtonRef.current.contains(el)
         ) {
           setIsGearOpen(false);
         }
       }
     };
 
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handleMouseDown);
+    document.addEventListener('keydown', handleKeyDown, true);
+    document.addEventListener('pointerdown', handlePointerDown, true);
     return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handleMouseDown);
+      document.removeEventListener('keydown', handleKeyDown, true);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
     };
   }, [isGearOpen, isCreatingNewEvent, session.title]);
 
@@ -118,8 +115,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   // Selecionar um evento ao clicar no botão do evento no cabeçalho -> abre a parte de baixo (Print 2)
   const handleSelectEventButton = (evt: VotingEventItem) => {
     if (evt.id === currentActiveEventId && activeTab === 'candidates') {
-      // Se já está selecionado na aba de nomes, alterna abrir/fechar a parte de baixo ou garante aberto
-      setIsBottomSectionOpen((prev) => !prev);
+      setIsBottomSectionOpen(true);
       return;
     }
 
@@ -629,6 +625,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             <div className="relative flex items-center shrink-0">
               <button
                 ref={createEventBtnRef}
+                data-create-event-btn="true"
                 type="button"
                 onClick={() => {
                   if (isCreatingNewEvent && !editingEventId) {
@@ -652,6 +649,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 {isCreatingNewEvent && !editingEventId && (
                   <motion.div
                     ref={eventModalRef}
+                    data-event-modal="true"
                     initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
                     animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
                     exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
@@ -689,7 +687,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </AnimatePresence>
             </div>
 
-            {/* À DIREITA DO BOTÃO "+ CRIAR VOTAÇÃO": EVENTOS CRIADOS (20% MAIS ALTOS + BOTÃO EDITAR COM MODALZINHO NO LÁPIS) */}
+            {/* À DIREITA DO BOTÃO "+ CRIAR VOTAÇÃO": EVENTOS CRIADOS (QTD EM AMARELO, SEM SETINHA, APENAS LÁPIS E LIXEIRA CLICÁVEIS) */}
             {eventsList.map((evt) => {
               const isSelected = evt.id === currentActiveEventId;
               const count = isSelected ? session.options.length : (evt.options?.length || 0);
@@ -699,23 +697,18 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <div key={evt.id} className="relative flex items-center">
                   <div
                     onClick={() => handleSelectEventButton(evt)}
-                    title="Clique para abrir/recolher os nomes deste evento"
-                    className={`group px-2.5 py-1.5 rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
+                    title="Selecionar este evento"
+                    className={`group px-2.5 py-1.5 rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none border shadow-sm ${
                       isSelected
                         ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
                         : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
                     }`}
                   >
                     <span>{displayName}</span>
-                    <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
+                    <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] border border-amber-400/70 text-[10px] font-mono font-black text-amber-400">
                       {count}
                     </span>
-                    <ChevronDown
-                      className={`w-3 h-3 transition-transform ${
-                        isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
-                      }`}
-                    />
-                    {/* Botão Editar Nome do Evento (abre o modalzinho exatamente embaixo deste evento/lápis) */}
+                    {/* Único ícone clicável 1: Lápis (Editar Nome do Evento) */}
                     <button
                       type="button"
                       data-edit-event-btn="true"
@@ -731,16 +724,17 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         }
                       }}
                       title="Editar nome deste evento"
-                      className="p-0.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
+                      className="p-0.5 text-slate-400 hover:text-amber-300 transition cursor-pointer active:scale-90"
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
+                    {/* Único ícone clicável 2: Lixeira (Excluir Evento) */}
                     {eventsList.length > 1 && (
                       <button
                         type="button"
                         onClick={(e) => handleDeleteEvent(evt.id, e)}
                         title="Excluir este evento"
-                        className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                        className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer active:scale-90"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -752,6 +746,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     {isEditingThisEvt && (
                       <motion.div
                         ref={eventModalRef}
+                        data-event-modal="true"
                         initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
                         animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
                         exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
