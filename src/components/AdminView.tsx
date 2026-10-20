@@ -446,12 +446,11 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               <span>Configurar Evento</span>
             </button>
             <button
-              onClick={() => setActiveTab('settings')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer ${
-                activeTab === 'settings'
-                  ? 'bg-slate-700 text-slate-200 font-bold shadow-md'
-                  : 'text-slate-500/60 hover:text-slate-300 opacity-60 hover:opacity-90'
-              }`}
+              type="button"
+              disabled
+              aria-disabled="true"
+              tabIndex={-1}
+              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500/40 opacity-45 cursor-not-allowed pointer-events-none select-none"
             >
               <span>Migração</span>
             </button>
