@@ -1,25 +1,56 @@
 // Gerenciador de Exibição em Múltiplas Telas (Monitor 2 / Projetor / TV)
 
+let secondaryWindow: Window | null = null;
+const listeners = new Set<(isOpen: boolean) => void>();
+
+function notifyListeners() {
+  const isOpen = isSecondaryScreenOpen();
+  listeners.forEach((fn) => {
+    try {
+      fn(isOpen);
+    } catch (_) {}
+  });
+}
+
+export function isSecondaryScreenOpen(): boolean {
+  return Boolean(secondaryWindow && !secondaryWindow.closed);
+}
+
+export function subscribeSecondaryScreen(callback: (isOpen: boolean) => void): () => void {
+  listeners.add(callback);
+  callback(isSecondaryScreenOpen());
+  return () => {
+    listeners.delete(callback);
+  };
+}
+
+export function closeSecondaryScreen(): void {
+  if (secondaryWindow && !secondaryWindow.closed) {
+    try {
+      secondaryWindow.close();
+    } catch (_) {}
+  }
+  secondaryWindow = null;
+  notifyListeners();
+}
+
 export async function openTelaoOnSecondMonitor(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
   const url = `${window.location.origin}/?view=telao&fullscreen=true`;
   
   // Coordenadas padrão para o 2º monitor no Windows (Extended Desktop)
-  // No Windows, o monitor secundário à direita fica em x = availWidth da tela principal
   let targetLeft = window.screen.availWidth || 1920;
   let targetTop = 0;
   let targetWidth = window.screen.availWidth || 1920;
   let targetHeight = window.screen.availHeight || 1080;
 
   // Window Management API moderna (Chrome / Edge / Chromium)
-  // Consegue identificar com precisão qual monitor é o projetor/TV
   if ('getScreenDetails' in window) {
     try {
       // @ts-ignore
       const screenDetails = await window.getScreenDetails();
       if (screenDetails && screenDetails.screens && screenDetails.screens.length > 1) {
-        // Encontra o monitor secundário (que não seja a tela atual onde está o Admin)
         const secondaryScreen =
           screenDetails.screens.find((s: any) => s !== screenDetails.currentScreen) ||
           screenDetails.screens[1];
@@ -33,7 +64,7 @@ export async function openTelaoOnSecondMonitor(): Promise<boolean> {
         }
       }
     } catch (err) {
-      console.log('ℹ️ Permissão de detecção de telas não concedida ou dispensada, usando posicionamento estendido:', err);
+      console.log('ℹ️ Detecção de telas API não disponível ou dispensada:', err);
     }
   }
 
@@ -58,11 +89,32 @@ export async function openTelaoOnSecondMonitor(): Promise<boolean> {
       return false; // Bloqueado pelo navegador
     }
 
+    secondaryWindow = popup;
+    notifyListeners();
+
+    // Monitora se o usuário fechar a janela manualmente com o X
+    const checkTimer = setInterval(() => {
+      if (!secondaryWindow || secondaryWindow.closed) {
+        clearInterval(checkTimer);
+        secondaryWindow = null;
+        notifyListeners();
+      }
+    }, 800);
+
     // Se o popup abriu, foca nele
     popup.focus();
     return true;
   } catch (e) {
     console.error('Falha ao abrir 2ª tela:', e);
     return false;
+  }
+}
+
+export async function toggleSecondaryScreen(): Promise<boolean> {
+  if (isSecondaryScreenOpen()) {
+    closeSecondaryScreen();
+    return false;
+  } else {
+    return await openTelaoOnSecondMonitor();
   }
 }

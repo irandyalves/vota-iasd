@@ -19,14 +19,16 @@ import {
   FileSpreadsheet,
   FileText,
   Tv,
+  MonitorOff,
   ExternalLink,
   Pencil,
   QrCode,
+  X,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
-import { openTelaoOnSecondMonitor } from '../utils/screen';
+import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -46,6 +48,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   // Estados de Desempate
   const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
   const [tieVacancies, setTieVacancies] = useState(1);
+  const [isScreen2Open, setIsScreen2Open] = useState(false);
+
+  useEffect(() => {
+    const unsub = subscribeSecondaryScreen(setIsScreen2Open);
+    return unsub;
+  }, []);
 
   const importFileRef = useRef<HTMLInputElement>(null);
   const fileUploadReplaceRef = useRef<HTMLInputElement>(null);
@@ -626,16 +634,25 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           </button>
 
           {/* Botão de 2ª Tela para o Projetor / TV */}
-          <button
-            onClick={() => {
-              openTelaoOnSecondMonitor();
-            }}
-            className="p-2.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-900/20 transition active:scale-95 cursor-pointer"
-          >
-            <Tv className="w-4 h-4" />
-            <span>2ª TELA (TELÃO)</span>
-            <ExternalLink className="w-3 h-3 opacity-80" />
-          </button>
+          {isScreen2Open ? (
+            <button
+              onClick={() => toggleSecondaryScreen()}
+              className="p-2.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-500/50 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-rose-950/40 transition active:scale-95 cursor-pointer"
+            >
+              <MonitorOff className="w-4 h-4 text-rose-400" />
+              <span>OCULTAR 2ª TELA</span>
+              <X className="w-3 h-3 opacity-80" />
+            </button>
+          ) : (
+            <button
+              onClick={() => toggleSecondaryScreen()}
+              className="p-2.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-900/20 transition active:scale-95 cursor-pointer"
+            >
+              <Tv className="w-4 h-4" />
+              <span>2ª TELA (TELÃO)</span>
+              <ExternalLink className="w-3 h-3 opacity-80" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -644,7 +661,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         <div className="space-y-3.5">
           {/* Seção de Desempate */}
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
-            <div className="flex items-center justify-between mb-3">
+            {/* Cabeçalho do Motor de Desempate */}
+            <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-2">
                 <Flame className="w-5 h-5 text-amber-400" />
                 <h3 className="text-base font-bold text-white font-serif">
@@ -654,64 +672,137 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               {session.status === 'TIE_BREAK' && (
                 <button
                   onClick={handleCancelTieBreak}
-                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold"
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow"
                 >
                   Finalizar Desempate
                 </button>
               )}
             </div>
 
-            <p className="text-[11px] text-blue-200 mb-3">
-              Selecione quais candidatos participarão da rodada de desempate e quantas vagas estão em disputa:
-            </p>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 mb-3">
-              {session.options.map((opt) => {
-                const isSelected = selectedTieCandidateIds.includes(opt.id);
-                return (
-                  <div
-                    key={opt.id}
-                    onClick={() => {
-                      if (isSelected) {
-                        setSelectedTieCandidateIds(selectedTieCandidateIds.filter((id) => id !== opt.id));
-                      } else {
-                        setSelectedTieCandidateIds([...selectedTieCandidateIds, opt.id]);
-                      }
-                    }}
-                    className={`p-2 rounded-lg border cursor-pointer select-none text-[11px] font-semibold flex items-center justify-between ${
-                      isSelected
-                        ? 'bg-amber-950 border-amber-400 text-amber-200'
-                        : 'bg-[#07132a] border-blue-900 text-slate-300'
-                    }`}
-                  >
-                    <span className="truncate">{opt.name}</span>
-                    <span className="font-mono ml-1.5 text-blue-300 text-[10px]">{opt.votesCount || 0}v</span>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3 pt-2.5 border-t border-blue-900/60">
-              <div className="flex items-center gap-1.5 text-xs text-white">
-                <span>Vagas em Disputa:</span>
-                <input
-                  type="number"
-                  min={1}
-                  max={selectedTieCandidateIds.length || 1}
-                  value={tieVacancies}
-                  onChange={(e) => setTieVacancies(Number(e.target.value))}
-                  className="w-14 px-2 py-1 bg-[#07132a] border border-blue-700 rounded-lg text-white font-mono text-center font-bold text-xs"
-                />
+            {/* SEÇÃO DE VAGAS EM DISPUTA (POSICIONADA EM CIMA DOS NOMES, 2.5X MAIOR COM SLIDER) */}
+            <div className="bg-[#07132a]/90 border border-amber-500/40 rounded-2xl p-4 mb-4 shadow-inner">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                <h4 className="text-base font-bold text-white font-serif uppercase tracking-wide">
+                  Vagas em Disputa
+                </h4>
+                <span className="text-xs text-blue-300 font-normal ml-1">
+                  (quantos candidatos serão eleitos nesta rodada)
+                </span>
               </div>
 
-              <button
-                onClick={handleStartTieBreak}
-                disabled={selectedTieCandidateIds.length < 2}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-blue-950 font-black text-xs rounded-xl shadow transition active:scale-95 cursor-pointer flex items-center gap-1.5"
-              >
-                <Flame className="w-3.5 h-3.5 text-blue-950" />
-                Iniciar Rodada de Desempate nos Celulares
-              </button>
+              <div className="flex flex-wrap items-center justify-between gap-4">
+                {/* Seletor Numérico 2.5x Maior com Botões + e - */}
+                <div className="flex items-center gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => setTieVacancies(Math.max(1, tieVacancies - 1))}
+                    disabled={tieVacancies <= 1}
+                    title="Diminuir vagas em disputa"
+                    className="w-12 h-12 rounded-xl bg-[#001f47] hover:bg-blue-900 border-2 border-blue-700 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md select-none"
+                  >
+                    -
+                  </button>
+
+                  <div className="min-w-[76px] h-14 bg-[#001f47] border-2 border-amber-400 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-amber-500/10 px-3 select-none">
+                    <span className="text-2xl sm:text-3xl font-black font-mono text-amber-300 tracking-wider">
+                      {tieVacancies}
+                    </span>
+                    <span className="text-[9px] font-bold text-amber-200/90 uppercase -mt-0.5">
+                      {tieVacancies === 1 ? 'Vaga' : 'Vagas'}
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const maxLimit = Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10);
+                      setTieVacancies(Math.min(maxLimit, tieVacancies + 1));
+                    }}
+                    title="Aumentar vagas em disputa"
+                    className="w-12 h-12 rounded-xl bg-[#001f47] hover:bg-blue-900 border-2 border-blue-700 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition active:scale-95 cursor-pointer shadow-md select-none"
+                  >
+                    +
+                  </button>
+                </div>
+
+                {/* Slider Elegante e Intuitivo */}
+                <div className="flex-1 min-w-[220px] max-w-sm flex flex-col gap-1.5 px-2">
+                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
+                    <span>1 vaga</span>
+                    <span className="text-amber-300 flex items-center gap-1 font-mono">
+                      <span>Deslize para regular:</span>
+                      <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">
+                        {tieVacancies}
+                      </strong>
+                    </span>
+                    <span>
+                      {Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10)} vagas
+                    </span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10)}
+                    value={tieVacancies}
+                    onChange={(e) => setTieVacancies(Number(e.target.value))}
+                    className="w-full h-3.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700 hover:border-amber-400 transition"
+                  />
+                </div>
+
+                {/* Botão de Disparo do Desempate (2.5x maior, alinhado e destacado) */}
+                <button
+                  onClick={handleStartTieBreak}
+                  disabled={selectedTieCandidateIds.length < 2}
+                  className="h-14 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 disabled:pointer-events-none text-blue-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-amber-950/40 transition active:scale-95 cursor-pointer flex items-center justify-center gap-2 shrink-0 border border-amber-300/60"
+                >
+                  <Flame className="w-5 h-5 text-blue-950 fill-current animate-pulse" />
+                  <span>Iniciar Rodada de Desempate nos Celulares</span>
+                </button>
+              </div>
+            </div>
+
+            {/* SEÇÃO DOS NOMES / CANDIDATOS EM DISPUTA */}
+            <div className="pt-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+                <p className="text-xs font-bold text-white flex items-center gap-2">
+                  <span>Candidatos Participantes do Desempate:</span>
+                  <span className="px-2.5 py-0.5 rounded-full bg-blue-950 text-amber-300 border border-blue-800 text-[11px] font-mono font-bold">
+                    {selectedTieCandidateIds.length} selecionados
+                  </span>
+                </p>
+                <span className="text-[11px] text-blue-300">
+                  Clique nos nomes para selecionar ou desmarcar
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+                {session.options.map((opt) => {
+                  const isSelected = selectedTieCandidateIds.includes(opt.id);
+                  return (
+                    <div
+                      key={opt.id}
+                      onClick={() => {
+                        if (isSelected) {
+                          setSelectedTieCandidateIds(selectedTieCandidateIds.filter((id) => id !== opt.id));
+                        } else {
+                          setSelectedTieCandidateIds([...selectedTieCandidateIds, opt.id]);
+                        }
+                      }}
+                      className={`p-2.5 rounded-xl border-2 cursor-pointer select-none text-[11px] font-bold flex items-center justify-between transition-all duration-150 ${
+                        isSelected
+                          ? 'bg-amber-950/90 border-amber-400 text-amber-200 shadow-md shadow-amber-950/40 scale-[1.02]'
+                          : 'bg-[#07132a] border-blue-900/80 hover:border-blue-700 text-slate-300'
+                      }`}
+                    >
+                      <span className="truncate">{opt.name}</span>
+                      <span className="font-mono ml-1.5 text-blue-300 text-[10px] bg-blue-950 px-1.5 py-0.5 rounded border border-blue-800">
+                        {opt.votesCount || 0}v
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
 

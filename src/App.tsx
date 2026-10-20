@@ -5,13 +5,23 @@ import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
-import { openTelaoOnSecondMonitor } from './utils/screen';
+import { openTelaoOnSecondMonitor, subscribeSecondaryScreen } from './utils/screen';
 import { ExternalLink, X, MonitorPlay } from 'lucide-react';
 
 export function App() {
   const [session, setSession] = useState<VotingSession>(DEFAULT_INITIAL_SESSION);
   const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('admin');
   const [showPopupBlockedToast, setShowPopupBlockedToast] = useState(false);
+
+  // Monitora se o Telão na 2ª tela está ativo
+  useEffect(() => {
+    const unsub = subscribeSecondaryScreen((isOpen) => {
+      if (isOpen) {
+        setShowPopupBlockedToast(false);
+      }
+    });
+    return unsub;
+  }, []);
 
   // Função para abrir o Telão na 2ª Tela (Projetor/TV)
   const handleOpenTelaoSecondScreen = async () => {
