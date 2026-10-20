@@ -193,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* CENTRO: BOTÃO NOVA VOTAÇÃO / APURAÇÃO MAIS ALTO E COM ÍCONE DE VOTAR */}
+        {/* CENTRO: BOTÃO INICIAR VOTAÇÃO (ESTILO URNA VERDE MAIS ESCURO, SEM BRILHO) / APURAÇÃO */}
         <div className="flex items-center justify-center justify-self-center">
           <button
             type="button"
@@ -203,12 +203,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'Clique para encerrar a votação e exibir a Apuração no Telão'
                 : isVotingActive
                 ? 'Votação em andamento (clique para abrir a Apuração)'
-                : 'Iniciar Nova Votação mantendo os nomes em ordem A-Z'
+                : 'Iniciar Votação mantendo os nomes em ordem A-Z'
             }
-            className={`px-6 py-3.5 min-h-[53px] rounded-xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 ${
+            className={`px-6 py-3.5 min-h-[53px] rounded-xl border font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 shadow-md ${
               showApuracaoCaption
-                ? 'bg-amber-500/30 hover:bg-amber-500/45 border-amber-300 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.45)] hover:shadow-[0_0_24px_rgba(251,191,36,0.65)]'
-                : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_22px_rgba(52,211,153,0.55)]'
+                ? 'bg-amber-600 hover:bg-amber-500 border-amber-400 text-white'
+                : 'bg-[#0b4f30] hover:bg-[#0e633c] border-[#157347] text-white'
             }`}
           >
             {isVotingActive ? (
@@ -239,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             ) : (
               <Vote className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             )}
-            <span>{showApuracaoCaption ? 'APURAÇÃO' : 'NOVA VOTAÇÃO'}</span>
+            <span>{showApuracaoCaption ? 'APURAÇÃO' : 'INICIAR VOTAÇÃO'}</span>
           </button>
         </div>
 
