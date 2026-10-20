@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Vote } from 'lucide-react';
+import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X } from 'lucide-react';
 import { IasdLogo } from './IasdLogo';
 import { toggleSecondaryScreen, subscribeSecondaryScreen, openTelaoOnSecondMonitor } from '../utils/screen';
 import type { VotingSession } from '../types';
@@ -193,7 +193,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* CENTRO: BOTÃO INICIAR VOTAÇÃO (ESTILO URNA VERDE MAIS ESCURO, SEM BRILHO) / APURAÇÃO */}
+        {/* CENTRO: BOTÃO DA URNA (3D VERDE COM RELEVO E BRAILLE, SEM BRILHO) */}
         <div className="flex items-center justify-center justify-self-center">
           <button
             type="button"
@@ -205,41 +205,82 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'Votação em andamento (clique para abrir a Apuração)'
                 : 'Iniciar Votação mantendo os nomes em ordem A-Z'
             }
-            className={`px-6 py-3.5 min-h-[53px] rounded-xl border font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 shadow-md ${
-              showApuracaoCaption
-                ? 'bg-amber-600 hover:bg-amber-500 border-amber-400 text-white'
-                : 'bg-[#0b4f30] hover:bg-[#0e633c] border-[#157347] text-white'
-            }`}
+            style={{
+              backgroundColor: showApuracaoCaption ? '#d97706' : '#159636',
+              borderColor: showApuracaoCaption ? '#f59e0b' : '#24b349',
+              boxShadow: showApuracaoCaption
+                ? '0 6px 0 #78350f, 3px 6px 0 #451a03'
+                : '0 6px 0 #09521b, 3px 6px 0 #063b13',
+            }}
+            className="px-7 pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-transform duration-100 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none"
           >
-            {isVotingActive ? (
-              /* Rodinha com efeito de girar antes do texto enquanto a votação está ativa */
-              <svg
-                className="w-4 h-4 sm:w-5 sm:h-5 animate-spin shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="9"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeDasharray="14 8"
-                  className="opacity-90"
-                />
-                <circle
-                  cx="12"
-                  cy="12"
-                  r="4"
-                  stroke="#fbbf24"
-                  strokeWidth="2"
-                  strokeDasharray="6 4"
-                />
-              </svg>
-            ) : (
-              <Vote className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
-            )}
-            <span>{showApuracaoCaption ? 'APURAÇÃO' : 'INICIAR VOTAÇÃO'}</span>
+            <div className="flex items-center justify-center gap-2">
+              {isVotingActive && (
+                /* Rodinha com efeito de girar antes do texto enquanto a votação está ativa */
+                <svg
+                  className="w-4 h-4 sm:w-5 sm:h-5 animate-spin shrink-0 text-[#181818]"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="9"
+                    stroke="currentColor"
+                    strokeWidth="2.8"
+                    strokeDasharray="14 8"
+                  />
+                  <circle
+                    cx="12"
+                    cy="12"
+                    r="4"
+                    stroke="currentColor"
+                    strokeWidth="2.2"
+                    strokeDasharray="6 4"
+                  />
+                </svg>
+              )}
+              <span className="font-black text-sm sm:text-base tracking-wider uppercase font-sans text-[#1a1a1a] leading-none">
+                {showApuracaoCaption ? 'APURAÇÃO' : 'INICIAR VOTAÇÃO'}
+              </span>
+            </div>
+
+            {/* Pontos em Braille 3D idênticos à tecla física da Urna */}
+            <div className="flex flex-col items-center gap-[2.5px] mt-1.5 pointer-events-none">
+              {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2.5" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+              </div>
+              {/* Linha 2 */}
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 opacity-0" />
+              </div>
+              {/* Linha 3 */}
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2.5" />
+                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 opacity-0" />
+                <span className="w-2 h-2 opacity-0" />
+              </div>
+            </div>
           </button>
         </div>
 

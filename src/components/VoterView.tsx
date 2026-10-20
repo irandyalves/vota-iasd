@@ -713,41 +713,74 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       {/* BARRA FLUTUANTE INFERIOR COM O BOTÃO CONFIRMA (RÉPLICA DA TECLA VERDE DA URNA DO TSE) */}
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-[#00132b]/95 backdrop-blur-lg border-t border-blue-900/80 z-40">
         <div className="max-w-xl mx-auto flex items-center gap-3">
-          {/* BOTÃO CONFIRMA - RÉPLICA OFICIAL DA URNA TSE (COM BRAILLE) */}
+          {/* BOTÃO CONFIRMA - RÉPLICA 3D FIEL DA TECLA VERDE DA URNA (SEM BRILHO, COM RELEVO E BRAILLE 3D) */}
           <button
             type="button"
             onClick={handleConfirmVote}
             disabled={!isReadyToConfirm || isSubmitting}
-            className={`flex-1 py-3 px-6 rounded-2xl flex flex-col items-center justify-center transition-all duration-200 select-none shadow-2xl relative ${
+            style={
               isReadyToConfirm
-                ? 'bg-[#00a859] hover:bg-[#00964f] active:translate-y-1 active:shadow-md border-b-4 border-[#006837] cursor-pointer ring-4 ring-[#00a859]/30 animate-pulse'
-                : 'bg-[#1b3d2b] border-b-4 border-[#12281c] opacity-40 cursor-not-allowed text-slate-500'
+                ? {
+                    backgroundColor: '#159636',
+                    borderColor: '#24b349',
+                    boxShadow: '0 8px 0 #09521b, 4px 8px 0 #063b13',
+                  }
+                : {
+                    backgroundColor: '#1b3d2b',
+                    borderColor: '#234d37',
+                    boxShadow: '0 5px 0 #0f2419',
+                  }
+            }
+            className={`flex-1 pt-3 pb-3.5 px-6 rounded-[18px] border-[3.5px] flex flex-col items-center justify-center transition-transform duration-100 select-none relative ${
+              isReadyToConfirm
+                ? 'active:translate-y-[5px] cursor-pointer'
+                : 'opacity-45 cursor-not-allowed'
             }`}
           >
             {/* Texto CONFIRMA em preto e negrito oficial */}
             <span
-              className={`font-black text-2xl sm:text-3xl tracking-widest uppercase font-sans ${
-                isReadyToConfirm ? 'text-[#111111]' : 'text-slate-400'
+              className={`font-black text-2xl sm:text-3xl tracking-wider uppercase font-sans leading-none ${
+                isReadyToConfirm ? 'text-[#1a1a1a]' : 'text-slate-400'
               }`}
             >
               CONFIRMA
             </span>
 
-            {/* Pontos em Braille da Urna Eletrônica (como na imagem 3 enviada pelo usuário) */}
-            <div className="flex items-center gap-1 mt-1 opacity-70 pointer-events-none">
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className="w-1" />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className="w-1" />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
-              <span className={`w-1.5 h-1.5 rounded-full ${isReadyToConfirm ? 'bg-[#005c2e]' : 'bg-[#12281c]'}`} />
+            {/* Pontos em Braille 3D idênticos à imagem enviada */}
+            <div className="flex flex-col items-center gap-1 mt-2 pointer-events-none">
+              {/* Linha 1 */}
+              <div className="flex items-center gap-2.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className="w-3" />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+              </div>
+              {/* Linha 2 */}
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className="w-2.5 h-2.5 opacity-0" />
+              </div>
+              {/* Linha 3 */}
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className="w-3" />
+                <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className="w-2.5 h-2.5 opacity-0" />
+                <span className="w-2.5 h-2.5 opacity-0" />
+              </div>
             </div>
           </button>
         </div>
