@@ -214,10 +214,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       {/* ÁREA CENTRAL: QR CODE CENTRALIZADO EM RELAÇÃO À SEÇÃO DE CARDS (items-center) */}
       <div className="flex-1 w-full">
         <div className="flex flex-col md:flex-row items-center w-full">
-          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (ALINHADO AO CENTRO DA SEÇÃO DE CARDS, VELOCIDADE 2400ms) */}
+          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (+35% MAIOR, ALINHADO AO CENTRO DA SEÇÃO DE CARDS, VELOCIDADE 2400ms) */}
           <div
             style={{
-              width: showQrCode ? '280px' : '0px',
+              width: showQrCode ? '378px' : '0px',
               marginRight: showQrCode ? '16px' : '0px',
               opacity: showQrCode ? 1 : 0,
               transition:
@@ -229,25 +229,25 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
           >
             <div
               style={{
-                width: '280px',
-                transform: showQrCode ? 'translateX(0px)' : 'translateX(-280px)',
+                width: '378px',
+                transform: showQrCode ? 'translateX(0px)' : 'translateX(-378px)',
                 transition: 'transform 2400ms cubic-bezier(0.25, 0.1, 0.25, 1)',
                 willChange: 'transform',
               }}
-              className="w-[280px] shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl px-2 py-3 shadow-2xl flex flex-col items-center text-center"
+              className="w-[378px] shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl px-3 py-3.5 shadow-2xl flex flex-col items-center text-center"
             >
-              <h3 className="font-black text-white text-base sm:text-lg font-serif tracking-wider uppercase mb-2.5">
+              <h3 className="font-black text-white text-lg sm:text-xl font-serif tracking-wider uppercase mb-2.5">
                 LEIA O QR CODE
               </h3>
 
-              {/* QR Code Grande Quase Encostando nas Bordas Dir e Esq */}
-              <div className="w-full p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37] flex items-center justify-center">
+              {/* QR Code 35% Maior Quase Encostando nas Bordas Dir e Esq */}
+              <div className="w-full p-3 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37] flex items-center justify-center">
                 <QRCodeSVG
-                  value={voterUrl || `https://irandyalves.github.io/vota-iasd/?view=voter&pin=${session.pin}`}
-                  size={240}
+                  value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
+                  size={330}
                   level="M"
                   includeMargin={false}
-                  style={{ width: '100%', height: 'auto', maxWidth: '244px' }}
+                  style={{ width: '100%', height: 'auto', maxWidth: '334px' }}
                 />
               </div>
 
