@@ -656,38 +656,78 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* BARRA DE ABAS E EVENTOS (ESTILO BOTÕES) — ENCOSTA NAS BORDAS DA JANELA */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 px-4 sm:px-6 lg:px-8 py-3.5 shadow-xl mb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          {/* ESQUERDA: Abas + Botões de Eventos Criados */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900">
+      {/* BARRA DE EVENTOS COMPACTA (50% MENOR EM ALTURA) — ENCOSTA NAS BORDAS DA JANELA */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 px-4 sm:px-6 lg:px-8 py-1.5 shadow-xl mb-3">
+        <div className="flex items-center justify-between gap-2">
+          {/* ESQUERDA: RÓTULO "EVENTOS" (SEM FUNDO PRETO) + BOTÃO "+ CRIAR EVENTO" À DIREITA DELE + BOTÕES DE EVENTOS */}
+          <div className="flex-1 min-w-0 flex flex-col gap-1">
+            {/* LINHA 1: EVENTOS (SEM FUNDO PRETO) + BOTÃO CRIAR EVENTO NA DIREITA DELE */}
+            <div className="flex flex-wrap items-center gap-2">
               <button
+                type="button"
                 onClick={() => {
                   setActiveTab('candidates');
                   setIsBottomSectionOpen(true);
                 }}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                  activeTab === 'candidates' && isBottomSectionOpen
-                    ? 'bg-amber-500 text-blue-950 font-black shadow-md'
-                    : 'text-slate-300 hover:text-white'
-                }`}
+                className="px-2.5 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] uppercase tracking-wider shadow transition cursor-pointer active:scale-95"
               >
-                <span>Nomes ({session.options.length})</span>
+                EVENTOS
               </button>
-              <button
-                type="button"
-                disabled
-                aria-disabled="true"
-                tabIndex={-1}
-                className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-500/40 opacity-45 cursor-not-allowed pointer-events-none select-none"
-              >
-                <span>Migração</span>
-              </button>
+
+              {/* Botão + Criar Evento movido para a direita de EVENTOS */}
+              {isCreatingNewEvent ? (
+                <div className="flex items-center gap-1.5 bg-[#07132a] border-2 border-amber-400 rounded-lg px-2 py-0.5 shadow-lg">
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="EX: ESCOLHA DO TESOUREIRO"
+                    value={eventNameInput}
+                    onChange={(e) => setEventNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleCreateEvent(eventNameInput);
+                      if (e.key === 'Escape') {
+                        setIsCreatingNewEvent(false);
+                        setEventNameInput(session.title || '');
+                      }
+                    }}
+                    className="bg-transparent text-[11px] font-black text-white uppercase outline-none w-44 sm:w-52 placeholder-slate-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleCreateEvent(eventNameInput)}
+                    className="px-2 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-blue-950 font-black text-[10px] rounded uppercase cursor-pointer"
+                  >
+                    Salvar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreatingNewEvent(false);
+                      setEventNameInput(session.title || '');
+                    }}
+                    className="px-1.5 py-0.5 text-slate-400 hover:text-white text-[10px] font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEventNameInput('');
+                    setIsCreatingNewEvent(true);
+                  }}
+                  title="Criar um novo evento de votação (ex: Escolha do Tesoureiro)"
+                  className="px-2.5 py-0.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-dashed border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95"
+                >
+                  <FolderPlus className="w-3 h-3 text-amber-400" />
+                  <span>+ Criar Evento</span>
+                </button>
+              )}
             </div>
 
-            {/* LISTA DE EVENTOS ESTILO BOTÕES (CLICOU ABRE A PARTE DE BAIXO / PRINT 2) */}
-            <div className="flex flex-wrap items-center gap-2">
+            {/* LINHA 2: LISTA DE EVENTOS ESTILO BOTÕES (COMPACTA) */}
+            <div className="flex flex-wrap items-center gap-1.5">
               {eventsList.map((evt) => {
                 const isSelected = evt.id === currentActiveEventId;
                 const count = isSelected ? session.options.length : (evt.options?.length || 0);
@@ -697,18 +737,18 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     key={evt.id}
                     onClick={() => handleSelectEventButton(evt)}
                     title="Clique para abrir/recolher os nomes deste evento"
-                    className={`group px-3.5 py-2 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition-all duration-150 cursor-pointer active:scale-95 select-none border-2 shadow-md ${
+                    className={`group px-2.5 py-1 rounded-lg font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
                       isSelected
-                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_14px_rgba(251,191,36,0.25)]'
+                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
                         : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
                     }`}
                   >
                     <span>{displayName}</span>
-                    <span className="px-1.5 py-0.2 rounded-md bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
+                    <span className="px-1.5 py-0 rounded bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
                       {count}
                     </span>
                     <ChevronDown
-                      className={`w-3.5 h-3.5 transition-transform ${
+                      className={`w-3 h-3 transition-transform ${
                         isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
                       }`}
                     />
@@ -725,75 +765,24 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   </div>
                 );
               })}
-
-              {/* Botão Rápido + Novo Evento no Cabeçalho */}
-              {isCreatingNewEvent ? (
-                <div className="flex items-center gap-1.5 bg-[#07132a] border-2 border-amber-400 rounded-xl px-2.5 py-1 shadow-lg">
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="EX: ESCOLHA DO TESOUREIRO"
-                    value={eventNameInput}
-                    onChange={(e) => setEventNameInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCreateEvent(eventNameInput);
-                      if (e.key === 'Escape') {
-                        setIsCreatingNewEvent(false);
-                        setEventNameInput(session.title || '');
-                      }
-                    }}
-                    className="bg-transparent text-xs font-black text-white uppercase outline-none w-48 sm:w-56 placeholder-slate-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleCreateEvent(eventNameInput)}
-                    className="px-2.5 py-1 bg-emerald-500 hover:bg-emerald-400 text-blue-950 font-black text-[11px] rounded-lg uppercase cursor-pointer"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCreatingNewEvent(false);
-                      setEventNameInput(session.title || '');
-                    }}
-                    className="px-2 py-1 text-slate-400 hover:text-white text-[11px] font-bold cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEventNameInput('');
-                    setIsCreatingNewEvent(true);
-                  }}
-                  title="Criar um novo evento de votação (ex: Escolha do Tesoureiro)"
-                  className="px-3 py-2 rounded-xl bg-blue-600/30 hover:bg-blue-600/50 border-2 border-dashed border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95"
-                >
-                  <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
-                  <span>+ Criar Evento</span>
-                </button>
-              )}
             </div>
           </div>
 
           {/* CANTO DIREITO: CONFIGURAR EVENTO (ENGRENAGEM COLORIDA: DENTES CINZA CLARO, CENTRO VERMELHO ESCURO, GIRA SUAVE SENTIDO HORÁRIO NO HOVER) */}
-          <div className="flex items-center ml-auto">
+          <div className="flex items-center shrink-0">
             <button
               type="button"
               onClick={() => setActiveTab(activeTab === 'control' ? 'candidates' : 'control')}
               title="Configurar Evento (Vagas, Suplentes, Nome do Evento e Desempate)"
-              className={`group relative p-2 rounded-2xl border-2 transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center ${
+              className={`group relative p-1.5 rounded-xl border-2 transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center ${
                 activeTab === 'control'
-                  ? 'bg-[#07132a] border-amber-400 shadow-[0_0_18px_rgba(251,191,36,0.45)]'
-                  : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 hover:border-amber-400/70 shadow-lg'
+                  ? 'bg-[#07132a] border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.45)]'
+                  : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 hover:border-amber-400/70 shadow-md'
               }`}
             >
               <svg
                 viewBox="0 0 64 64"
-                className="w-8 h-8 transition-transform duration-1000 ease-in-out group-hover:rotate-[360deg] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+                className="w-7 h-7 transition-transform duration-1000 ease-in-out group-hover:rotate-[360deg] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
               >
                 {/* 8 Dentes Cinza Claro (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°) */}
                 {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
