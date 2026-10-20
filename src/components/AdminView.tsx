@@ -638,7 +638,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   }
                 }}
                 title="Criar nova votação / evento"
-                className="px-3 py-1.5 rounded-[4px] bg-blue-600/35 hover:bg-blue-600/55 border border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
+                className="px-3 py-2 min-h-[34px] rounded-[4px] bg-blue-600/35 hover:bg-blue-600/55 border border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)]"
               >
                 <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
                 <span>+ Criar Votação</span>
@@ -698,10 +698,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   <div
                     onClick={() => handleSelectEventButton(evt)}
                     title="Selecionar este evento"
-                    className={`group px-2.5 py-1.5 rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none border shadow-sm ${
+                    className={`group px-2.5 py-2 min-h-[34px] rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none border ${
                       isSelected
-                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
-                        : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
+                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_6px_18px_rgba(0,0,0,0.75),0_0_12px_rgba(251,191,36,0.35)]'
+                        : 'bg-[#07132a]/95 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.85)]'
                     }`}
                   >
                     <span>{displayName}</span>
