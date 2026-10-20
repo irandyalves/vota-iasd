@@ -6,7 +6,7 @@ import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
 import { openTelaoOnSecondMonitor, subscribeSecondaryScreen } from './utils/screen';
-import { ExternalLink, X, MonitorPlay, ArrowLeft } from 'lucide-react';
+import { ExternalLink, X, MonitorPlay } from 'lucide-react';
 
 export function App() {
   const [session, setSession] = useState<VotingSession>(DEFAULT_INITIAL_SESSION);
@@ -155,20 +155,6 @@ export function App() {
             saveSession({ ...session, logoUrl: url });
           }}
         />
-      )}
-
-      {/* Botão de retorno superior direito (apenas para tela de votante/teste, NUNCA exibido no Telão) */}
-      {currentView === 'voter' && (
-        <div className="fixed top-2.5 right-24 sm:right-28 z-50">
-          <button
-            onClick={handleReturnToAdmin}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#001f47]/95 hover:bg-blue-900 border border-amber-400/80 hover:border-amber-400 text-amber-300 font-bold text-xs rounded-xl shadow-2xl backdrop-blur-md transition active:scale-95 cursor-pointer"
-            title="Pressione ESC ou clique para voltar ao Painel Admin"
-          >
-            <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Voltar ao Admin (ESC)</span>
-          </button>
-        </div>
       )}
 
       {/* Conteúdo da Tela Selecionada - 100% Fluido e Responsivo */}

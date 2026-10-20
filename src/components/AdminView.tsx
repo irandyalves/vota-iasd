@@ -428,130 +428,131 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* CABEÇALHO DO ADMIN COM CONTROLES RÁPIDOS (REDUZIDO EM 30%) */}
+      {/* CABEÇALHO DO ADMIN COM CONTROLES RÁPIDOS */}
       <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg mb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-          <div className="flex-1 max-w-2xl">
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-900 text-blue-200 uppercase tracking-wider">
-              Painel de Controle do Líder
-            </span>
-            {isEditingTitle ? (
-              <input
-                type="text"
-                value={editedTitle}
-                onChange={(e) => setEditedTitle(e.target.value)}
-                onBlur={() => {
-                  if (editedTitle.trim()) {
-                    saveSession({ ...session, title: editedTitle.trim() });
-                  }
-                  setIsEditingTitle(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          {/* LADO ESQUERDO: Título, Senha e Abas */}
+          <div className="flex-1 space-y-3">
+            <div>
+              {isEditingTitle ? (
+                <input
+                  type="text"
+                  value={editedTitle}
+                  onChange={(e) => setEditedTitle(e.target.value)}
+                  onBlur={() => {
                     if (editedTitle.trim()) {
                       saveSession({ ...session, title: editedTitle.trim() });
                     }
                     setIsEditingTitle(false);
-                  } else if (e.key === 'Escape') {
-                    setIsEditingTitle(false);
-                  }
-                }}
-                autoFocus
-                className="text-lg sm:text-xl font-black text-white font-serif mt-1 bg-[#07132a] border border-[#d4af37] px-2.5 py-1 rounded-lg outline-none shadow-inner w-full"
-              />
-            ) : (
-              <div
-                className="flex items-center gap-2 group cursor-pointer"
-                onDoubleClick={() => {
-                  setEditedTitle(session.title);
-                  setIsEditingTitle(true);
-                }}
-                title="Dê um duplo clique para editar o nome da pauta diretamente"
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (editedTitle.trim()) {
+                        saveSession({ ...session, title: editedTitle.trim() });
+                      }
+                      setIsEditingTitle(false);
+                    } else if (e.key === 'Escape') {
+                      setIsEditingTitle(false);
+                    }
+                  }}
+                  autoFocus
+                  className="text-lg sm:text-xl font-black text-white font-serif mt-1 bg-[#07132a] border border-[#d4af37] px-2.5 py-1 rounded-lg outline-none shadow-inner w-full"
+                />
+              ) : (
+                <div
+                  className="flex items-center gap-2 group cursor-pointer"
+                  onDoubleClick={() => {
+                    setEditedTitle(session.title);
+                    setIsEditingTitle(true);
+                  }}
+                  title="Dê um duplo clique para editar o nome da pauta diretamente"
+                >
+                  <h1 className="text-xl sm:text-2xl font-black text-white font-serif tracking-tight group-hover:text-amber-300 transition-colors">
+                    {session.title}
+                  </h1>
+                  <span className="text-[10px] text-blue-300 opacity-60 group-hover:opacity-100 bg-blue-900/60 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
+                    <Pencil className="w-2.5 h-2.5 text-amber-300" />
+                    Duplo clique edita
+                  </span>
+                </div>
+              )}
+              <p className="text-xs sm:text-sm text-blue-200 mt-1 flex items-center gap-1.5 font-sans">
+                <span>Senha:</span>
+                <strong className="text-amber-300 font-mono text-sm sm:text-base tracking-wider font-black">{session.pin}</strong>
+              </p>
+            </div>
+
+            {/* Abas com Nomes em PRIMEIRO */}
+            <div className="inline-flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900">
+              <button
+                onClick={() => setActiveTab('candidates')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === 'candidates' ? 'bg-amber-500 text-blue-950 font-black shadow-md' : 'text-slate-300 hover:text-white'
+                }`}
               >
-                <h1 className="text-lg sm:text-xl font-black text-white font-serif mt-0.5 group-hover:text-amber-300 transition-colors">
-                  {session.title}
-                </h1>
-                <span className="text-[10px] text-blue-300 opacity-60 group-hover:opacity-100 bg-blue-900/60 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
-                  <Pencil className="w-2.5 h-2.5 text-amber-300" />
-                  Duplo clique edita
-                </span>
-              </div>
-            )}
-            <p className="text-[11px] text-blue-200 mt-0.5">
-              PIN de Acesso dos Membros: <strong className="text-amber-300 font-mono text-xs">{session.pin}</strong>
-            </p>
+                <span>Nomes ({session.options.length})</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('control')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'control' ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>CONFIGURAR</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                  activeTab === 'settings' ? 'bg-purple-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                <span>Configuração & Migração</span>
+              </button>
+            </div>
           </div>
 
-          {/* Abas com Nomes em PRIMEIRO */}
-          <div className="flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900">
+          {/* COLUNA À DIREITA: BOTÕES DE COMANDOS DA VOTAÇÃO */}
+          <div className="flex flex-col sm:flex-row lg:flex-col gap-2 shrink-0 sm:w-auto lg:w-56 justify-center lg:border-l lg:border-blue-900/70 lg:pl-4">
             <button
-              onClick={() => setActiveTab('candidates')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'candidates' ? 'bg-amber-500 text-blue-950 font-black shadow-md' : 'text-slate-300 hover:text-white'
+              onClick={session.status === 'VOTING' ? handlePauseVoting : handleStartVoting}
+              className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all duration-150 active:scale-90 cursor-pointer ${
+                session.status === 'VOTING'
+                  ? 'bg-transparent border-2 border-amber-500 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/25'
+                  : 'bg-transparent border-2 border-emerald-500 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 active:bg-emerald-500/25'
               }`}
             >
-              <span>Nomes ({session.options.length})</span>
+              <Play className="w-4 h-4 fill-current" />
+              <span>{session.status === 'VOTING' ? 'PAUSAR VOTAÇÃO' : 'INICIAR VOTAÇÃO'}</span>
             </button>
+
             <button
-              onClick={() => setActiveTab('control')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                activeTab === 'control' ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
-              }`}
+              onClick={handleCloseVoting}
+              disabled={session.status === 'CLOSED'}
+              className="p-2.5 bg-transparent hover:bg-purple-500/10 border-2 border-purple-500 text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:pointer-events-none rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-90 active:bg-purple-500/25 cursor-pointer"
             >
-              <span>CONFIGURAR</span>
+              <StopCircle className="w-4 h-4 fill-current" />
+              <span>ENCERRAR VOTAÇÃO</span>
             </button>
+
+            {/* Botão de Controle do QR Code no Telão */}
             <button
-              onClick={() => setActiveTab('settings')}
-              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
-                activeTab === 'settings' ? 'bg-purple-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
+              onClick={() => {
+                saveSession({
+                  ...session,
+                  showQrOnTelao: session.showQrOnTelao === false ? true : false,
+                });
+              }}
+              title="Mostrar ou ocultar o QR Code no Telão"
+              className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-90 cursor-pointer ${
+                session.showQrOnTelao !== false
+                  ? 'bg-transparent hover:bg-amber-400/10 border-2 border-amber-400 text-amber-300 hover:text-amber-200 active:bg-amber-400/25'
+                  : 'bg-transparent hover:bg-slate-500/10 border-2 border-slate-600 text-slate-400 hover:text-slate-300 active:bg-slate-500/25'
               }`}
             >
-              <span>Configuração & Migração</span>
+              <QrCode className="w-4 h-4" />
+              <span>{session.showQrOnTelao !== false ? 'QR Telão: Visível' : 'QR Telão: Oculto'}</span>
             </button>
           </div>
-        </div>
-
-        {/* BARRA DE COMANDOS DA VOTAÇÃO (REFINADA COM BORDAS COLORIDAS E EFEITO DE CLIQUE) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3 border-t border-blue-900/80">
-          <button
-            onClick={session.status === 'VOTING' ? handlePauseVoting : handleStartVoting}
-            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all duration-150 active:scale-90 cursor-pointer ${
-              session.status === 'VOTING'
-                ? 'bg-transparent border-2 border-amber-500 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/25'
-                : 'bg-transparent border-2 border-emerald-500 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 active:bg-emerald-500/25'
-            }`}
-          >
-            <Play className="w-4 h-4 fill-current" />
-            <span>{session.status === 'VOTING' ? 'PAUSAR VOTAÇÃO' : 'INICIAR VOTAÇÃO'}</span>
-          </button>
-
-          <button
-            onClick={handleCloseVoting}
-            disabled={session.status === 'CLOSED'}
-            className="p-2.5 bg-transparent hover:bg-purple-500/10 border-2 border-purple-500 text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:pointer-events-none rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-90 active:bg-purple-500/25 cursor-pointer"
-          >
-            <StopCircle className="w-4 h-4 fill-current" />
-            <span>ENCERRAR VOTAÇÃO</span>
-          </button>
-
-          {/* Botão de Controle do QR Code no Telão */}
-          <button
-            onClick={() => {
-              saveSession({
-                ...session,
-                showQrOnTelao: session.showQrOnTelao === false ? true : false,
-              });
-            }}
-            title="Mostrar ou ocultar o QR Code no Telão"
-            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-90 cursor-pointer ${
-              session.showQrOnTelao !== false
-                ? 'bg-transparent hover:bg-amber-400/10 border-2 border-amber-400 text-amber-300 hover:text-amber-200 active:bg-amber-400/25'
-                : 'bg-transparent hover:bg-slate-500/10 border-2 border-slate-600 text-slate-400 hover:text-slate-300 active:bg-slate-500/25'
-            }`}
-          >
-            <QrCode className="w-4 h-4" />
-            <span>{session.showQrOnTelao !== false ? 'QR Telão: Visível' : 'QR Telão: Oculto'}</span>
-          </button>
         </div>
       </div>
 
