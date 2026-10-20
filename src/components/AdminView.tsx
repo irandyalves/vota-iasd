@@ -949,6 +949,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               {(() => {
                 const layout = session.telaoLayout || {};
                 const cols = layout.columns ?? 2;
+                const qrPos = layout.qrPosition ?? 'middle';
                 const height = layout.cardHeight ?? 38;
                 const gap = layout.cardGap ?? 8;
                 const winnerColor = layout.winnerColor || '#10b981';
@@ -961,6 +962,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     ...session,
                     telaoLayout: {
                       columns: cols,
+                      qrPosition: qrPos,
                       cardHeight: height,
                       cardGap: gap,
                       winnerColor,
@@ -987,8 +989,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       </span>
                     </div>
 
-                    {/* LINHA 1 COMPACTA: COLUNAS (1 OU 2), ALTURA DOS CARDS E ESPAÇO ENTRE ELES */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    {/* LINHA 1 COMPACTA: COLUNAS (1 OU 2), POSIÇÃO DO QR CODE (TOPO, MEIO, BOTTOM), ALTURA E ESPAÇO */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                       {/* 1. QUANTIDADE DE COLUNAS */}
                       <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
                         <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
@@ -1032,7 +1034,68 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         </div>
                       </div>
 
-                      {/* 2. ALTURA DOS CARDS */}
+                      {/* 2. POSIÇÃO DO QR CODE NA TELA PÚBLICO (TOPO, MEIO OU BOTTOM - APENAS ÍCONES) */}
+                      <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                        <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
+                          Posição QR Code:
+                        </span>
+
+                        <div className="grid grid-cols-3 gap-1.5 flex-1 max-w-[165px]">
+                          {/* Botão TOPO */}
+                          <button
+                            type="button"
+                            onClick={() => updateLayout({ qrPosition: 'top' })}
+                            title="Posicionar QR Code no TOPO da tela pública"
+                            className={`py-1.5 px-2 rounded-md border transition cursor-pointer active:scale-95 flex items-center justify-center ${
+                              qrPos === 'top'
+                                ? 'bg-amber-500 text-blue-950 border-amber-300 shadow'
+                                : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600 hover:text-white'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="4" y1="4" x2="20" y2="4" />
+                              <rect x="7" y="7" width="10" height="7" rx="1.5" fill="currentColor" />
+                            </svg>
+                          </button>
+
+                          {/* Botão MEIO */}
+                          <button
+                            type="button"
+                            onClick={() => updateLayout({ qrPosition: 'middle' })}
+                            title="Posicionar QR Code no MEIO (Centro) da tela pública"
+                            className={`py-1.5 px-2 rounded-md border transition cursor-pointer active:scale-95 flex items-center justify-center ${
+                              qrPos === 'middle'
+                                ? 'bg-amber-500 text-blue-950 border-amber-300 shadow'
+                                : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600 hover:text-white'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <line x1="4" y1="12" x2="7" y2="12" />
+                              <line x1="17" y1="12" x2="20" y2="12" />
+                              <rect x="7" y="8.5" width="10" height="7" rx="1.5" fill="currentColor" />
+                            </svg>
+                          </button>
+
+                          {/* Botão BOTTOM */}
+                          <button
+                            type="button"
+                            onClick={() => updateLayout({ qrPosition: 'bottom' })}
+                            title="Posicionar QR Code emBAIXO (Bottom) da tela pública"
+                            className={`py-1.5 px-2 rounded-md border transition cursor-pointer active:scale-95 flex items-center justify-center ${
+                              qrPos === 'bottom'
+                                ? 'bg-amber-500 text-blue-950 border-amber-300 shadow'
+                                : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600 hover:text-white'
+                            }`}
+                          >
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="7" y="10" width="10" height="7" rx="1.5" fill="currentColor" />
+                              <line x1="4" y1="20" x2="20" y2="20" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 3. ALTURA DOS CARDS */}
                       <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
                         <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
                           Altura:

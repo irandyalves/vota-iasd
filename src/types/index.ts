@@ -11,6 +11,7 @@ export type SessionStatus = 'WAITING' | 'VOTING' | 'CLOSED' | 'TIE_BREAK';
 
 export interface TelaoLayoutConfig {
   columns?: 1 | 2; // 1 coluna ou 2 colunas (padrão: 2)
+  qrPosition?: 'top' | 'middle' | 'bottom'; // Posição vertical do QR Code no Telão (padrão: 'middle')
   cardHeight?: number; // Altura mínima do card em px (padrão: 38)
   cardGap?: number; // Espaçamento entre os cards em px (padrão: 8)
   winnerColor?: string; // Cor dos cards Vencedores/Titulares (padrão: '#10b981')

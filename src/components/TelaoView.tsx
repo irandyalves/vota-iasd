@@ -116,6 +116,13 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   // Configurações personalizáveis de layout dos cards no Telão
   const layoutColumns = session.telaoLayout?.columns ?? 2;
+  const qrPosition = session.telaoLayout?.qrPosition ?? 'middle';
+  const qrAlignClass =
+    qrPosition === 'top'
+      ? 'self-start'
+      : qrPosition === 'bottom'
+      ? 'self-end'
+      : 'self-center';
   const cardHeight = session.telaoLayout?.cardHeight ?? 38;
   const cardGap = session.telaoLayout?.cardGap ?? 8;
   const winnerColor = session.telaoLayout?.winnerColor || '#10b981';
@@ -225,7 +232,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               pointerEvents: showQrCode ? 'auto' : 'none',
               willChange: 'width, margin-right, opacity',
             }}
-            className="overflow-hidden shrink-0 self-center flex items-center"
+            className={`overflow-hidden shrink-0 ${qrAlignClass} flex items-center transition-all duration-300`}
           >
             <div
               style={{
