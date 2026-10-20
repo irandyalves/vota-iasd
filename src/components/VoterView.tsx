@@ -175,7 +175,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     const detectedTies = live ? [] : detectVotingTies(session);
     const hasTies = detectedTies.length > 0;
 
-    const sortedOptions = [...resultOptions].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
+    const sortedOptions = [...resultOptions].sort((a, b) => {
+      const diff = (b.votesCount || 0) - (a.votesCount || 0);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+    });
     const maxVotesRecorded = Math.max(...resultOptions.map((o) => o.votesCount || 0), 1);
     const totalVotesCast = resultOptions.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
 

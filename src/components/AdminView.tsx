@@ -111,41 +111,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     showNotification('success', 'Modelo de exemplo (.CSV compatível com Excel) baixado!');
   };
 
-  // Detector Automático de Empate no Ponto de Corte
-  const detectTieAtCutoff = (): { hasTie: boolean; tiedCandidates: VotingOption[]; cutoffRank: number } => {
-    if (session.status === 'WAITING' || session.options.length === 0) {
-      return { hasTie: false, tiedCandidates: [], cutoffRank: 0 };
-    }
-
-    const sorted = [...session.options].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
-    const cutoffIndex = session.vacancies - 1;
-
-    if (cutoffIndex < 0 || cutoffIndex >= sorted.length - 1) {
-      return { hasTie: false, tiedCandidates: [], cutoffRank: 0 };
-    }
-
-    const cutoffCandidate = sorted[cutoffIndex];
-    const nextCandidate = sorted[cutoffIndex + 1];
-
-    // Se ambos têm votos > 0 e a mesma quantidade de votos no limite da vaga
-    if (
-      cutoffCandidate.votesCount > 0 &&
-      cutoffCandidate.votesCount === nextCandidate.votesCount
-    ) {
-      const tiedVotes = cutoffCandidate.votesCount;
-      const tied = sorted.filter((c) => c.votesCount === tiedVotes);
-      return {
-        hasTie: true,
-        tiedCandidates: tied,
-        cutoffRank: session.vacancies,
-      };
-    }
-
-    return { hasTie: false, tiedCandidates: [], cutoffRank: 0 };
-  };
-
-  const tieInfo = detectTieAtCutoff();
-
   // Web Speech API - Microfone para adicionar nomes por voz
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -221,8 +186,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
   // Disparo: "VOTAR AGORA / INICIAR VOTAÇÃO"
   const handleStartVoting = () => {
-    // Ao iniciar nova votação, zera a apuração mantendo os nomes cadastrados na tela (atuais ou novos)
-    const freshOptions = session.options.map((o) => ({ ...o, votesCount: 0 }));
+    // Ao iniciar nova votação, zera a apuração e ordena alfabeticamente mantendo os nomes cadastrados
+    const freshOptions = [...session.options]
+      .map((o) => ({ ...o, votesCount: 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
     const nextIteration = (session.votingIteration || 1) + 1;
 
     saveSession({
@@ -261,8 +228,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         'Deseja zerar os votos e reiniciar a votação? Todos os nomes atualmente cadastrados serão mantidos!'
       )
     ) {
-      // Preserva exatamente a lista de nomes já cadastrados, zerando apenas a apuração
-      const resetOptions = session.options.map((o) => ({ ...o, votesCount: 0 }));
+      // Preserva a lista de nomes cadastrados, zerando a apuração e ordenando alfabeticamente
+      const resetOptions = [...session.options]
+        .map((o) => ({ ...o, votesCount: 0 }))
+        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
       const nextIteration = (session.votingIteration || 1) + 1;
       saveSession({
         ...session,
@@ -452,37 +421,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow transition cursor-pointer active:scale-95 flex items-center gap-1.5"
           >
             <Flame className="w-4 h-4" />
-            Configurar Desempate
-          </button>
-        </div>
-      )}
-
-      {/* BANNER DE ALERTA DE EMPATE NO PONTO DE CORTE */}
-      {tieInfo.hasTie && (
-        <div className="mb-4 p-3.5 rounded-2xl bg-amber-950/80 border border-amber-500 shadow-lg flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-400">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="font-extrabold text-xs sm:text-sm text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
-                Empate no Limite de Vagas!
-              </h3>
-              <p className="text-[11px] text-amber-100">
-                Há um empate entre {tieInfo.tiedCandidates.map((c) => c.name).join(' e ')} com {tieInfo.tiedCandidates[0].votesCount} votos na linha de corte da vaga #{tieInfo.cutoffRank}.
-              </p>
-            </div>
-          </div>
-
-          <button
-            onClick={() => {
-              setSelectedTieCandidateIds(tieInfo.tiedCandidates.map((c) => c.id));
-              setTieVacancies(1);
-              setActiveTab('control');
-            }}
-            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black rounded-lg text-[11px] shadow transition active:scale-95 cursor-pointer flex items-center gap-1"
-          >
-            <Flame className="w-3.5 h-3.5 text-blue-950" />
             Configurar Desempate
           </button>
         </div>
@@ -953,7 +891,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             </div>
           </div>
 
-          {/* Seção de Desempate */}
+          {/* Seção de Desempate (somente exibida após encerrar a votação ou durante rodada de desempate) */}
+          {(session.status === 'CLOSED' || session.status === 'TIE_BREAK') && (
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
             {/* Cabeçalho do Motor de Desempate */}
             <div className="flex items-center justify-between mb-4">
@@ -1159,6 +1098,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </div>
             </div>
           </div>
+          )}
 
           {/* Ações de Gestão */}
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">

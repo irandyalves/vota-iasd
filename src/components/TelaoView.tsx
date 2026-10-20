@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
 import {
@@ -43,11 +43,20 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   // Lógica do QR Code: Sempre visível na coluna da esquerda por padrão no Telão
   const showQrCode = session.showQrOnTelao !== false;
 
-  // Ordena opções por contagem de votos (decrescente)
-  const sortedOptions = [...optionsToDisplay].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
+  // Ordena opções por contagem de votos (decrescente) e, quando zerados/empatados, por ordem alfabética (A-Z)
+  const sortedOptions = [...optionsToDisplay].sort((a, b) => {
+    const diff = (b.votesCount || 0) - (a.votesCount || 0);
+    if (diff !== 0) return diff;
+    return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+  });
 
   const maxVotesRecorded = Math.max(...optionsToDisplay.map((o) => o.votesCount || 0), 1);
   const totalVotesCast = optionsToDisplay.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+  const maxVotesPerBallot = isTieBreak
+    ? (session.tieBreak?.maxVotesPerVoter || 1)
+    : (session.maxVotesPerVoter || 1);
+  const totalVotersVoted =
+    totalVotesCast > 0 ? Math.max(1, Math.round(totalVotesCast / maxVotesPerBallot)) : 0;
 
   // Alterna Modo Tela Cheia (Fullscreen)
   const toggleFullscreen = () => {
@@ -237,35 +246,27 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               </div>
             ) : (
               <div className="bg-[#001f47]/80 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-xl">
-                <div className="flex flex-wrap items-center justify-between mb-2.5 pb-2 border-b border-blue-900/80 gap-2">
-                  <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-                    <div className="flex items-center gap-1.5">
-                      <Trophy className="w-4 h-4 text-[#d4af37]" />
-                      <h3 className="font-extrabold text-sm sm:text-base text-white font-sans tracking-tight">
-                        Tempo real
-                      </h3>
+                {/* CABEÇALHO DO PAINEL TELÃO: XX JÁ VOTARAM | ÍCONE DE TELA CHEIA */}
+                <div className="flex flex-wrap items-center justify-between mb-3 pb-2.5 border-b border-blue-800/80 gap-2">
+                  <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-md">
+                    <div className="flex items-center gap-1.5 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                      <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
+                        {totalVotersVoted}
+                      </strong>
+                      <span>{totalVotersVoted === 1 ? 'JÁ VOTOU' : 'JÁ VOTARAM'}</span>
                     </div>
 
-                    {/* X JÁ VOTARAM (NA FRENTE DE TEMPO REAL) */}
-                    <span className="px-2.5 py-0.5 rounded-lg bg-[#07132a] border border-blue-700/80 text-white font-bold text-xs flex items-center gap-1.5 shadow-inner">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                      <span>
-                        <strong className="text-amber-300 font-mono text-xs sm:text-sm font-black">
-                          {totalVotesCast}
-                        </strong>{' '}
-                        {totalVotesCast === 1 ? 'já votou' : 'já votaram'}
-                      </span>
-                    </span>
+                    <span className="text-blue-600/80 font-light text-base select-none">|</span>
 
-                    {/* BOTÃO TELA CHEIA (NA FRENTE DE TEMPO REAL) */}
+                    {/* ÍCONE DE TELA CHEIA */}
                     <button
                       type="button"
                       onClick={toggleFullscreen}
-                      title="Alternar Tela Cheia para o Projetor / TV (F11)"
-                      className="bg-[#07132a] hover:bg-[#002f6c] border border-blue-700/80 text-amber-300 font-bold px-2.5 py-0.5 rounded-lg flex items-center gap-1 shadow transition cursor-pointer text-xs active:scale-95"
+                      title={isFullscreen ? 'Sair da Tela Cheia (ESC)' : 'Alternar Tela Cheia (F11)'}
+                      className="p-1 rounded-lg hover:bg-blue-900/70 text-amber-300 hover:text-amber-200 transition cursor-pointer active:scale-90 flex items-center justify-center"
                     >
-                      {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-                      <span>{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
+                      {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
                     </button>
                   </div>
 
@@ -345,6 +346,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       <motion.div
                         key={option.id}
                         layout
+                        layoutId={`telao-card-${option.id}`}
                         transition={{
                           type: 'spring',
                           damping: 25,
@@ -484,6 +486,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   };
 
                   return (
+                    <LayoutGroup>
                     <div className="space-y-2">
                       {/* 1. SEÇÃO DE TITULARES */}
                       <div className={`gap-1.5 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1'}`}>
@@ -578,6 +581,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         </div>
                       )}
                     </div>
+                    </LayoutGroup>
                   );
                 })()}
               </div>
