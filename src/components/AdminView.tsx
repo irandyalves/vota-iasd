@@ -1369,6 +1369,363 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </div>
             )}
           </div>
+
+          {/* 4. PERSONALIZAR LAYOUT E CORES DOS CARDS NO PAINEL / TELÃO (DEPOIS DOS NOMES ESCOLHIDOS) */}
+          {(() => {
+            const layout = session.telaoLayout || {};
+            const cols = layout.columns ?? 2;
+            const height = layout.cardHeight ?? 38;
+            const gap = layout.cardGap ?? 8;
+            const winnerColor = layout.winnerColor || '#10b981';
+            const suplenteColor = layout.suplenteColor || '#3b82f6';
+            const suplente2Color = layout.suplente2Color || '#64748b';
+            const unclassifiedColor = layout.unclassifiedColor || '#1e293b';
+
+            const updateLayout = (patch: Partial<typeof layout>) => {
+              saveSession({
+                ...session,
+                telaoLayout: {
+                  columns: cols,
+                  cardHeight: height,
+                  cardGap: gap,
+                  winnerColor,
+                  suplenteColor,
+                  suplente2Color,
+                  unclassifiedColor,
+                  ...patch,
+                },
+              });
+            };
+
+            return (
+              <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-4">
+                {/* Cabeçalho com Botão Rápido de Alternar Layout e Restaurar Padrão */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-blue-900/80">
+                  <div className="flex items-center gap-2.5">
+                    <Sliders className="w-5 h-5 text-amber-400" />
+                    <div>
+                      <h3 className="font-bold text-white text-sm sm:text-base font-sans tracking-tight">
+                        Layout e Cores dos Cards no Painel (Telão)
+                      </h3>
+                      <p className="text-[11px] text-blue-300">
+                        Ajuste em tempo real as colunas, altura, espaçamento e cores dos cards exibidos no Telão
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Botão para mudar rapidamente o layout dos cards (1 Coluna <-> 2 Colunas) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextCols = cols === 2 ? 1 : 2;
+                        updateLayout({ columns: nextCols });
+                        showNotification('success', `Layout alterado para ${nextCols} ${nextCols === 1 ? 'Coluna' : 'Colunas'} no Telão!`);
+                      }}
+                      className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 border-2 border-amber-400 text-amber-300 hover:text-amber-200 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition active:scale-95 cursor-pointer shadow"
+                    >
+                      <Tv className="w-4 h-4" />
+                      <span>Mudar Layout: {cols === 2 ? '2 Colunas (Ativo)' : '1 Coluna (Ativo)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        saveSession({
+                          ...session,
+                          telaoLayout: {
+                            columns: 2,
+                            cardHeight: 38,
+                            cardGap: 8,
+                            winnerColor: '#10b981',
+                            suplenteColor: '#3b82f6',
+                            suplente2Color: '#64748b',
+                            unclassifiedColor: '#1e293b',
+                          },
+                        });
+                        showNotification('success', 'Layout e cores dos cards restaurados para o padrão!');
+                      }}
+                      className="px-3 py-2 bg-[#07132a] hover:bg-blue-950 border border-blue-700 text-blue-200 hover:text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                      title="Voltar tamanho, espaçamento, colunas e cores ao padrão original"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Restaurar Padrão</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* LINHA 1: COLUNAS (1 OU 2), ALTURA DOS CARDS E ESPAÇO ENTRE ELES */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* 1. QUANTIDADE DE COLUNAS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="mb-2.5">
+                      <span className="text-xs font-black text-white uppercase tracking-wide block">
+                        Disposição das Colunas
+                      </span>
+                      <span className="text-[11px] text-blue-300">
+                        Escolha se os cards ficarão em 1 ou 2 colunas
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ columns: 1 })}
+                        className={`py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition cursor-pointer active:scale-95 flex flex-col items-center gap-1 ${
+                          cols === 1
+                            ? 'bg-amber-500 text-blue-950 border-amber-300 shadow-lg'
+                            : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600'
+                        }`}
+                      >
+                        <div className="w-8 flex flex-col gap-0.5">
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                        </div>
+                        <span>1 Coluna</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ columns: 2 })}
+                        className={`py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition cursor-pointer active:scale-95 flex flex-col items-center gap-1 ${
+                          cols === 2
+                            ? 'bg-amber-500 text-blue-950 border-amber-300 shadow-lg'
+                            : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600'
+                        }`}
+                      >
+                        <div className="w-8 grid grid-cols-2 gap-0.5">
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                        </div>
+                        <span>2 Colunas</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. ALTURA DOS CARDS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="text-xs font-black text-white uppercase tracking-wide block">
+                          Altura dos Cards
+                        </span>
+                        <span className="text-[11px] text-blue-300">
+                          Aumentar ou diminuir altura
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg bg-[#001f47] border border-amber-400/60 text-amber-300 font-mono font-black text-xs">
+                        {height}px
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardHeight: Math.max(26, height - 4) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="range"
+                        min={26}
+                        max={76}
+                        value={height}
+                        onChange={(e) => updateLayout({ cardHeight: Number(e.target.value) })}
+                        className="flex-1 h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardHeight: Math.min(76, height + 4) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-blue-300 font-mono">
+                      <span>Compacto (26px)</span>
+                      <span>Padrão (38px)</span>
+                      <span>Grande (76px)</span>
+                    </div>
+                  </div>
+
+                  {/* 3. ESPAÇO ENTRE OS CARDS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="text-xs font-black text-white uppercase tracking-wide block">
+                          Espaço entre os Cards
+                        </span>
+                        <span className="text-[11px] text-blue-300">
+                          Distância vertical e horizontal
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg bg-[#001f47] border border-amber-400/60 text-amber-300 font-mono font-black text-xs">
+                        {gap}px
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardGap: Math.max(2, gap - 2) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="range"
+                        min={2}
+                        max={28}
+                        value={gap}
+                        onChange={(e) => updateLayout({ cardGap: Number(e.target.value) })}
+                        className="flex-1 h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardGap: Math.min(28, gap + 2) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-blue-300 font-mono">
+                      <span>Junto (2px)</span>
+                      <span>Padrão (8px)</span>
+                      <span>Espaçado (28px)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* LINHA 2: CORES DOS CARDS (VENCEDORES, 1º SUPLENTES, 2º SUPLENTES E NÃO CLASSIFICADOS) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* COR VENCEDORES / TITULARES */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: Vencedores
+                      </span>
+                      <input
+                        type="color"
+                        value={winnerColor}
+                        onChange={(e) => updateLayout({ winnerColor: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para os Vencedores (Titulares)"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#10b981', '#059669', '#22c55e', '#eab308', '#3b82f6', '#8b5cf6', '#06b6d4', '#f43f5e'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ winnerColor: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            winnerColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COR 1º SUPLENTES */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: 1º Suplentes
+                      </span>
+                      <input
+                        type="color"
+                        value={suplenteColor}
+                        onChange={(e) => updateLayout({ suplenteColor: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para 1º Suplentes"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#3b82f6', '#2563eb', '#06b6d4', '#6366f1', '#f59e0b', '#a855f7', '#14b8a6', '#ec4899'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ suplenteColor: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            suplenteColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COR 2º SUPLENTES */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: 2º Suplentes
+                      </span>
+                      <input
+                        type="color"
+                        value={suplente2Color}
+                        onChange={(e) => updateLayout({ suplente2Color: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para 2º Suplentes"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#64748b', '#475569', '#0d9488', '#d97706', '#7c3aed', '#0284c7', '#9333ea', '#e11d48'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ suplente2Color: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            suplente2Color.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COR NÃO CLASSIFICADOS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: Não Classif.
+                      </span>
+                      <input
+                        type="color"
+                        value={unclassifiedColor}
+                        onChange={(e) => updateLayout({ unclassifiedColor: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para Não Classificados"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#1e293b', '#0f172a', '#334155', '#1f2937', '#1e1b4b', '#172554', '#27272a', '#3f3f46'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ unclassifiedColor: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            unclassifiedColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

@@ -17,6 +17,46 @@ interface TelaoViewProps {
   session: VotingSession;
 }
 
+// Converte cor hexadecimal para estilos ricos de fundo, borda, barra e badge
+function getCardColorStyles(hexColor: string, isUnclassified = false) {
+  const safeHex = /^#[0-9A-Fa-f]{6}$/.test(hexColor) ? hexColor : '#10b981';
+  const r = parseInt(safeHex.slice(1, 3), 16);
+  const g = parseInt(safeHex.slice(3, 5), 16);
+  const b = parseInt(safeHex.slice(5, 7), 16);
+
+  return {
+    cardStyle: {
+      backgroundColor: isUnclassified
+        ? `rgba(${r}, ${g}, ${b}, 0.45)`
+        : `rgba(${Math.round(r * 0.22)}, ${Math.round(g * 0.25)}, ${Math.round(b * 0.28)}, 0.94)`,
+      borderColor: isUnclassified
+        ? `rgba(${r}, ${g}, ${b}, 0.55)`
+        : `rgba(${r}, ${g}, ${b}, 0.85)`,
+      boxShadow: isUnclassified
+        ? 'none'
+        : `0 4px 14px -2px rgba(${r}, ${g}, ${b}, 0.25)`,
+    } as React.CSSProperties,
+    barStyle: {
+      background: `linear-gradient(90deg, rgba(${r}, ${g}, ${b}, 0.65), rgba(${r}, ${g}, ${b}, 0.30))`,
+    } as React.CSSProperties,
+    badgeStyle: {
+      backgroundColor: `rgba(${Math.round(r * 0.18)}, ${Math.round(g * 0.2)}, ${Math.round(b * 0.24)}, 0.95)`,
+      borderColor: `rgba(${r}, ${g}, ${b}, 0.7)`,
+      color: '#ffffff',
+    } as React.CSSProperties,
+    rankStyle: {
+      backgroundColor: `rgba(${r}, ${g}, ${b}, 0.28)`,
+      borderColor: `rgba(${r}, ${g}, ${b}, 0.75)`,
+      color: '#ffffff',
+    } as React.CSSProperties,
+    dotStyle: {
+      backgroundColor: `rgba(${r}, ${g}, ${b}, 0.35)`,
+      borderColor: safeHex,
+    } as React.CSSProperties,
+    textColor: safeHex,
+  };
+}
+
 export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const [voterUrl, setVoterUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -41,6 +81,20 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   // Lógica do QR Code: Sempre visível na coluna da esquerda por padrão no Telão
   const showQrCode = session.showQrOnTelao !== false;
+
+  // Configurações personalizáveis de layout dos cards no Telão
+  const layoutColumns = session.telaoLayout?.columns ?? 2;
+  const cardHeight = session.telaoLayout?.cardHeight ?? 38;
+  const cardGap = session.telaoLayout?.cardGap ?? 8;
+  const winnerColor = session.telaoLayout?.winnerColor || '#10b981';
+  const suplenteColor = session.telaoLayout?.suplenteColor || '#3b82f6';
+  const suplente2Color = session.telaoLayout?.suplente2Color || '#64748b';
+  const unclassifiedColor = session.telaoLayout?.unclassifiedColor || '#1e293b';
+
+  const winnerStyles = getCardColorStyles(winnerColor);
+  const suplente1Styles = getCardColorStyles(suplenteColor);
+  const suplente2Styles = getCardColorStyles(suplente2Color);
+  const unclassifiedStyles = getCardColorStyles(unclassifiedColor, true);
 
   // Ordena opções por contagem de votos (decrescente) e, quando zerados/empatados, por ordem alfabética (A-Z)
   const sortedOptions = [...optionsToDisplay].sort((a, b) => {
@@ -121,27 +175,27 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   return (
     <div className="min-h-screen bg-[#07132a] text-white p-2 sm:p-3 lg:p-3.5 flex flex-col justify-between select-none">
-      {/* ÁREA CENTRAL: QR CODE À ESQUERDA (REVELANDO SUAVE DA ESQUERDA P/ DIREITA) E SEÇÃO DA DIREITA SENDO EMPURRADA/ESMAGADA */}
+      {/* ÁREA CENTRAL: QR CODE CENTRALIZADO EM RELAÇÃO À SEÇÃO DE CARDS (items-center) */}
       <div className="flex-1 w-full">
-        <div className="flex flex-col md:flex-row items-start w-full">
-          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (TRANSIÇÃO CSS NATIVA GARANTIDA DE 6 SEGUNDOS, CENTRALIZADO VERTICALMENTE) */}
+        <div className="flex flex-col md:flex-row items-center w-full">
+          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (ALINHADO AO CENTRO DA SEÇÃO DE CARDS, VELOCIDADE 2400ms) */}
           <div
             style={{
               width: showQrCode ? '280px' : '0px',
               marginRight: showQrCode ? '16px' : '0px',
               opacity: showQrCode ? 1 : 0,
               transition:
-                'width 6000ms cubic-bezier(0.25, 0.1, 0.25, 1), margin-right 6000ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 6000ms ease-in-out',
+                'width 2400ms cubic-bezier(0.25, 0.1, 0.25, 1), margin-right 2400ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 2400ms ease-in-out',
               pointerEvents: showQrCode ? 'auto' : 'none',
               willChange: 'width, margin-right, opacity',
             }}
-            className="overflow-hidden shrink-0 sticky top-0 min-h-[calc(100vh-1.75rem)] flex items-center"
+            className="overflow-hidden shrink-0 self-center flex items-center"
           >
             <div
               style={{
                 width: '280px',
                 transform: showQrCode ? 'translateX(0px)' : 'translateX(-280px)',
-                transition: 'transform 6000ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+                transition: 'transform 2400ms cubic-bezier(0.25, 0.1, 0.25, 1)',
                 willChange: 'transform',
               }}
               className="w-[280px] shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
@@ -222,7 +276,14 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     Aguardando cadastro dos nomes no painel...
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  <div
+                    style={{ gap: `${cardGap}px` }}
+                    className={`grid ${
+                      layoutColumns === 1
+                        ? 'grid-cols-1'
+                        : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                    }`}
+                  >
                     <AnimatePresence>
                       {optionsToDisplay.map((option) => (
                         <motion.div
@@ -231,6 +292,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                          style={{ minHeight: `${cardHeight}px` }}
                           className="px-3.5 py-1.5 sm:py-2 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-blue-700/80 rounded-lg flex items-center shadow-md transition"
                         >
                           {/* Nome do Candidato em Destaque Maiúsculo (Sem iniciais CE..) */}
@@ -377,19 +439,28 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   </div>
 
                   <div className="flex items-center gap-3 text-[11px] font-semibold">
-                    <span className="flex items-center gap-1 text-emerald-400">
-                      <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/30 border border-emerald-400 inline-block" />
+                    <span className="flex items-center gap-1" style={{ color: winnerStyles.textColor }}>
+                      <span
+                        className="w-2.5 h-2.5 rounded-sm border inline-block"
+                        style={winnerStyles.dotStyle}
+                      />
                       Titulares ({vacancies})
                     </span>
                     {suplentesCount > 0 && (
-                      <span className="flex items-center gap-1 text-blue-400">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-[#0a2352] border border-blue-400 inline-block" />
+                      <span className="flex items-center gap-1" style={{ color: suplente1Styles.textColor }}>
+                        <span
+                          className="w-2.5 h-2.5 rounded-sm border inline-block"
+                          style={suplente1Styles.dotStyle}
+                        />
                         {segundoSuplentesCount > 0 ? `1º Suplentes (${suplentesCount})` : `Suplentes (${suplentesCount})`}
                       </span>
                     )}
                     {segundoSuplentesCount > 0 && (
-                      <span className="flex items-center gap-1 text-slate-300">
-                        <span className="w-2.5 h-2.5 rounded-sm bg-slate-700/80 border border-slate-500 inline-block" />
+                      <span className="flex items-center gap-1" style={{ color: suplente2Styles.textColor }}>
+                        <span
+                          className="w-2.5 h-2.5 rounded-sm border inline-block"
+                          style={suplente2Styles.dotStyle}
+                        />
                         2º Suplentes ({segundoSuplentesCount})
                       </span>
                     )}
@@ -421,7 +492,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   </div>
                 )}
 
-                {/* ESTRUTURA DOS CARDS DE VOTAÇÃO (ALTURA REDUZIDA EM 30%, ANIMAÇÃO FLUIDA LAYOUT) */}
+                {/* ESTRUTURA DOS CARDS DE VOTAÇÃO COM ALTURA, ESPAÇAMENTO, COLUNAS E CORES PERSONALIZÁVEIS */}
                 {(() => {
                   const titulares = sortedOptions.slice(0, vacancies);
                   const suplentes1 = sortedOptions.slice(vacancies, vacancies + suplentesCount);
@@ -432,6 +503,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   const naoClassificados = sortedOptions.slice(
                     vacancies + suplentesCount + segundoSuplentesCount
                   );
+
+                  const gridColsClass =
+                    layoutColumns === 1 ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2';
 
                   const renderCandidateCard = (
                     option: typeof sortedOptions[0],
@@ -448,19 +522,31 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     const isSuplente1 = category === 'suplente1';
                     const isSuplente2 = category === 'suplente2';
 
+                    const categoryStyles = isElected
+                      ? winnerStyles
+                      : isSuplente1
+                      ? suplente1Styles
+                      : isSuplente2
+                      ? suplente2Styles
+                      : unclassifiedStyles;
+
                     return (
                       <motion.div
                         key={option.id}
-                        className={`border transition-colors duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 min-h-[36px] sm:min-h-[38px] shadow-sm ${
+                        style={{
+                          minHeight: `${cardHeight}px`,
+                          ...(tiedGroup ? {} : categoryStyles.cardStyle),
+                        }}
+                        className={`border transition-colors duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 shadow-sm ${
                           tiedGroup
                             ? 'bg-[#3b2105]/95 border-2 border-amber-400 text-amber-100 shadow-md ring-2 ring-amber-400/50'
                             : isElected
-                            ? 'bg-[#052e1c] border-emerald-500/80 shadow-md shadow-emerald-950/40 text-white'
+                            ? 'text-white'
                             : isSuplente1
-                            ? 'bg-[#092350]/95 border-blue-500/80 text-blue-100 ring-1 ring-blue-500/30'
+                            ? 'text-blue-100'
                             : isSuplente2
-                            ? 'bg-slate-800/85 border-slate-600/80 text-slate-200 ring-1 ring-slate-500/30'
-                            : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400 py-0.5 px-2 rounded-md'
+                            ? 'text-slate-200'
+                            : 'text-slate-300 py-0.5 px-2 rounded-md'
                         }`}
                       >
                         {/* Barra de Progresso Animada no Fundo */}
@@ -468,21 +554,19 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           initial={{ width: 0 }}
                           animate={{ width: `${Math.max(percentage, 2)}%` }}
                           transition={{ duration: 0.6, ease: 'easeOut' }}
-                          className={`absolute top-0 bottom-0 left-0 opacity-25 pointer-events-none rounded-lg ${
-                            tiedGroup
-                              ? 'bg-gradient-to-r from-amber-600 to-amber-400'
-                              : isElected
-                              ? 'bg-gradient-to-r from-emerald-500 to-green-400'
-                              : isSuplente1
-                              ? 'bg-gradient-to-r from-blue-600 to-blue-400'
-                              : isSuplente2
-                              ? 'bg-gradient-to-r from-slate-600 to-slate-500'
-                              : 'bg-slate-700'
+                          style={tiedGroup ? undefined : categoryStyles.barStyle}
+                          className={`absolute top-0 bottom-0 left-0 opacity-35 pointer-events-none rounded-lg ${
+                            tiedGroup ? 'bg-gradient-to-r from-amber-600 to-amber-400' : ''
                           }`}
                         />
 
                         {/* Posição / Rank (1º, 2º, 3º...) */}
                         <div
+                          style={
+                            !tiedGroup && (!isElected || rank > 3)
+                              ? categoryStyles.rankStyle
+                              : undefined
+                          }
                           className={`flex items-center justify-center font-black shrink-0 shadow-sm ${
                             tiedGroup
                               ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-amber-400 text-blue-950 ring-2 ring-amber-300'
@@ -493,12 +577,12 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-slate-300 text-slate-900'
                                 : rank === 3
                                 ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-amber-700 text-white'
-                                : 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-emerald-900 text-emerald-200 border border-emerald-600/50'
+                                : 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs border'
                               : isSuplente1
-                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-blue-900 text-blue-200 border border-blue-500/60'
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs border'
                               : isSuplente2
-                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-slate-700 text-slate-200 border border-slate-500/60'
-                              : 'w-5 h-5 sm:w-5.5 sm:h-5.5 rounded text-[9.5px] bg-slate-800 text-slate-400 border border-slate-700/50'
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs border'
+                              : 'w-5 h-5 sm:w-5.5 sm:h-5.5 rounded text-[9.5px] border'
                           }`}
                         >
                           {rank}º
@@ -525,10 +609,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   : isElected
                                   ? 'font-black text-xs sm:text-sm text-white'
                                   : isSuplente1
-                                  ? 'font-bold text-[11px] sm:text-xs text-blue-100'
+                                  ? 'font-bold text-[11px] sm:text-xs text-white'
                                   : isSuplente2
-                                  ? 'font-bold text-[11px] sm:text-xs text-slate-200'
-                                  : 'font-semibold text-[10px] sm:text-[11px] text-slate-300'
+                                  ? 'font-bold text-[11px] sm:text-xs text-slate-100'
+                                  : 'font-semibold text-[10px] sm:text-[11px] text-slate-200'
                               }`}
                             >
                               {option.name}
@@ -542,13 +626,19 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             ) : (
                               <>
                                 {isElected && (
-                                  <span className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
-                                    <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
+                                  <span
+                                    style={winnerStyles.badgeStyle}
+                                    className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold border"
+                                  >
+                                    <CheckCircle className="w-2.5 h-2.5" style={{ color: winnerStyles.textColor }} />
                                     {isClosed ? 'Eleito Titular' : 'Titular'}
                                   </span>
                                 )}
                                 {isSuplente1 && (
-                                  <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold bg-blue-950 text-blue-200 border border-blue-500/60">
+                                  <span
+                                    style={suplente1Styles.badgeStyle}
+                                    className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold border"
+                                  >
                                     {isClosed
                                       ? segundoSuplentesCount > 0
                                         ? '1º Suplente Eleito'
@@ -559,7 +649,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                   </span>
                                 )}
                                 {isSuplente2 && (
-                                  <span className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold bg-slate-900/90 text-slate-300 border border-slate-600/60">
+                                  <span
+                                    style={suplente2Styles.badgeStyle}
+                                    className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold border"
+                                  >
                                     {isClosed ? '2º Suplente Eleito' : '2º Suplente'}
                                   </span>
                                 )}
@@ -586,29 +679,41 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                   return (
                     <LayoutGroup>
-                    <div className="space-y-2">
-                      {/* 1. SEÇÃO DE TITULARES (ELEITOS EM 2 COLUNAS NO TELÃO) */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: `${Math.max(cardGap, 6)}px` }}>
+                      {/* 1. SEÇÃO DE TITULARES */}
+                      <div className={`grid ${gridColsClass}`} style={{ gap: `${cardGap}px` }}>
                         <AnimatePresence>
                           {titulares.map((option, idx) => renderCandidateCard(option, idx + 1, 'titular'))}
                         </AnimatePresence>
                       </div>
 
-                      {/* 2. SEÇÃO DE SUPLENTES (1º E 2º SUPLENTE LADO A LADO EM 2 COLUNAS) */}
+                      {/* 2. SEÇÃO DE SUPLENTES */}
                       {suplentesCount > 0 && (
                         <div className="w-full pt-1">
                           {segundoSuplentesCount > 0 ? (
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 items-start">
+                            <div
+                              className={`grid ${gridColsClass} items-start`}
+                              style={{ gap: `${Math.max(cardGap, 8)}px` }}
+                            >
                               {/* COLUNA 1: 1º SUPLENTE */}
-                              <div className="space-y-1">
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>
                                 <div className="flex items-center gap-2 py-0.5">
-                                  <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
-                                  <span className="text-blue-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                  <div
+                                    className="flex-1 border-t-2 border-dashed"
+                                    style={{ borderColor: suplente1Styles.textColor }}
+                                  />
+                                  <span
+                                    className="font-black text-xs uppercase tracking-widest px-2 select-none shrink-0"
+                                    style={{ color: suplente1Styles.textColor }}
+                                  >
                                     1º SUPLENTES ({suplentesCount})
                                   </span>
-                                  <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
+                                  <div
+                                    className="flex-1 border-t-2 border-dashed"
+                                    style={{ borderColor: suplente1Styles.textColor }}
+                                  />
                                 </div>
-                                <div className="space-y-1">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>
                                   <AnimatePresence>
                                     {suplentes1.map((option, idx) =>
                                       renderCandidateCard(option, vacancies + idx + 1, 'suplente1')
@@ -617,16 +722,25 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 </div>
                               </div>
 
-                              {/* COLUNA 2: 2º SUPLENTE (CINZA ESMAECIDO, MESMO TAMANHO DO 1º) */}
-                              <div className="space-y-1">
+                              {/* COLUNA 2: 2º SUPLENTE */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>
                                 <div className="flex items-center gap-2 py-0.5">
-                                  <div className="flex-1 border-t-2 border-dashed border-slate-600/70" />
-                                  <span className="text-slate-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                  <div
+                                    className="flex-1 border-t-2 border-dashed"
+                                    style={{ borderColor: suplente2Styles.textColor }}
+                                  />
+                                  <span
+                                    className="font-black text-xs uppercase tracking-widest px-2 select-none shrink-0"
+                                    style={{ color: suplente2Styles.textColor }}
+                                  >
                                     2º SUPLENTES ({segundoSuplentesCount})
                                   </span>
-                                  <div className="flex-1 border-t-2 border-dashed border-slate-600/70" />
+                                  <div
+                                    className="flex-1 border-t-2 border-dashed"
+                                    style={{ borderColor: suplente2Styles.textColor }}
+                                  />
                                 </div>
-                                <div className="space-y-1">
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>
                                   <AnimatePresence>
                                     {suplentes2.map((option, idx) =>
                                       renderCandidateCard(option, vacancies + suplentesCount + idx + 1, 'suplente2')
@@ -636,15 +750,24 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               </div>
                             </div>
                           ) : (
-                            <div className="space-y-1">
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>
                               <div className="flex items-center gap-3 py-0.5">
-                                <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
-                                <span className="text-blue-400 font-black text-xs uppercase tracking-widest px-2 select-none shrink-0">
+                                <div
+                                  className="flex-1 border-t-2 border-dashed"
+                                  style={{ borderColor: suplente1Styles.textColor }}
+                                />
+                                <span
+                                  className="font-black text-xs uppercase tracking-widest px-2 select-none shrink-0"
+                                  style={{ color: suplente1Styles.textColor }}
+                                >
                                   SUPLENTES ({suplentesCount})
                                 </span>
-                                <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
+                                <div
+                                  className="flex-1 border-t-2 border-dashed"
+                                  style={{ borderColor: suplente1Styles.textColor }}
+                                />
                               </div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                              <div className={`grid ${gridColsClass}`} style={{ gap: `${cardGap}px` }}>
                                 <AnimatePresence>
                                   {suplentes1.map((option, idx) =>
                                     renderCandidateCard(option, vacancies + idx + 1, 'suplente1')
@@ -658,7 +781,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                       {/* 3. SEÇÃO DE NÃO CLASSIFICADOS */}
                       {naoClassificados.length > 0 && (
-                        <div className="w-full space-y-1 pt-1">
+                        <div className="w-full pt-1" style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>
                           <div className="flex items-center gap-3 py-0.5">
                             <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
                             <span className="text-slate-400 font-bold text-xs uppercase tracking-widest px-2 select-none shrink-0">
@@ -666,7 +789,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             </span>
                             <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
                           </div>
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
+                          <div className={`grid ${gridColsClass}`} style={{ gap: `${cardGap}px` }}>
                             <AnimatePresence>
                               {naoClassificados.map((option, idx) =>
                                 renderCandidateCard(
