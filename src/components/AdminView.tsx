@@ -510,14 +510,14 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           </div>
         </div>
 
-        {/* BARRA DE COMANDOS DA VOTAÇÃO (REFINADA: SEM SALA DE ESPERA, SEM TELÃO AO VIVO, SEM 2A TELA) */}
+        {/* BARRA DE COMANDOS DA VOTAÇÃO (REFINADA COM BORDAS COLORIDAS E EFEITO DE CLIQUE) */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3 border-t border-blue-900/80">
           <button
             onClick={session.status === 'VOTING' ? handlePauseVoting : handleStartVoting}
-            className={`p-2.5 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer ${
+            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition-all duration-150 active:scale-90 cursor-pointer ${
               session.status === 'VOTING'
-                ? 'bg-amber-600 hover:bg-amber-500'
-                : 'bg-emerald-600 hover:bg-emerald-500'
+                ? 'bg-transparent border-2 border-amber-500 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 active:bg-amber-500/25'
+                : 'bg-transparent border-2 border-emerald-500 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 active:bg-emerald-500/25'
             }`}
           >
             <Play className="w-4 h-4 fill-current" />
@@ -527,7 +527,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           <button
             onClick={handleCloseVoting}
             disabled={session.status === 'CLOSED'}
-            className="p-2.5 bg-purple-700 hover:bg-purple-600 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition active:scale-95 cursor-pointer"
+            className="p-2.5 bg-transparent hover:bg-purple-500/10 border-2 border-purple-500 text-purple-400 hover:text-purple-300 disabled:opacity-40 disabled:pointer-events-none rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-90 active:bg-purple-500/25 cursor-pointer"
           >
             <StopCircle className="w-4 h-4 fill-current" />
             <span>ENCERRAR VOTAÇÃO</span>
@@ -542,10 +542,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               });
             }}
             title="Mostrar ou ocultar o QR Code no Telão"
-            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition active:scale-95 cursor-pointer ${
+            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition-all duration-150 active:scale-90 cursor-pointer ${
               session.showQrOnTelao !== false
-                ? 'bg-blue-900/90 hover:bg-blue-800 text-amber-300 border border-amber-500/40'
-                : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700'
+                ? 'bg-transparent hover:bg-amber-400/10 border-2 border-amber-400 text-amber-300 hover:text-amber-200 active:bg-amber-400/25'
+                : 'bg-transparent hover:bg-slate-500/10 border-2 border-slate-600 text-slate-400 hover:text-slate-300 active:bg-slate-500/25'
             }`}
           >
             <QrCode className="w-4 h-4" />
@@ -762,7 +762,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <button
                   type="button"
                   onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-2.5 py-1 bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                  className="px-2.5 py-1 bg-transparent hover:bg-emerald-500/15 border-2 border-emerald-500/80 text-emerald-400 hover:text-emerald-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-emerald-500/30 shadow-sm"
                   title="Importar de arquivo Excel (.xlsx, .xls)"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -772,7 +772,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <button
                   type="button"
                   onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-2.5 py-1 bg-blue-950/90 hover:bg-blue-900 border border-blue-600/70 text-blue-300 hover:text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                  className="px-2.5 py-1 bg-transparent hover:bg-blue-500/15 border-2 border-blue-500/80 text-blue-400 hover:text-blue-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-blue-500/30 shadow-sm"
                   title="Importar de arquivo CSV"
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -782,7 +782,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <button
                   type="button"
                   onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 border border-slate-600/70 text-slate-300 hover:text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
+                  className="px-2.5 py-1 bg-transparent hover:bg-slate-400/15 border-2 border-slate-500/80 text-slate-300 hover:text-white rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-slate-500/30 shadow-sm"
                   title="Importar de arquivo TXT"
                 >
                   <FileText className="w-3.5 h-3.5" />
@@ -840,22 +840,22 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   type="button"
                   onClick={() => setIsListening(!isListening)}
                   title={isListening ? 'Parar microfone' : 'Falar nomes pelo microfone'}
-                  className={`absolute right-3 top-3 w-10 h-10 rounded-xl flex items-center justify-center transition cursor-pointer shadow-lg ${
+                  className={`absolute right-3 top-3 w-10 h-10 rounded-xl flex items-center justify-center transition-all duration-150 cursor-pointer shadow-md active:scale-90 ${
                     isListening
-                      ? 'bg-rose-600 text-white animate-pulse ring-4 ring-rose-400/50'
-                      : 'bg-amber-500 hover:bg-amber-400 text-blue-950'
+                      ? 'bg-transparent border-2 border-rose-500 text-rose-400 animate-pulse ring-2 ring-rose-400/50'
+                      : 'bg-transparent border-2 border-amber-400 text-amber-400 hover:text-amber-300 hover:bg-amber-400/10 active:bg-amber-400/25'
                   }`}
                 >
                   {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                 </button>
               </div>
 
-              {/* Coluna de Ações: Adicionar, Mostrar no Telão e Limpar Todos */}
+              {/* Coluna de Ações: Adicionar, Mostrar no Telão e Limpar Todos (Bordas Coloridas e Efeito de Clique) */}
               <div className="flex flex-col gap-2 shrink-0 sm:w-52 justify-between">
                 <button
                   type="button"
                   onClick={() => handleAddCandidateName(newName)}
-                  className="flex-1 min-h-[44px] px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  className="flex-1 min-h-[44px] px-4 bg-transparent hover:bg-amber-400/10 border-2 border-amber-400 text-amber-400 hover:text-amber-300 hover:border-amber-300 font-black text-xs sm:text-sm rounded-xl shadow-md transition-all duration-150 active:scale-90 active:bg-amber-400/25 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
                 >
                   <Plus className="w-4 h-4 stroke-[3]" />
                   <span>+ ADICIONAR</span>
@@ -874,10 +874,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         : 'Exibindo Votação/Resultados no Telão!'
                     );
                   }}
-                  className={`flex-1 min-h-[40px] px-4 font-bold text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider ${
+                  className={`flex-1 min-h-[40px] px-4 font-bold text-xs rounded-xl shadow-md transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider ${
                     session.telaoMode === 'names'
-                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-300'
-                      : 'bg-blue-700 hover:bg-blue-600 text-white'
+                      ? 'bg-transparent border-2 border-emerald-400 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10 active:bg-emerald-400/25'
+                      : 'bg-transparent border-2 border-blue-500 text-blue-400 hover:text-blue-300 hover:border-blue-400 hover:bg-blue-500/10 active:bg-blue-500/25'
                   }`}
                   title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
                 >
@@ -895,7 +895,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       showNotification('success', 'Todos os nomes foram apagados.');
                     }
                   }}
-                  className="min-h-[38px] px-4 bg-rose-950/80 hover:bg-rose-900 border border-rose-600/70 text-rose-300 hover:text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  className="min-h-[38px] px-4 bg-transparent hover:bg-rose-500/10 border-2 border-rose-500/80 text-rose-400 hover:text-rose-300 hover:border-rose-400 font-bold text-xs rounded-xl shadow transition-all duration-150 active:scale-90 active:bg-rose-500/25 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
                   title="Apagar todos os nomes cadastrados"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
