@@ -16,10 +16,12 @@ import {
   FileText,
   Pencil,
   QrCode,
+  Tv,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
+import { openTelaoOnSecondMonitor } from '../utils/screen';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -721,125 +723,69 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
       {/* ABA: NOMES / CANDIDATOS (AGORA EM PRIMEIRO) */}
       {activeTab === 'candidates' && (
         <div className="space-y-3.5">
-          {/* 1. CAMPO PARA DIGITAR OU FALAR EM TEMPO REAL */}
+          {/* Inputs ocultos para importação de arquivos */}
+          <input
+            ref={fileUploadAppendRef}
+            type="file"
+            accept=".txt,.csv,.xls,.xlsx"
+            className="hidden"
+            onChange={(e) => handleFileImport(e, 'append')}
+          />
+          <input
+            ref={fileUploadReplaceRef}
+            type="file"
+            accept=".txt,.csv,.xls,.xlsx"
+            className="hidden"
+            onChange={(e) => handleFileImport(e, 'replace')}
+          />
+
+          {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ (3X MAIS ALTA, COM BOTÕES DE IMPORTAR NA MESMA LINHA DO CABEÇALHO) */}
           <div className="bg-[#001f47] border-2 border-amber-400/80 rounded-2xl p-4 shadow-xl">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs sm:text-sm font-bold text-white flex items-center gap-2 font-serif">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                <span>Digite ou Fale os Nomes (Atualiza o Telão em Tempo Real)</span>
-              </label>
-              {isListening && (
-                <span className="text-[11px] font-bold text-rose-400 bg-rose-950/80 px-2.5 py-0.5 rounded-full border border-rose-700 animate-pulse flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
-                  Microfone Ativo • Fale agora!
-                </span>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="text"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleAddCandidateName(newName);
-                    }
-                  }}
-                  placeholder="Digite o nome e dê Enter (ou separe por vírgula para vários)..."
-                  className="w-full h-11 pl-3.5 pr-12 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-xl text-white font-bold text-xs sm:text-sm placeholder-slate-400 outline-none transition shadow-inner uppercase"
-                />
-                <button
-                  type="button"
-                  onClick={() => setIsListening(!isListening)}
-                  title={isListening ? 'Parar microfone' : 'Falar nomes pelo microfone'}
-                  className={`absolute right-1.5 top-1.5 w-8 h-8 rounded-lg flex items-center justify-center transition cursor-pointer ${
-                    isListening
-                      ? 'bg-rose-600 text-white animate-pulse shadow-md'
-                      : 'bg-amber-500 hover:bg-amber-400 text-blue-950'
-                  }`}
-                >
-                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                </button>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => handleAddCandidateName(newName)}
-                className="h-11 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black text-xs rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 uppercase tracking-wider"
-              >
-                <Plus className="w-4 h-4 stroke-[3]" />
-                <span>Adicionar</span>
-              </button>
-            </div>
-
-            {speechTranscript && isListening && (
-              <p className="text-xs text-amber-300 font-mono mt-2 bg-blue-950/80 p-2 rounded-lg border border-blue-800">
-                Ouvindo: <span className="text-white font-bold">"{speechTranscript}"</span>
-              </p>
-            )}
-          </div>
-
-          {/* 2. SEÇÃO LISTA: IMPORTAÇÃO DE ARQUIVOS EM UMA LINHA */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-3 shadow-md">
-            <input
-              ref={fileUploadAppendRef}
-              type="file"
-              accept=".txt,.csv,.xls,.xlsx"
-              className="hidden"
-              onChange={(e) => handleFileImport(e, 'append')}
-            />
-            <input
-              ref={fileUploadReplaceRef}
-              type="file"
-              accept=".txt,.csv,.xls,.xlsx"
-              className="hidden"
-              onChange={(e) => handleFileImport(e, 'replace')}
-            />
-
-            <div className="flex flex-wrap items-center justify-between gap-2.5">
+            {/* CABEÇALHO NA MESMA LINHA: TÍTULO À ESQUERDA + BOTÕES DE IMPORTAR À DIREITA */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 mb-3">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-black text-amber-300 uppercase font-serif tracking-wider flex items-center gap-1.5">
-                  <FileSpreadsheet className="w-4 h-4 text-amber-400" />
-                  SEÇÃO LISTA:
-                </span>
-                <span className="text-[11px] text-blue-200">Importar Arquivos:</span>
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                <label className="text-xs sm:text-sm font-black text-white font-serif uppercase tracking-wide">
+                  Digite ou Fale os Nomes
+                </label>
+                {isListening && (
+                  <span className="text-[10px] font-bold text-rose-400 bg-rose-950/90 px-2 py-0.5 rounded-full border border-rose-600 animate-pulse flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                    Ouvindo...
+                  </span>
+                )}
               </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Botão Excel */}
+              {/* Botões de Importar Arquivos movidos para o cabeçalho na mesma linha */}
+              <div className="flex flex-wrap items-center gap-1.5">
                 <button
                   type="button"
                   onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  className="px-2.5 py-1 bg-emerald-950/90 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                   title="Importar de arquivo Excel (.xlsx, .xls)"
                 >
                   <FileSpreadsheet className="w-3.5 h-3.5" />
                   <span>Excel (.xlsx)</span>
                 </button>
 
-                {/* Botão CSV */}
                 <button
                   type="button"
                   onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-3 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-600/70 text-blue-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  className="px-2.5 py-1 bg-blue-950/90 hover:bg-blue-900 border border-blue-600/70 text-blue-300 hover:text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                   title="Importar de arquivo CSV"
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  <span>CSV (.csv)</span>
+                  <span>CSV</span>
                 </button>
 
-                {/* Botão TXT */}
                 <button
                   type="button"
                   onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-3 py-1.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-600/70 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  className="px-2.5 py-1 bg-slate-900/90 hover:bg-slate-800 border border-slate-600/70 text-slate-300 hover:text-white rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer active:scale-95 shadow-sm"
                   title="Importar de arquivo TXT"
                 >
                   <FileText className="w-3.5 h-3.5" />
-                  <span>TXT (.txt)</span>
+                  <span>TXT</span>
                 </button>
 
                 {/* Arrastar e Soltar */}
@@ -854,10 +800,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     }
                   }}
                   onClick={() => fileUploadAppendRef.current?.click()}
-                  className="px-3.5 py-1.5 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-blue-600 hover:border-amber-400 rounded-lg text-[11px] text-blue-300 hover:text-amber-300 font-semibold transition cursor-pointer flex items-center gap-1.5"
-                  title="Arraste qualquer arquivo Excel, CSV ou TXT e solte aqui"
+                  className="px-2.5 py-1 bg-[#07132a] hover:bg-[#0c1f44] border border-dashed border-blue-500 hover:border-amber-400 rounded-lg text-[10px] text-blue-300 hover:text-amber-300 font-semibold transition cursor-pointer flex items-center gap-1"
+                  title="Arraste qualquer arquivo e solte aqui"
                 >
-                  <Upload className="w-3.5 h-3.5 text-amber-400" />
+                  <Upload className="w-3 h-3 text-amber-400" />
                   <span>ou arraste o arquivo aqui</span>
                 </div>
 
@@ -865,14 +811,90 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <button
                   type="button"
                   onClick={handleDownloadSampleTemplate}
-                  className="px-2.5 py-1.5 text-blue-300/80 hover:text-white rounded-lg text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                  className="px-2 py-1 text-blue-300/80 hover:text-white rounded-lg text-[10px] font-semibold transition flex items-center gap-0.5 cursor-pointer"
                   title="Baixar arquivo modelo de exemplo"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-3 h-3" />
                   <span>Modelo (.csv)</span>
                 </button>
               </div>
             </div>
+
+            {/* CAMPO DE DIGITAÇÃO 3X MAIS ALTO + BOTÕES DE AÇÃO */}
+            <div className="flex flex-col sm:flex-row gap-3 items-stretch">
+              <div className="relative flex-1">
+                <textarea
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleAddCandidateName(newName);
+                    }
+                  }}
+                  placeholder="DIGITE OU COLE OS NOMES AQUI (DÊ ENTER OU SEPARE POR VÍRGULA OU LINHA)..."
+                  className="w-full h-32 sm:h-36 p-3.5 pr-14 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsListening(!isListening)}
+                  title={isListening ? 'Parar microfone' : 'Falar nomes pelo microfone'}
+                  className={`absolute right-3 top-3 w-10 h-10 rounded-xl flex items-center justify-center transition cursor-pointer shadow-lg ${
+                    isListening
+                      ? 'bg-rose-600 text-white animate-pulse ring-4 ring-rose-400/50'
+                      : 'bg-amber-500 hover:bg-amber-400 text-blue-950'
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
+              </div>
+
+              {/* Coluna de Ações: Adicionar, Mostrar no Telão e Limpar Todos */}
+              <div className="flex flex-col gap-2 shrink-0 sm:w-52 justify-between">
+                <button
+                  type="button"
+                  onClick={() => handleAddCandidateName(newName)}
+                  className="flex-1 min-h-[44px] px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black text-xs sm:text-sm rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                >
+                  <Plus className="w-4 h-4 stroke-[3]" />
+                  <span>+ ADICIONAR</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    openTelaoOnSecondMonitor();
+                    showNotification('success', 'Telão aberto e sincronizado!');
+                  }}
+                  className="flex-1 min-h-[40px] px-4 bg-blue-700 hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  title="Abrir o Telão no 2º monitor ou projetor"
+                >
+                  <Tv className="w-4 h-4" />
+                  <span>MOSTRAR NO TELÃO</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
+                      saveSession({ ...session, options: [] });
+                      showNotification('success', 'Todos os nomes foram apagados.');
+                    }
+                  }}
+                  className="min-h-[38px] px-4 bg-rose-950/80 hover:bg-rose-900 border border-rose-600/70 text-rose-300 hover:text-white font-bold text-xs rounded-xl shadow transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  title="Apagar todos os nomes cadastrados"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                  <span>LIMPAR TODOS</span>
+                </button>
+              </div>
+            </div>
+
+            {speechTranscript && isListening && (
+              <p className="text-xs text-amber-300 font-mono mt-2 bg-blue-950/80 p-2 rounded-lg border border-blue-800">
+                Ouvindo: <span className="text-white font-bold">"{speechTranscript}"</span>
+              </p>
+            )}
           </div>
 
           {/* 3. NOMES CADASTRADOS (CARDS EM LINHA, SEM SUBTITULO, SEM VOTOS) */}
