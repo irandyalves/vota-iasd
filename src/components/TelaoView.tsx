@@ -6,7 +6,6 @@ import {
   CheckCircle,
   Maximize,
   Minimize,
-  QrCode as QrIcon,
   Users,
   AlertTriangle,
 } from 'lucide-react';
@@ -198,31 +197,25 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 transition: 'transform 2400ms cubic-bezier(0.25, 0.1, 0.25, 1)',
                 willChange: 'transform',
               }}
-              className="w-[280px] shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
+              className="w-[280px] shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl px-2 py-3 shadow-2xl flex flex-col items-center text-center"
             >
-              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2 shadow-inner">
-                <QrIcon className="w-5 h-5" />
-              </div>
-
-              <h3 className="font-extrabold text-white text-sm font-serif tracking-tight mb-0.5">
-                VOTE PELO CELULAR
+              <h3 className="font-black text-white text-base sm:text-lg font-serif tracking-wider uppercase mb-2.5">
+                LEIA O QR CODE
               </h3>
-              <p className="text-[11px] text-blue-200/90 mb-3">
-                Aponte a câmera para o QR Code:
-              </p>
 
-              {/* QR Code Nítido e Limpo */}
-              <div className="p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37]">
+              {/* QR Code Grande Quase Encostando nas Bordas Dir e Esq */}
+              <div className="w-full p-2.5 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37] flex items-center justify-center">
                 <QRCodeSVG
                   value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
-                  size={135}
+                  size={240}
                   level="M"
                   includeMargin={false}
+                  style={{ width: '100%', height: 'auto', maxWidth: '244px' }}
                 />
               </div>
 
               {/* Caixa da Senha em Grande Destaque */}
-              <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-2 shadow-inner mb-2">
+              <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-2 shadow-inner">
                 <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
                   SENHA DE ACESSO
                 </span>
@@ -230,10 +223,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   {session.pin}
                 </span>
               </div>
-
-              <p className="text-[10px] text-blue-300/70 font-mono">
-                vota-iasd-central.web.app
-              </p>
             </div>
           </div>
 
