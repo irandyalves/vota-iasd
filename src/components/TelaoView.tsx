@@ -594,8 +594,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   return (
                     <LayoutGroup>
                     <div className="space-y-2">
-                      {/* 1. SEÇÃO DE TITULARES */}
-                      <div className="space-y-1">
+                      {/* 1. SEÇÃO DE TITULARES (ELEITOS EM 2 COLUNAS NO TELÃO) */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                         <AnimatePresence>
                           {titulares.map((option, idx) => renderCandidateCard(option, idx + 1, 'titular'))}
                         </AnimatePresence>
@@ -651,7 +651,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 </span>
                                 <div className="flex-1 border-t-2 border-dashed border-blue-500/70" />
                               </div>
-                              <div className="space-y-1">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                                 <AnimatePresence>
                                   {suplentes1.map((option, idx) =>
                                     renderCandidateCard(option, vacancies + idx + 1, 'suplente1')
@@ -673,7 +673,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             </span>
                             <div className="flex-1 border-t-2 border-dashed border-slate-600/60" />
                           </div>
-                          <div className="space-y-1">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                             <AnimatePresence>
                               {naoClassificados.map((option, idx) =>
                                 renderCandidateCard(
