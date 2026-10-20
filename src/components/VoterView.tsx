@@ -3,16 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
   Lock,
-  Vote,
   Sparkles,
   AlertCircle,
-  KeyRound,
   ShieldAlert,
   Flame,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { submitBallot, hasVoted } from '../services/votingService';
 import { urnaAudio } from '../utils/audio';
+import { IasdLogo } from './IasdLogo';
 
 interface VoterViewProps {
   session: VotingSession;
@@ -123,8 +122,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
           animate={{ opacity: 1, y: 0 }}
           className="max-w-md w-full bg-[#001f47] border border-blue-800 rounded-3xl p-6 sm:p-8 shadow-2xl text-center"
         >
-          <div className="w-20 h-20 bg-amber-500/10 border-2 border-[#d4af37] rounded-3xl flex items-center justify-center mx-auto mb-5 shadow-lg">
-            <KeyRound className="w-10 h-10 text-[#d4af37]" />
+          <div className="flex justify-center mb-5">
+            <IasdLogo className="w-20 h-20 shadow-2xl" customUrl={session.logoUrl} />
           </div>
 
           <h1 className="text-2xl font-bold text-white mb-2 font-serif">Acesso ao VOTO IASD</h1>
@@ -261,8 +260,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
               }}
               className="absolute inset-2 rounded-full border-2 border-dashed border-blue-400/40"
             />
-            <div className="w-20 h-20 bg-gradient-to-tr from-[#002f6c] to-blue-900 rounded-full flex items-center justify-center shadow-xl border border-blue-400/30 z-10">
-              <Vote className="w-10 h-10 text-[#d4af37] animate-pulse" />
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl z-10 overflow-hidden">
+              <IasdLogo className="w-20 h-20" customUrl={session.logoUrl} />
             </div>
           </div>
 
@@ -331,18 +330,22 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
       {/* Cabeçalho da Pauta */}
       <div className="bg-[#001f47] rounded-3xl p-5 border border-blue-800 shadow-xl mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-          <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-900/70 text-blue-200 uppercase tracking-wider">
-            {session.category || 'Votação IASD'}
-          </span>
-          <span className="text-xs text-amber-300 font-bold bg-amber-950/80 px-2.5 py-1 rounded-md border border-amber-700/40">
-            {session.vacancies} Vagas {session.suplentesCount > 0 && `+ ${session.suplentesCount} Suplentes`}
-          </span>
+        <div className="flex items-center gap-3 mb-3">
+          <IasdLogo className="w-12 h-12 shadow shrink-0" customUrl={session.logoUrl} />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-blue-900/70 text-blue-200 uppercase tracking-wider">
+                {session.category || 'Votação IASD'}
+              </span>
+              <span className="text-[11px] text-amber-300 font-bold bg-amber-950/80 px-2 py-0.5 rounded-md border border-amber-700/40">
+                {session.vacancies} Vagas {session.suplentesCount > 0 && `+ ${session.suplentesCount} Suplentes`}
+              </span>
+            </div>
+            <h1 className="text-xl sm:text-2xl font-extrabold text-white font-serif leading-tight truncate">
+              {session.title}
+            </h1>
+          </div>
         </div>
-
-        <h1 className="text-xl sm:text-2xl font-extrabold text-white font-serif mb-1">
-          {session.title}
-        </h1>
 
         {/* Indicador de Seleção de Votos */}
         <div className="mt-4 pt-3 border-t border-blue-900/80 flex items-center justify-between">

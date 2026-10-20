@@ -20,6 +20,8 @@ import {
   FileText,
   Tv,
   ExternalLink,
+  Pencil,
+  QrCode,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
@@ -36,6 +38,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [bulkText, setBulkText] = useState('');
   const [newName, setNewName] = useState('');
   const [newSubtitle, setNewSubtitle] = useState('');
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [editedTitle, setEditedTitle] = useState('');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // Estados de Desempate
@@ -480,13 +484,52 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
       {/* CABEÇALHO DO ADMIN COM CONTROLES RÁPIDOS */}
       <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl mb-6">
         <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <div>
+          <div className="flex-1 max-w-2xl">
             <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-900 text-blue-200 uppercase tracking-wider">
               Painel de Controle do Líder
             </span>
-            <h1 className="text-2xl sm:text-3xl font-black text-white font-serif mt-1">
-              {session.title}
-            </h1>
+            {isEditingTitle ? (
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                onBlur={() => {
+                  if (editedTitle.trim()) {
+                    saveSession({ ...session, title: editedTitle.trim() });
+                  }
+                  setIsEditingTitle(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (editedTitle.trim()) {
+                      saveSession({ ...session, title: editedTitle.trim() });
+                    }
+                    setIsEditingTitle(false);
+                  } else if (e.key === 'Escape') {
+                    setIsEditingTitle(false);
+                  }
+                }}
+                autoFocus
+                className="text-2xl sm:text-3xl font-black text-white font-serif mt-1 bg-[#07132a] border-2 border-[#d4af37] px-3 py-1 rounded-xl outline-none shadow-inner w-full"
+              />
+            ) : (
+              <div
+                className="flex items-center gap-2 group cursor-pointer"
+                onDoubleClick={() => {
+                  setEditedTitle(session.title);
+                  setIsEditingTitle(true);
+                }}
+                title="Dê um duplo clique para editar o nome da pauta diretamente"
+              >
+                <h1 className="text-2xl sm:text-3xl font-black text-white font-serif mt-1 group-hover:text-amber-300 transition-colors">
+                  {session.title}
+                </h1>
+                <span className="text-[11px] text-blue-300 opacity-60 group-hover:opacity-100 bg-blue-900/60 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
+                  <Pencil className="w-3 h-3 text-amber-300" />
+                  Duplo clique edita
+                </span>
+              </div>
+            )}
             <p className="text-xs text-blue-200 mt-0.5">
               PIN de Acesso dos Membros: <strong className="text-amber-300 font-mono text-sm">{session.pin}</strong>
             </p>
@@ -522,14 +565,14 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
 
         {/* BARRA DE GATILHOS DA ELEIÇÃO */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 pt-4 border-t border-blue-900/80">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-blue-900/80">
           <button
             onClick={handleStartVoting}
             disabled={session.status === 'VOTING'}
             className="p-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer"
           >
             <Play className="w-5 h-5 fill-current" />
-            VOTAR AGORA
+            INICIAR VOTAÇÃO
           </button>
 
           <button
@@ -562,6 +605,25 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             {session.showResultsLive ? 'Telão: Ao Vivo' : 'Telão: Oculto'}
           </button>
 
+          {/* Botão de Controle do QR Code no Telão */}
+          <button
+            onClick={() => {
+              saveSession({
+                ...session,
+                showQrOnTelao: session.showQrOnTelao === false ? true : false,
+              });
+            }}
+            title="Mostrar ou ocultar o QR Code no Telão a qualquer momento"
+            className={`p-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer ${
+              session.showQrOnTelao !== false
+                ? 'bg-blue-900/90 hover:bg-blue-800 text-amber-300 border border-amber-500/40'
+                : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700'
+            }`}
+          >
+            <QrCode className="w-5 h-5" />
+            {session.showQrOnTelao !== false ? 'QR Telão: Sim' : 'QR Telão: Não'}
+          </button>
+
           {/* Botão de 2ª Tela para o Projetor / TV */}
           <button
             onClick={() => {
@@ -575,7 +637,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               );
               if (popup) popup.focus();
             }}
-            className="col-span-2 sm:col-span-1 p-3.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-amber-900/30 transition active:scale-95 cursor-pointer"
+            className="p-3.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-amber-900/30 transition active:scale-95 cursor-pointer"
           >
             <Tv className="w-5 h-5" />
             <span>2ª TELA (TELÃO)</span>
@@ -948,6 +1010,17 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   type="text"
                   value={session.title}
                   onChange={(e) => saveSession({ ...session, title: e.target.value })}
+                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-semibold text-blue-200 block mb-1">Título Público no Telão:</label>
+                <input
+                  type="text"
+                  placeholder="Ex: VOTAÇÃO ESCOLHA DIÁCONOS"
+                  value={session.publicTitle || ''}
+                  onChange={(e) => saveSession({ ...session, publicTitle: e.target.value })}
                   className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
                 />
               </div>

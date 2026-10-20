@@ -4,7 +4,7 @@ import { VoterView } from './components/VoterView';
 import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
-import { subscribeToSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
+import { subscribeToSession, saveSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
 import { Tv, ExternalLink, X } from 'lucide-react';
 
 export function App() {
@@ -31,20 +31,25 @@ export function App() {
     }
   };
 
-  // Detecta parâmetro de URL (ex: ?view=telao ou ?view=admin ou ?view=voter)
+  // Detecta parâmetro de URL (ex: ?view=voter ou ?view=telao ou ?view=admin)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const viewParam = params.get('view');
       if (viewParam === 'telao' || viewParam === 'admin' || viewParam === 'voter') {
         setCurrentView(viewParam);
+      } else {
+        // Se acessado diretamente sem parâmetro num celular/tablet, abre a visão de votante
+        const isMobile = window.innerWidth <= 768;
+        if (isMobile) {
+          setCurrentView('voter');
+        }
       }
 
-      // Ao abrir o sistema pela primeira vez no admin, tenta abrir a 2ª tela automaticamente
+      // Ao abrir o admin no notebook pela primeira vez, tenta abrir a 2ª tela automaticamente
       const hasAttempted = sessionStorage.getItem('vota_iasd_telao_auto_launched');
-      if (viewParam !== 'telao' && !hasAttempted) {
+      if (viewParam === 'admin' && !hasAttempted) {
         sessionStorage.setItem('vota_iasd_telao_auto_launched', 'true');
-        // Pequeno atraso para dar tempo do navegador processar
         setTimeout(() => {
           openSecondaryScreen();
         }, 500);
@@ -67,13 +72,13 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-[#07132a] text-slate-100 flex flex-col font-sans selection:bg-[#d4af37] selection:text-blue-950 w-full overflow-x-hidden">
-      {/* Notificação Flutuante caso o navegador bloqueie popup automático */}
-      {showPopupBlockedToast && currentView !== 'telao' && (
+      {/* Notificação Flutuante caso o navegador bloqueie popup automático (apenas no Admin) */}
+      {showPopupBlockedToast && currentView === 'admin' && (
         <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-blue-950 px-4 py-3 flex items-center justify-between text-xs sm:text-sm font-bold shadow-xl border-b border-amber-400">
           <div className="flex items-center gap-2">
             <Tv className="w-5 h-5 shrink-0" />
             <span>
-              O navegador solicitou permissão de tela. Clique no botão ao lado para abrir o <strong>Telão em 2ª Tela (Tela Cheia)</strong>:
+              O navegador solicitou permissão de tela. Clique para projetar o <strong>Telão em 2ª Tela (Tela Cheia)</strong>:
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -94,8 +99,9 @@ export function App() {
         </div>
       )}
 
-      {/* Navbar com seleção rápida de tela (No Telão a tela fica 100% limpa para projeção) */}
-      {currentView !== 'telao' ? (
+      {/* NAVBAR: EXIBIDA EXCLUSIVAMENTE NO MODO ADMIN! */}
+      {/* Nos celulares dos votantes (QR Code) e no Telão de projeção, o cabeçalho administrativo NÃO aparece */}
+      {currentView === 'admin' && (
         <Navbar
           currentView={currentView}
           setCurrentView={(view) => {
@@ -106,12 +112,20 @@ export function App() {
               window.history.pushState({}, '', url.toString());
             }
           }}
-          title={session?.title}
           pin={session?.pin}
+          onRegeneratePin={(newPin) => {
+            saveSession({ ...session, pin: newPin });
+          }}
+          logoUrl={session?.logoUrl}
+          onUpdateLogo={(url) => {
+            saveSession({ ...session, logoUrl: url });
+          }}
         />
-      ) : (
-        /* Controle discreto flutuante no topo do Telão visível apenas ao passar o mouse */
-        <div className="fixed top-3 right-4 z-50 flex items-center gap-2 opacity-20 hover:opacity-100 transition-opacity">
+      )}
+
+      {/* Botão de retorno discreto exclusivo no Telão */}
+      {currentView === 'telao' && (
+        <div className="fixed top-4 left-4 z-50 opacity-10 hover:opacity-100 transition-opacity">
           <button
             onClick={() => {
               setCurrentView('admin');
@@ -121,9 +135,9 @@ export function App() {
                 window.history.pushState({}, '', url.toString());
               }
             }}
-            className="px-3 py-1.5 bg-[#001f47]/90 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-blue-800 shadow-lg backdrop-blur-md cursor-pointer"
+            className="px-3 py-1.5 bg-[#001f47]/80 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-blue-800 shadow-md backdrop-blur-md cursor-pointer"
           >
-            Voltar ao Admin
+            ← Painel Admin
           </button>
         </div>
       )}
@@ -135,8 +149,8 @@ export function App() {
         {currentView === 'admin' && <AdminView session={session} />}
       </main>
 
-      {/* Rodapé discreto da igreja (oculto no Telão de projeção) */}
-      {currentView !== 'telao' && (
+      {/* Rodapé discreto da igreja (exibido apenas no Admin) */}
+      {currentView === 'admin' && (
         <footer className="py-4 text-center text-xs text-blue-300/40 border-t border-blue-900/40 w-full">
           <p>Sistema VOTA IASD • Desenvolvido para Votações Transparentes e Seguras</p>
         </footer>

@@ -18,6 +18,9 @@ export interface VotingSession {
   vacancies: number; // Quantidade de vagas principais
   suplentesCount: number; // Quantidade de suplentes
   showResultsLive: boolean; // Mostrar corrida ao vivo no telão ou ocultar até o fim
+  showQrOnTelao?: boolean; // Controlar exibição do QR Code no Telão
+  logoUrl?: string; // Logo customizado da IASD ou do evento
+  publicTitle?: string; // Título exibido no Telão (Ex: "VOTAÇÃO ESCOLHA DIÁCONOS")
   options: VotingOption[];
   // Dados da rodada de desempate (se houver)
   tieBreak?: {

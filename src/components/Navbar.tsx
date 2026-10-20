@@ -1,28 +1,58 @@
-import React from 'react';
-import { Vote, Tv, ShieldCheck, Volume2, Database, Wifi, ExternalLink } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Tv, ShieldCheck, Volume2, Database, Wifi, ExternalLink, RefreshCw, Camera } from 'lucide-react';
 import { isFirebaseConfigured } from '../services/firebase';
 import { urnaAudio } from '../utils/audio';
+import { IasdLogo } from './IasdLogo';
 
 interface NavbarProps {
   currentView: 'voter' | 'telao' | 'admin';
   setCurrentView: (view: 'voter' | 'telao' | 'admin') => void;
-  title?: string;
   pin?: string;
+  onRegeneratePin?: (newPin: string) => void;
+  logoUrl?: string;
+  onUpdateLogo?: (url: string) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   setCurrentView,
-  title,
-  pin,
+  pin = '1844',
+  onRegeneratePin,
+  logoUrl,
+  onUpdateLogo,
 }) => {
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  // Gera novo PIN de 4 dígitos aleatório
+  const handleRegenerate = () => {
+    const newPin = Math.floor(1000 + Math.random() * 9000).toString();
+    if (onRegeneratePin) {
+      onRegeneratePin(newPin);
+    }
+  };
+
+  // Upload de Logo personalizado
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !onUpdateLogo) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const result = event.target?.result as string;
+      if (result) {
+        onUpdateLogo(result);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Abre o Telão em uma 2ª janela/tela dedicada para projetor ou TV
   const handleOpenSecondaryScreen = () => {
     if (typeof window === 'undefined') return;
     const url = `${window.location.origin}/?view=telao&fullscreen=true`;
     const screenWidth = window.screen.availWidth || 1920;
     const screenHeight = window.screen.availHeight || 1080;
-    
+
     const popup = window.open(
       url,
       'VotaIASDTelaoProjetor',
@@ -34,13 +64,29 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-3 w-full">
+    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-2.5 w-full">
       <div className="w-full flex flex-wrap items-center justify-between gap-3">
-        {/* Marca / Identidade IASD */}
+        {/* Marca / Identidade IASD com Logo Clicável */}
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#d4af37] to-amber-300 flex items-center justify-center shadow-md shadow-amber-900/30 shrink-0">
-            <Vote className="w-6 h-6 text-[#001f47] font-bold" />
-          </div>
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleLogoUpload}
+          />
+          <button
+            type="button"
+            onClick={() => logoInputRef.current?.click()}
+            title="Clique para trocar o logo da igreja"
+            className="relative group shrink-0 cursor-pointer rounded-2xl overflow-hidden focus:outline-none"
+          >
+            <IasdLogo className="w-11 h-11" customUrl={logoUrl} />
+            <div className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-amber-300 transition-opacity">
+              <Camera className="w-4 h-4" />
+            </div>
+          </button>
+
           <div>
             <div className="flex items-center gap-2">
               <span className="font-extrabold tracking-wider text-white text-lg font-serif">
@@ -51,15 +97,26 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Tempo Real
               </span>
             </div>
-            {title && (
-              <p className="text-xs text-blue-200/80 truncate max-w-[200px] sm:max-w-xs md:max-w-md">
-                {title} {pin && <span className="text-amber-300 font-mono font-bold ml-1">PIN: {pin}</span>}
-              </p>
-            )}
+
+            {/* SENHA 1844 com Botão de Regenerar */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <span className="text-xs text-blue-300 font-medium">SENHA:</span>
+              <span className="text-amber-300 font-mono font-black text-sm tracking-widest bg-[#07132a] px-2 py-0.5 rounded-md border border-amber-500/30">
+                {pin}
+              </span>
+              <button
+                type="button"
+                onClick={handleRegenerate}
+                title="Regenerar Senha da Votação"
+                className="p-1 text-blue-300 hover:text-amber-300 hover:bg-blue-900/60 rounded-md transition cursor-pointer active:scale-95"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Seletor de Telas (Votante / Telão / Admin) */}
+        {/* Seletor de Telas (Apenas no Admin) */}
         <div className="flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900/80 shadow-inner">
           <button
             onClick={() => setCurrentView('voter')}
@@ -69,7 +126,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'text-slate-300 hover:text-white hover:bg-blue-950/50'
             }`}
           >
-            <Vote className="w-4 h-4" />
             <span>Celular (Votante)</span>
           </button>
 
@@ -98,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        {/* Ações Rápidas: 2ª Tela (Telão), Som da Urna e Conexão */}
+        {/* Ações Rápidas: 2ª Tela, Som da Urna e Conexão */}
         <div className="flex items-center gap-2">
           {/* Botão de Destaque: Abrir 2ª Tela (Telão / Projetor) */}
           <button
