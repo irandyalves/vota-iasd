@@ -124,7 +124,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       {/* ÁREA CENTRAL: QR CODE À ESQUERDA (REVELANDO SUAVE DA ESQUERDA P/ DIREITA) E SEÇÃO DA DIREITA SENDO EMPURRADA/ESMAGADA */}
       <div className="flex-1 w-full">
         <div className="flex flex-col md:flex-row items-start w-full">
-          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (SEMPRE MONTADO PARA ANIMAR IDA E VOLTA SUAVEMENTE) */}
+          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (CENTRALIZADO VERTICALMENTE E COM ANIMAÇÃO 10X MAIS LENTA) */}
           <motion.div
             initial={false}
             animate={{
@@ -132,9 +132,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               marginRight: showQrCode ? 16 : 0,
               opacity: showQrCode ? 1 : 0,
             }}
-            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 4.5, ease: 'easeInOut' }}
             style={{ pointerEvents: showQrCode ? 'auto' : 'none' }}
-            className="overflow-hidden shrink-0 sticky top-2 max-w-full"
+            className="overflow-hidden shrink-0 sticky top-0 min-h-[calc(100vh-1.75rem)] flex items-center max-w-full"
           >
             <motion.div
               initial={false}
@@ -142,7 +142,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 x: showQrCode ? 0 : -280,
                 opacity: showQrCode ? 1 : 0,
               }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ duration: 4.5, ease: 'easeInOut' }}
               className="w-[280px] bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl p-4 shadow-2xl flex flex-col items-center text-center"
             >
               <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2 shadow-inner">
