@@ -140,16 +140,18 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
             <span>{session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}</span>
           </span>
 
-          {/* Card: X já votaram (Movido para próximo de 'Escolha de Nomes', cantos rounded-lg) */}
-          <span className="px-3 py-1 rounded-lg bg-[#001f47] border border-blue-700/80 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-inner">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>
-              <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
-                {totalVotesCast}
-              </strong>{' '}
-              {totalVotesCast === 1 ? 'já votou' : 'já votaram'}
+          {/* Card: X já votaram (Movido para próximo de 'Escolha de Nomes', cantos rounded-lg - oculto na tela de Nomes para Escolha) */}
+          {session.telaoMode !== 'names' && (
+            <span className="px-3 py-1 rounded-lg bg-[#001f47] border border-blue-700/80 text-white font-bold text-xs sm:text-sm flex items-center gap-2 shadow-inner">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>
+                <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
+                  {totalVotesCast}
+                </strong>{' '}
+                {totalVotesCast === 1 ? 'já votou' : 'já votaram'}
+              </span>
             </span>
-          </span>
+          )}
         </div>
       </div>
 
@@ -224,7 +226,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     Aguardando cadastro dos nomes no painel...
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5">
                     <AnimatePresence>
                       {optionsToDisplay.map((option) => (
                         <motion.div
@@ -234,21 +236,11 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
                           transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                          className="px-3.5 py-2.5 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-blue-700/80 rounded-xl flex items-center gap-3 shadow-lg transition"
+                          className="px-3.5 py-1.5 sm:py-2 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-blue-700/80 rounded-lg flex items-center shadow-md transition"
                         >
-                          {/* Inicial do Nome (Destaque Azul e Amarelo como no Print 2) */}
-                          <div className="w-9 h-9 rounded-lg bg-blue-900 border border-blue-400/50 flex items-center justify-center text-amber-300 font-black text-sm shrink-0 select-none shadow-inner">
-                            {option.name
-                              .split(' ')
-                              .map((n) => n[0])
-                              .slice(0, 2)
-                              .join('')
-                              .toUpperCase()}
-                          </div>
-
-                          {/* Nome do Candidato em Destaque Maiúsculo */}
+                          {/* Nome do Candidato em Destaque Maiúsculo (Sem iniciais CE..) */}
                           <div className="flex-1 min-w-0">
-                            <h4 className="font-extrabold text-xs sm:text-sm lg:text-base text-white uppercase tracking-wide truncate">
+                            <h4 className="font-extrabold text-xs sm:text-sm lg:text-[15px] text-white uppercase tracking-wide truncate">
                               {option.name}
                             </h4>
                           </div>
