@@ -218,23 +218,21 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     showNotification('success', `${newOptions.length} candidato(s) adicionado(s) por voz!`);
   };
 
-  // Disparo: "VOTAR AGORA"
+  // Disparo: "VOTAR AGORA / INICIAR VOTAÇÃO"
   const handleStartVoting = () => {
-    // Se a sessão estava encerrada (CLOSED), reinicia com os MESMOS nomes que já estão na tela, zerando os votos
-    let currentOptions = session.options;
-    if (session.status === 'CLOSED') {
-      currentOptions = session.options.map((o) => ({ ...o, votesCount: 0 }));
-    }
-
+    // Ao iniciar nova votação, zera a apuração mantendo os nomes cadastrados na tela (atuais ou novos)
+    const freshOptions = session.options.map((o) => ({ ...o, votesCount: 0 }));
     const nextIteration = (session.votingIteration || 1) + 1;
+
     saveSession({
       ...session,
       status: 'VOTING',
-      options: currentOptions,
+      options: freshOptions,
+      tieBreak: undefined,
       telaoMode: 'voting',
       votingIteration: nextIteration,
     });
-    showNotification('success', 'Votação iniciada! Celulares liberados para votar.');
+    showNotification('success', 'Votação iniciada! Telão em tempo real e celulares liberados.');
   };
 
   // Disparo: "PAUSAR / SALA DE ESPERA"

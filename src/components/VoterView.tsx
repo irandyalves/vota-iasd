@@ -77,10 +77,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     setSubmitSuccess(false);
   }, [session.status, currentRound, session.votingIteration]);
 
-  // Se a apuração for zerada pelo líder, destrava o aparelho imediatamente
+  // Se a apuração for zerada pelo líder, destrava o aparelho imediatamente e limpa seleções
   useEffect(() => {
     if (totalVotesRecorded === 0) {
       setSubmitSuccess(false);
+      setSelectedIds([]);
+      setErrorMessage('');
     }
   }, [totalVotesRecorded]);
 
