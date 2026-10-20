@@ -33,8 +33,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const suplentesCount = isTieBreak ? 0 : session.suplentesCount;
 
   // Lógica do QR Code:
-  // Se admin configurou explicitamente showQrOnTelao, respeita a escolha do admin.
-  // Caso contrário, o QR Code aparece na Sala de Espera (WAITING) e SOME ao iniciar votação (VOTING).
   const showQrCode = session.showQrOnTelao !== undefined
     ? session.showQrOnTelao
     : session.status === 'WAITING';
@@ -66,7 +64,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
   }, []);
 
-  // O QR Code direciona estritamente para o celular do votante (?view=voter)
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setVoterUrl(`${window.location.origin}/?view=voter`);
@@ -81,24 +78,24 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   useEffect(() => {
     if (session.status === 'CLOSED') {
       confetti({
-        particleCount: 140,
-        spread: 90,
+        particleCount: 120,
+        spread: 80,
         origin: { y: 0.6 },
         colors: ['#d4af37', '#002f6c', '#10b981', '#ffffff'],
       });
 
       const timer = setTimeout(() => {
         confetti({
-          particleCount: 90,
+          particleCount: 80,
           angle: 60,
-          spread: 70,
+          spread: 60,
           origin: { x: 0 },
           colors: ['#d4af37', '#3b82f6', '#10b981'],
         });
         confetti({
-          particleCount: 90,
+          particleCount: 80,
           angle: 120,
-          spread: 70,
+          spread: 60,
           origin: { x: 1 },
           colors: ['#d4af37', '#3b82f6', '#10b981'],
         });
@@ -113,38 +110,36 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const instructionText = `ESCOLHA ${session.maxVotesPerVoter === 1 ? '1 NOME' : `ATÉ ${session.maxVotesPerVoter} NOMES`} • ${vacancies} ${vacancies === 1 ? 'VAGA TITULAR' : 'VAGAS TITULARES'}${suplentesCount > 0 ? ` (+ ${suplentesCount} SUPLENTES)` : ''}`;
 
   return (
-    <div className="min-h-screen bg-[#07132a] text-white p-4 sm:p-6 lg:p-8 flex flex-col justify-between select-none">
+    <div className="min-h-screen bg-[#07132a] text-white p-2.5 sm:p-3.5 lg:p-4 flex flex-col justify-between select-none">
       {/* BOTÃO DISCRETO DE TELA CHEIA NO TOPO DIREITO */}
-      <div className="fixed top-4 right-4 z-50 flex items-center gap-2">
+      <div className="fixed top-2.5 right-2.5 z-50 flex items-center gap-1.5">
         <button
           onClick={toggleFullscreen}
           title="Alternar Tela Cheia para o Projetor / TV (F11)"
-          className="bg-[#001f47]/80 hover:bg-[#002f6c] border border-blue-700/60 text-amber-300 font-bold p-2.5 rounded-xl flex items-center gap-1.5 shadow-lg backdrop-blur-md transition cursor-pointer text-xs active:scale-95"
+          className="bg-[#001f47]/80 hover:bg-[#002f6c] border border-blue-700/60 text-amber-300 font-bold p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg flex items-center gap-1 shadow-lg backdrop-blur-md transition cursor-pointer text-[11px] active:scale-95"
         >
-          {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
+          {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
           <span className="hidden sm:inline">{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
         </button>
       </div>
 
-      {/* ÁREA SUPERIOR CENTRAL: TÍTULO LIMPO DO PÚBLICO (SEM CABEÇALHO ADMINISTRATIVO) */}
-      <div className="text-center mb-6 pt-2">
-        <div className="flex items-center justify-center gap-3 mb-2">
-          <IasdLogo className="w-12 h-12 shadow-xl" customUrl={session.logoUrl} />
-          <div>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-white font-serif tracking-tight drop-shadow-md">
-              {displayTitle}
-            </h1>
-          </div>
+      {/* ÁREA SUPERIOR CENTRAL: TÍTULO LIMPO DO PÚBLICO (REDUZIDO EM 35%) */}
+      <div className="text-center mb-3 pt-1">
+        <div className="flex items-center justify-center gap-2 mb-1">
+          <IasdLogo className="w-8 h-8 shadow-md" customUrl={session.logoUrl} />
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-black text-white font-serif tracking-tight drop-shadow-sm">
+            {displayTitle}
+          </h1>
         </div>
 
-        {/* INFORMAÇÃO ABAIXO: ESCOLHA 1 OU X NOMES */}
-        <div className="flex flex-wrap items-center justify-center gap-3 mt-2">
-          <span className="px-4 py-1.5 rounded-full bg-gradient-to-r from-amber-500 to-[#d4af37] text-blue-950 font-black text-xs sm:text-sm tracking-wider uppercase shadow-md">
+        {/* INFORMAÇÃO ABAIXO: ESCOLHA 1 OU X NOMES (COMPACTO) */}
+        <div className="flex flex-wrap items-center justify-center gap-2 mt-1">
+          <span className="px-3 py-1 rounded-full bg-gradient-to-r from-amber-500 to-[#d4af37] text-blue-950 font-black text-[11px] sm:text-xs tracking-wider uppercase shadow-sm">
             {instructionText}
           </span>
 
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 ${
+            className={`px-2.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold uppercase tracking-wider flex items-center gap-1.5 ${
               session.status === 'VOTING'
                 ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500 animate-pulse'
                 : session.status === 'TIE_BREAK'
@@ -154,100 +149,99 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 : 'bg-blue-950/90 text-blue-300 border border-blue-600'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-current" />
+            <span className="w-1.5 h-1.5 rounded-full bg-current" />
             {session.status === 'VOTING' && 'Votação em Andamento'}
             {session.status === 'TIE_BREAK' && 'Rodada de Desempate'}
             {session.status === 'CLOSED' && 'Resultado Final'}
             {session.status === 'WAITING' && 'Aguardando Início'}
           </span>
 
-          <span className="px-3 py-1 rounded-full bg-[#07132a] text-blue-200 border border-blue-800 text-xs font-mono font-bold">
-            SENHA: <strong className="text-amber-300 text-sm tracking-widest ml-1">{session.pin}</strong>
+          <span className="px-2.5 py-0.5 rounded-full bg-[#07132a] text-blue-200 border border-blue-800 text-[10px] sm:text-[11px] font-mono font-bold">
+            SENHA: <strong className="text-amber-300 text-xs tracking-widest ml-1">{session.pin}</strong>
           </span>
 
-          <span className="px-3 py-1 rounded-full bg-[#07132a] text-emerald-400 border border-blue-800 text-xs font-mono font-bold">
-            {totalVotesCast} votos computados
+          <span className="px-2.5 py-0.5 rounded-full bg-[#07132a] text-emerald-400 border border-blue-800 text-[10px] sm:text-[11px] font-mono font-bold">
+            {totalVotesCast} votos
           </span>
         </div>
       </div>
 
-      {/* ÁREA CENTRAL: CORRIDA DE BARRAS (EXPANDE 100% QUANDO O QR CODE SOME) */}
+      {/* ÁREA CENTRAL: CORRIDA DE BARRAS (REDUZIDA EM 35%) */}
       <div className="flex-1 w-full">
-        {/* Se a votação estiver em andamento mas configurada para modo oculto */}
         {!session.showResultsLive && session.status === 'VOTING' ? (
-          <div className="h-full min-h-[460px] flex flex-col items-center justify-center text-center p-8 bg-[#001f47]/80 rounded-3xl border border-blue-800/60 shadow-2xl">
-            <div className="w-24 h-24 rounded-full bg-blue-900/40 border-2 border-blue-500/40 flex items-center justify-center mb-6">
-              <Trophy className="w-12 h-12 text-amber-300 animate-pulse" />
+          <div className="h-full min-h-[340px] flex flex-col items-center justify-center text-center p-6 bg-[#001f47]/80 rounded-2xl border border-blue-800/60 shadow-xl">
+            <div className="w-16 h-16 rounded-full bg-blue-900/40 border-2 border-blue-500/40 flex items-center justify-center mb-4">
+              <Trophy className="w-8 h-8 text-amber-300 animate-pulse" />
             </div>
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white mb-3 font-serif">
+            <h2 className="text-2xl font-extrabold text-white mb-2 font-serif">
               Votação em Andamento (Voto Secreto)
             </h2>
-            <p className="text-base text-blue-200 max-w-lg mb-6 leading-relaxed">
+            <p className="text-xs text-blue-200 max-w-md mb-4 leading-relaxed">
               Os votos estão sendo registrados com segurança. Os resultados oficiais serão revelados no telão após o encerramento da votação.
             </p>
-            <div className="flex items-center gap-3 px-6 py-3 bg-[#07132a] rounded-2xl border border-blue-800 font-mono text-emerald-400 font-bold text-lg">
-              <span className="w-3 h-3 rounded-full bg-emerald-400 animate-ping" />
+            <div className="flex items-center gap-2 px-4 py-2 bg-[#07132a] rounded-xl border border-blue-800 font-mono text-emerald-400 font-bold text-sm">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
               {totalVotesCast} votos já computados
             </div>
           </div>
         ) : (
-          <div className={`grid gap-6 items-start ${showQrCode ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`}>
-            {/* PAINEL DO QR CODE (Aparece na espera e some automaticamente ao votar, ou conforme admin) */}
+          <div className={`grid gap-4 items-start ${showQrCode ? 'grid-cols-1 lg:grid-cols-4' : 'grid-cols-1'}`}>
+            {/* PAINEL DO QR CODE (COMPACTO) */}
             {showQrCode && (
-              <div className="lg:col-span-1 bg-[#001f47]/90 border border-blue-800/80 rounded-3xl p-6 shadow-2xl flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-2">
-                  <QrIcon className="w-6 h-6" />
+              <div className="lg:col-span-1 bg-[#001f47]/90 border border-blue-800/80 rounded-2xl p-3.5 shadow-xl flex flex-col items-center text-center">
+                <div className="w-8 h-8 rounded-xl bg-amber-500/10 border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] mb-1.5">
+                  <QrIcon className="w-4 h-4" />
                 </div>
 
-                <h3 className="font-bold text-white text-base font-serif mb-1">Aponte a Câmera</h3>
-                <p className="text-xs text-blue-200 mb-3">
-                  Escaneie para votar diretamente no seu celular:
+                <h3 className="font-bold text-white text-xs font-serif mb-0.5">Aponte a Câmera</h3>
+                <p className="text-[10px] text-blue-200 mb-2">
+                  Escaneie para votar pelo celular:
                 </p>
 
-                {/* QR Code direcionando estritamente para o voto do celular */}
-                <div className="p-3 bg-white rounded-2xl shadow-2xl mb-3 border-4 border-[#d4af37]">
+                {/* QR Code Reduzido em 35% */}
+                <div className="p-2 bg-white rounded-xl shadow-lg mb-2 border-2 border-[#d4af37]">
                   <QRCodeSVG
                     value={voterUrl || 'https://vota-iasd-central.web.app/?view=voter'}
-                    size={170}
+                    size={110}
                     level="M"
                     includeMargin={false}
                   />
                 </div>
 
-                <div className="w-full bg-[#07132a] border-2 border-[#d4af37] rounded-2xl p-2.5 shadow-inner">
-                  <span className="text-[10px] uppercase font-bold text-blue-300 block">SENHA DE ACESSO</span>
-                  <span className="text-3xl font-mono font-black text-[#d4af37] tracking-widest">
+                <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-1.5 shadow-inner">
+                  <span className="text-[9px] uppercase font-bold text-blue-300 block">SENHA DE ACESSO</span>
+                  <span className="text-xl font-mono font-black text-[#d4af37] tracking-widest">
                     {session.pin}
                   </span>
                 </div>
               </div>
             )}
 
-            {/* LISTA DE CANDIDATOS / CORRIDA DE BARRAS */}
-            <div className={`${showQrCode ? 'lg:col-span-3' : 'w-full'} bg-[#001f47]/80 border border-blue-800/60 rounded-3xl p-5 sm:p-6 shadow-2xl`}>
-              <div className="flex items-center justify-between mb-4 pb-3 border-b border-blue-900/80">
-                <div className="flex items-center gap-2">
-                  <Trophy className="w-5 h-5 text-[#d4af37]" />
-                  <h3 className="font-extrabold text-lg text-white font-serif">
+            {/* LISTA DE CANDIDATOS / CORRIDA DE BARRAS (35% MAIS COMPACTA) */}
+            <div className={`${showQrCode ? 'lg:col-span-3' : 'w-full'} bg-[#001f47]/80 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-xl`}>
+              <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-blue-900/80">
+                <div className="flex items-center gap-1.5">
+                  <Trophy className="w-4 h-4 text-[#d4af37]" />
+                  <h3 className="font-bold text-sm text-white font-serif">
                     {session.status === 'CLOSED' ? 'Resultado Final Oficial' : 'Classificação em Tempo Real'}
                   </h3>
                 </div>
-                <div className="flex items-center gap-4 text-xs font-semibold">
-                  <span className="flex items-center gap-1.5 text-emerald-400">
-                    <span className="w-3 h-3 rounded-md bg-emerald-500/30 border border-emerald-400 inline-block" />
-                    Zona de Titulares ({vacancies})
+                <div className="flex items-center gap-3 text-[11px] font-semibold">
+                  <span className="flex items-center gap-1 text-emerald-400">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500/30 border border-emerald-400 inline-block" />
+                    Titulares ({vacancies})
                   </span>
                   {suplentesCount > 0 && (
-                    <span className="flex items-center gap-1.5 text-cyan-400">
-                      <span className="w-3 h-3 rounded-md bg-cyan-500/30 border border-cyan-400 inline-block" />
+                    <span className="flex items-center gap-1 text-cyan-400">
+                      <span className="w-2.5 h-2.5 rounded-sm bg-cyan-500/30 border border-cyan-400 inline-block" />
                       Suplentes ({suplentesCount})
                     </span>
                   )}
                 </div>
               </div>
 
-              {/* LISTA ANIMADA DE CANDIDATOS (Bar Race em 60 FPS com layout expansivo) */}
-              <div className={`space-y-3 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 gap-3 space-y-0' : ''}`}>
+              {/* LISTA ANIMADA DE CANDIDATOS COM ESPAÇAMENTOS REDUZIDOS */}
+              <div className={`gap-2 ${!showQrCode ? 'grid grid-cols-1 md:grid-cols-2 space-y-0' : 'space-y-1.5'}`}>
                 <AnimatePresence>
                   {sortedOptions.map((option, index) => {
                     const rank = index + 1;
@@ -259,16 +253,16 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       <React.Fragment key={option.id}>
                         {/* Linha de Corte dos Eleitos */}
                         {showQrCode && rank === vacancies + 1 && (
-                          <div className="py-1 flex items-center gap-3 text-xs font-bold text-emerald-400/90 my-2">
-                            <div className="flex-1 border-t-2 border-dashed border-emerald-500/50" />
-                            <span className="px-3 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/60 uppercase text-[10px] tracking-wider">
+                          <div className="py-0.5 flex items-center gap-2 text-[10px] font-bold text-emerald-400/90 my-1">
+                            <div className="flex-1 border-t border-dashed border-emerald-500/50" />
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-950 border border-emerald-700/60 uppercase text-[9px] tracking-wider">
                               ▲ Limite dos Eleitos ({vacancies} Vagas) ▲
                             </span>
-                            <div className="flex-1 border-t-2 border-dashed border-emerald-500/50" />
+                            <div className="flex-1 border-t border-dashed border-emerald-500/50" />
                           </div>
                         )}
 
-                        {/* Card Animado de Corrida de Barras */}
+                        {/* Card Animado de Corrida de Barras (Compacto) */}
                         <motion.div
                           layout
                           transition={{
@@ -276,11 +270,11 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             damping: 25,
                             stiffness: 180,
                           }}
-                          className={`p-3.5 rounded-2xl border transition-all duration-300 relative overflow-hidden flex items-center gap-4 ${
+                          className={`p-2 sm:p-2.5 rounded-xl border transition-all duration-300 relative overflow-hidden flex items-center gap-2.5 ${
                             isElected
-                              ? 'bg-[#002855] border-emerald-500/70 shadow-lg shadow-emerald-950/20'
+                              ? 'bg-[#002855] border-emerald-500/70 shadow-md shadow-emerald-950/20'
                               : isSuplente
-                              ? 'bg-[#002244] border-cyan-500/50 shadow-md'
+                              ? 'bg-[#002244] border-cyan-500/50 shadow-sm'
                               : 'bg-[#07132a]/70 border-blue-900/40 text-slate-400'
                           }`}
                         >
@@ -289,7 +283,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             initial={{ width: 0 }}
                             animate={{ width: `${Math.max(percentage, 2)}%` }}
                             transition={{ duration: 0.6, ease: 'easeOut' }}
-                            className={`absolute top-0 bottom-0 left-0 opacity-25 pointer-events-none rounded-2xl ${
+                            className={`absolute top-0 bottom-0 left-0 opacity-25 pointer-events-none rounded-xl ${
                               isElected
                                 ? 'bg-gradient-to-r from-emerald-500 to-green-400'
                                 : isSuplente
@@ -298,11 +292,11 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             }`}
                           />
 
-                          {/* Posição / Rank */}
+                          {/* Posição / Rank Reduzido */}
                           <div
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm shrink-0 shadow-md ${
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center font-black text-xs shrink-0 shadow-sm ${
                               rank === 1
-                                ? 'bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-2 ring-amber-300'
+                                ? 'bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
                                 : rank === 2
                                 ? 'bg-slate-300 text-slate-900'
                                 : rank === 3
@@ -317,16 +311,16 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             #{rank}
                           </div>
 
-                          {/* Foto ou Iniciais */}
+                          {/* Foto ou Iniciais Reduzido */}
                           <div className="shrink-0">
                             {option.photoUrl ? (
                               <img
                                 src={option.photoUrl}
                                 alt={option.name}
-                                className="w-12 h-12 rounded-xl object-cover border border-blue-500/50 shadow"
+                                className="w-9 h-9 rounded-lg object-cover border border-blue-500/50 shadow"
                               />
                             ) : (
-                              <div className="w-12 h-12 rounded-xl bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-base">
+                              <div className="w-9 h-9 rounded-lg bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-xs">
                                 {option.name
                                   .split(' ')
                                   .map((n) => n[0])
@@ -338,38 +332,38 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                           {/* Nome e Cargo / Descrição */}
                           <div className="flex-1 min-w-0 z-10">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1.5">
                               <h4
-                                className={`font-extrabold text-base leading-tight truncate ${
+                                className={`font-bold text-xs sm:text-sm leading-tight truncate ${
                                   isElected ? 'text-white' : 'text-slate-200'
                                 }`}
                               >
                                 {option.name}
                               </h4>
                               {isElected && (
-                                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
-                                  <CheckCircle className="w-3 h-3 text-emerald-400" />
+                                <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50">
+                                  <CheckCircle className="w-2.5 h-2.5 text-emerald-400" />
                                   Titular
                                 </span>
                               )}
                               {isSuplente && (
-                                <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full font-bold bg-cyan-950 text-cyan-300 border border-cyan-600/50">
+                                <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.2 rounded-full font-bold bg-cyan-950 text-cyan-300 border border-cyan-600/50">
                                   Suplente
                                 </span>
                               )}
                             </div>
                             {option.subtitle && (
-                              <p className="text-xs text-blue-200/70 mt-0.5 truncate">{option.subtitle}</p>
+                              <p className="text-[10px] text-blue-200/70 truncate">{option.subtitle}</p>
                             )}
                           </div>
 
-                          {/* Contador Numérico de Votos */}
+                          {/* Contador Numérico de Votos Reduzido */}
                           <div className="text-right z-10 shrink-0">
-                            <div className="text-2xl font-mono font-black text-white leading-none">
+                            <div className="text-lg font-mono font-black text-white leading-none">
                               {option.votesCount || 0}
-                              <span className="text-[11px] text-blue-300 font-normal ml-1">votos</span>
+                              <span className="text-[9px] text-blue-300 font-normal ml-0.5">v</span>
                             </div>
-                            <span className="text-xs font-mono text-blue-300/80">
+                            <span className="text-[10px] font-mono text-blue-300/80">
                               {totalVotesCast > 0
                                 ? `${Math.round(((option.votesCount || 0) / totalVotesCast) * 100)}%`
                                 : '0%'}

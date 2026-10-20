@@ -435,33 +435,33 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
   };
 
   return (
-    <div className="w-full px-3 sm:px-6 lg:px-8 xl:px-10 py-5">
+    <div className="w-full px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100">
       {/* Notificação Flutuante */}
       {notification && (
         <div
-          className={`fixed top-20 right-4 z-50 p-4 rounded-2xl shadow-2xl flex items-center gap-3 border text-sm font-semibold transition-all ${
+          className={`fixed top-16 right-4 z-50 p-3 rounded-xl shadow-xl flex items-center gap-2 border text-xs font-semibold transition-all ${
             notification.type === 'success'
               ? 'bg-emerald-950 border-emerald-500 text-emerald-200'
               : 'bg-rose-950 border-rose-500 text-rose-200'
           }`}
         >
-          <CheckCircle className="w-5 h-5 text-current shrink-0" />
+          <CheckCircle className="w-4 h-4 text-current shrink-0" />
           <span>{notification.message}</span>
         </div>
       )}
 
       {/* BANNER DE ALERTA DE EMPATE NO PONTO DE CORTE */}
       {tieInfo.hasTie && (
-        <div className="mb-6 p-5 rounded-3xl bg-amber-950/80 border-2 border-amber-500 shadow-xl flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-400">
-              <AlertTriangle className="w-7 h-7" />
+        <div className="mb-4 p-3.5 rounded-2xl bg-amber-950/80 border border-amber-500 shadow-lg flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-amber-400 flex items-center justify-center text-amber-400">
+              <AlertTriangle className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-base text-amber-300 uppercase tracking-wide flex items-center gap-2">
+              <h3 className="font-extrabold text-xs sm:text-sm text-amber-300 uppercase tracking-wide flex items-center gap-1.5">
                 Empate no Limite de Vagas!
               </h3>
-              <p className="text-xs text-amber-100">
+              <p className="text-[11px] text-amber-100">
                 Há um empate entre {tieInfo.tiedCandidates.map((c) => c.name).join(' e ')} com {tieInfo.tiedCandidates[0].votesCount} votos na linha de corte da vaga #{tieInfo.cutoffRank}.
               </p>
             </div>
@@ -473,19 +473,19 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               setTieVacancies(1);
               setActiveTab('control');
             }}
-            className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-bold rounded-xl text-xs shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black rounded-lg text-[11px] shadow transition active:scale-95 cursor-pointer flex items-center gap-1"
           >
-            <Flame className="w-4 h-4 text-blue-950" />
+            <Flame className="w-3.5 h-3.5 text-blue-950" />
             Configurar Desempate
           </button>
         </div>
       )}
 
-      {/* CABEÇALHO DO ADMIN COM CONTROLES RÁPIDOS */}
-      <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl mb-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+      {/* CABEÇALHO DO ADMIN COM CONTROLES RÁPIDOS (REDUZIDO EM 30%) */}
+      <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg mb-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
           <div className="flex-1 max-w-2xl">
-            <span className="text-xs font-semibold px-2.5 py-1 rounded-md bg-blue-900 text-blue-200 uppercase tracking-wider">
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-blue-900 text-blue-200 uppercase tracking-wider">
               Painel de Controle do Líder
             </span>
             {isEditingTitle ? (
@@ -510,7 +510,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   }
                 }}
                 autoFocus
-                className="text-2xl sm:text-3xl font-black text-white font-serif mt-1 bg-[#07132a] border-2 border-[#d4af37] px-3 py-1 rounded-xl outline-none shadow-inner w-full"
+                className="text-lg sm:text-xl font-black text-white font-serif mt-1 bg-[#07132a] border border-[#d4af37] px-2.5 py-1 rounded-lg outline-none shadow-inner w-full"
               />
             ) : (
               <div
@@ -521,25 +521,25 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 }}
                 title="Dê um duplo clique para editar o nome da pauta diretamente"
               >
-                <h1 className="text-2xl sm:text-3xl font-black text-white font-serif mt-1 group-hover:text-amber-300 transition-colors">
+                <h1 className="text-lg sm:text-xl font-black text-white font-serif mt-0.5 group-hover:text-amber-300 transition-colors">
                   {session.title}
                 </h1>
-                <span className="text-[11px] text-blue-300 opacity-60 group-hover:opacity-100 bg-blue-900/60 px-2 py-0.5 rounded-md flex items-center gap-1 shrink-0">
-                  <Pencil className="w-3 h-3 text-amber-300" />
+                <span className="text-[10px] text-blue-300 opacity-60 group-hover:opacity-100 bg-blue-900/60 px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
+                  <Pencil className="w-2.5 h-2.5 text-amber-300" />
                   Duplo clique edita
                 </span>
               </div>
             )}
-            <p className="text-xs text-blue-200 mt-0.5">
-              PIN de Acesso dos Membros: <strong className="text-amber-300 font-mono text-sm">{session.pin}</strong>
+            <p className="text-[11px] text-blue-200 mt-0.5">
+              PIN de Acesso dos Membros: <strong className="text-amber-300 font-mono text-xs">{session.pin}</strong>
             </p>
           </div>
 
-          {/* Abas */}
-          <div className="flex items-center bg-[#07132a] p-1 rounded-2xl border border-blue-900">
+          {/* Abas Compactas */}
+          <div className="flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900">
             <button
               onClick={() => setActiveTab('control')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
                 activeTab === 'control' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -547,7 +547,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             </button>
             <button
               onClick={() => setActiveTab('candidates')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
                 activeTab === 'candidates' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -555,7 +555,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition ${
+              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
                 activeTab === 'settings' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
               }`}
             >
@@ -564,44 +564,44 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           </div>
         </div>
 
-        {/* BARRA DE GATILHOS DA ELEIÇÃO */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 pt-4 border-t border-blue-900/80">
+        {/* BARRA DE GATILHOS DA ELEIÇÃO (REDUZIDA EM 30%) */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-3 border-t border-blue-900/80">
           <button
             onClick={handleStartVoting}
             disabled={session.status === 'VOTING'}
-            className="p-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer"
+            className="p-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
           >
-            <Play className="w-5 h-5 fill-current" />
+            <Play className="w-4 h-4 fill-current" />
             INICIAR VOTAÇÃO
           </button>
 
           <button
             onClick={handlePauseVoting}
             disabled={session.status === 'WAITING'}
-            className="p-3.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer"
+            className="p-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
           >
-            <Pause className="w-5 h-5 fill-current" />
+            <Pause className="w-4 h-4 fill-current" />
             SALA DE ESPERA
           </button>
 
           <button
             onClick={handleCloseVoting}
             disabled={session.status === 'CLOSED'}
-            className="p-3.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer"
+            className="p-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
           >
-            <StopCircle className="w-5 h-5 fill-current" />
+            <StopCircle className="w-4 h-4 fill-current" />
             ENCERRAR
           </button>
 
           <button
             onClick={handleToggleLiveResults}
-            className={`p-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer ${
+            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer ${
               session.showResultsLive
                 ? 'bg-blue-700 hover:bg-blue-600 text-white'
                 : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40'
             }`}
           >
-            {session.showResultsLive ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+            {session.showResultsLive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             {session.showResultsLive ? 'Telão: Ao Vivo' : 'Telão: Oculto'}
           </button>
 
@@ -614,13 +614,13 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               });
             }}
             title="Mostrar ou ocultar o QR Code no Telão a qualquer momento"
-            className={`p-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer ${
+            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer ${
               session.showQrOnTelao !== false
                 ? 'bg-blue-900/90 hover:bg-blue-800 text-amber-300 border border-amber-500/40'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700'
             }`}
           >
-            <QrCode className="w-5 h-5" />
+            <QrCode className="w-4 h-4" />
             {session.showQrOnTelao !== false ? 'QR Telão: Sim' : 'QR Telão: Não'}
           </button>
 
@@ -637,42 +637,42 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               );
               if (popup) popup.focus();
             }}
-            className="p-3.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-2xl font-black text-sm flex items-center justify-center gap-2 shadow-xl shadow-amber-900/30 transition active:scale-95 cursor-pointer"
+            className="p-2.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-900/20 transition active:scale-95 cursor-pointer"
           >
-            <Tv className="w-5 h-5" />
+            <Tv className="w-4 h-4" />
             <span>2ª TELA (TELÃO)</span>
-            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+            <ExternalLink className="w-3 h-3 opacity-80" />
           </button>
         </div>
       </div>
 
-      {/* ABA 1: COMANDOS E DESEMPATE */}
+      {/* ABA 1: COMANDOS E DESEMPATE (REDUZIDO EM 30%) */}
       {activeTab === 'control' && (
-        <div className="space-y-6">
+        <div className="space-y-3.5">
           {/* Seção de Desempate */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2.5">
-                <Flame className="w-6 h-6 text-amber-400" />
-                <h3 className="text-lg font-bold text-white font-serif">
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Flame className="w-5 h-5 text-amber-400" />
+                <h3 className="text-base font-bold text-white font-serif">
                   Motor de Desempate Inteligente
                 </h3>
               </div>
               {session.status === 'TIE_BREAK' && (
                 <button
                   onClick={handleCancelTieBreak}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold"
+                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold"
                 >
                   Finalizar Desempate
                 </button>
               )}
             </div>
 
-            <p className="text-xs text-blue-200 mb-4">
+            <p className="text-[11px] text-blue-200 mb-3">
               Selecione quais candidatos participarão da rodada de desempate e quantas vagas estão em disputa:
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5 mb-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2 mb-3">
               {session.options.map((opt) => {
                 const isSelected = selectedTieCandidateIds.includes(opt.id);
                 return (
@@ -685,21 +685,21 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         setSelectedTieCandidateIds([...selectedTieCandidateIds, opt.id]);
                       }
                     }}
-                    className={`p-3 rounded-xl border cursor-pointer select-none text-xs font-semibold flex items-center justify-between ${
+                    className={`p-2 rounded-lg border cursor-pointer select-none text-[11px] font-semibold flex items-center justify-between ${
                       isSelected
                         ? 'bg-amber-950 border-amber-400 text-amber-200'
                         : 'bg-[#07132a] border-blue-900 text-slate-300'
                     }`}
                   >
                     <span className="truncate">{opt.name}</span>
-                    <span className="font-mono ml-2 text-blue-300">{opt.votesCount || 0}v</span>
+                    <span className="font-mono ml-1.5 text-blue-300 text-[10px]">{opt.votesCount || 0}v</span>
                   </div>
                 );
               })}
             </div>
 
-            <div className="flex flex-wrap items-center gap-4 pt-3 border-t border-blue-900/60">
-              <div className="flex items-center gap-2 text-xs text-white">
+            <div className="flex flex-wrap items-center gap-3 pt-2.5 border-t border-blue-900/60">
+              <div className="flex items-center gap-1.5 text-xs text-white">
                 <span>Vagas em Disputa:</span>
                 <input
                   type="number"
@@ -707,73 +707,71 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   max={selectedTieCandidateIds.length || 1}
                   value={tieVacancies}
                   onChange={(e) => setTieVacancies(Number(e.target.value))}
-                  className="w-16 px-2 py-1 bg-[#07132a] border border-blue-700 rounded-lg text-white font-mono text-center font-bold"
+                  className="w-14 px-2 py-1 bg-[#07132a] border border-blue-700 rounded-lg text-white font-mono text-center font-bold text-xs"
                 />
               </div>
 
               <button
                 onClick={handleStartTieBreak}
                 disabled={selectedTieCandidateIds.length < 2}
-                className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-blue-950 font-black text-xs rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-blue-950 font-black text-xs rounded-xl shadow transition active:scale-95 cursor-pointer flex items-center gap-1.5"
               >
-                <Flame className="w-4 h-4 text-blue-950" />
+                <Flame className="w-3.5 h-3.5 text-blue-950" />
                 Iniciar Rodada de Desempate nos Celulares
               </button>
             </div>
           </div>
 
           {/* Ações de Gestão */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl flex flex-wrap items-center justify-between gap-4">
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h4 className="font-bold text-white text-base">Zerar Apuração / Reiniciar Votação</h4>
-              <p className="text-xs text-blue-200">Zera todos os votos registrados e redefine o status para Sala de Espera.</p>
+              <h4 className="font-bold text-white text-sm">Zerar Apuração / Reiniciar Votação</h4>
+              <p className="text-[11px] text-blue-200">Zera todos os votos registrados e redefine o status para Sala de Espera.</p>
             </div>
             <button
               onClick={handleResetVotes}
-              className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition active:scale-95"
+              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
               Zerar Todos os Votos
             </button>
           </div>
         </div>
       )}
 
-      {/* ABA 2: CANDIDATOS / TEMAS / BRINDES (Arquivos .XLS, .CSV, .TXT, Voz, Lote) */}
+      {/* ABA 2: CANDIDATOS / TEMAS / BRINDES (REDUZIDO EM 30%) */}
       {activeTab === 'candidates' && (
-        <div className="space-y-6">
-          {/* Card Especial de Importação por Arquivos (.XLS, .XLSX, .CSV, .TXT) */}
-          <div className="bg-[#001f47] border-2 border-[#d4af37]/60 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-[#d4af37] flex items-center justify-center text-[#d4af37]">
-                  <FileSpreadsheet className="w-7 h-7" />
+        <div className="space-y-3.5">
+          {/* Card Especial de Importação por Arquivos */}
+          <div className="bg-[#001f47] border border-[#d4af37]/60 rounded-2xl p-4 shadow-lg relative overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-[#d4af37] flex items-center justify-center text-[#d4af37]">
+                  <FileSpreadsheet className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-white text-lg font-serif flex items-center gap-2">
+                  <h3 className="font-extrabold text-white text-sm sm:text-base font-serif flex items-center gap-1.5">
                     Importar Arquivos (.XLS, .XLSX, .CSV, .TXT)
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-600/50 uppercase font-sans">
-                      Excel • Bloco de Notas • Planilhas
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-600/50 uppercase font-sans">
+                      Excel • TXT • CSV
                     </span>
                   </h3>
-                  <p className="text-xs text-blue-200">
-                    Importe listas de <strong>Nomes, Temas de Votação, Brindes de Sorteio ou Enquetes</strong> direto do seu computador.
+                  <p className="text-[11px] text-blue-200">
+                    Importe listas de <strong>Nomes, Temas ou Brindes</strong> do seu computador.
                   </p>
                 </div>
               </div>
 
-              {/* Botão Baixar Modelo */}
               <button
                 type="button"
                 onClick={handleDownloadSampleTemplate}
-                className="px-4 py-2 bg-blue-900/80 hover:bg-blue-800 text-blue-200 hover:text-white border border-blue-700/60 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer active:scale-95 shadow-sm"
+                className="px-3 py-1.5 bg-blue-900/80 hover:bg-blue-800 text-blue-200 hover:text-white border border-blue-700/60 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
               >
-                <Download className="w-4 h-4 text-amber-400" />
-                Baixar Planilha Modelo (.CSV / Excel)
+                <Download className="w-3.5 h-3.5 text-amber-400" />
+                Baixar Planilha Modelo (.CSV)
               </button>
             </div>
 
-            {/* Inputs de Upload Ocultos com Gatilhos Visuais */}
             <input
               ref={fileUploadAppendRef}
               type="file"
@@ -789,21 +787,21 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               onChange={(e) => handleFileImport(e, 'replace')}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
               <button
                 type="button"
                 onClick={() => fileUploadAppendRef.current?.click()}
-                className="p-4 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-blue-600/80 hover:border-[#d4af37] rounded-2xl flex items-center gap-4 text-left transition cursor-pointer group"
+                className="p-3 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-blue-600/80 hover:border-[#d4af37] rounded-xl flex items-center gap-3 text-left transition cursor-pointer group"
               >
-                <div className="w-10 h-10 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 group-hover:text-amber-300 shrink-0">
-                  <Plus className="w-6 h-6" />
+                <div className="w-8 h-8 rounded-lg bg-blue-900/60 flex items-center justify-center text-blue-300 group-hover:text-amber-300 shrink-0">
+                  <Plus className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-white text-sm group-hover:text-amber-300">
+                  <h4 className="font-bold text-white text-xs group-hover:text-amber-300">
                     Adicionar aos Itens Existentes
                   </h4>
-                  <p className="text-[11px] text-blue-300/80">
-                    Mantém a lista atual e acrescenta os itens do arquivo .xls, .xlsx, .csv ou .txt
+                  <p className="text-[10px] text-blue-300/80">
+                    Mantém a lista atual e acrescenta os itens do arquivo
                   </p>
                 </div>
               </button>
@@ -815,17 +813,17 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     fileUploadReplaceRef.current?.click();
                   }
                 }}
-                className="p-4 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-amber-600/80 hover:border-amber-400 rounded-2xl flex items-center gap-4 text-left transition cursor-pointer group"
+                className="p-3 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-amber-600/80 hover:border-amber-400 rounded-xl flex items-center gap-3 text-left transition cursor-pointer group"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-950/60 flex items-center justify-center text-amber-400 shrink-0">
-                  <Upload className="w-6 h-6" />
+                <div className="w-8 h-8 rounded-lg bg-amber-950/60 flex items-center justify-center text-amber-400 shrink-0">
+                  <Upload className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-white text-sm group-hover:text-amber-300">
+                  <h4 className="font-bold text-white text-xs group-hover:text-amber-300">
                     Substituir Lista Completa
                   </h4>
-                  <p className="text-[11px] text-blue-300/80">
-                    Limpa a lista atual e preenche com os itens da nova planilha
+                  <p className="text-[10px] text-blue-300/80">
+                    Limpa a lista atual e preenche com a nova planilha
                   </p>
                 </div>
               </button>
@@ -833,66 +831,66 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           </div>
 
           {/* Adicionar por Voz ou Texto Colado */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Adição por Voz (Microfone) */}
-            <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Voz */}
+            <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Mic className="w-5 h-5 text-[#d4af37]" />
-                  <h3 className="font-bold text-white text-base font-serif">
+                <div className="flex items-center gap-1.5 mb-1.5">
+                  <Mic className="w-4 h-4 text-[#d4af37]" />
+                  <h3 className="font-bold text-white text-sm font-serif">
                     Adicionar Itens por Voz
                   </h3>
                 </div>
-                <p className="text-xs text-blue-200 mb-4 leading-relaxed">
-                  Clique no microfone e fale nomes, temas ou brindes em sequência (ex: <em>"Carlos Eduardo, Tema 1 Conectados, Bíblia de Estudo"</em>).
+                <p className="text-[11px] text-blue-200 mb-2 leading-relaxed">
+                  Fale os nomes ou temas em sequência (ex: <em>"Carlos Eduardo, Tema 1, Bíblia"</em>).
                 </p>
               </div>
 
-              <div className="text-center py-4">
+              <div className="text-center py-2">
                 <button
                   type="button"
                   onClick={() => setIsListening(!isListening)}
-                  className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto shadow-xl transition-all cursor-pointer ${
+                  className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto shadow-lg transition-all cursor-pointer ${
                     isListening
                       ? 'bg-rose-600 text-white ring-4 ring-rose-400 animate-pulse'
                       : 'bg-gradient-to-tr from-[#d4af37] to-amber-400 text-blue-950 hover:scale-105'
                   }`}
                 >
-                  {isListening ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+                  {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
                 </button>
-                <span className="block text-xs font-semibold text-blue-300 mt-2">
-                  {isListening ? 'Ouvindo... Fale agora!' : 'Clique para falar'}
+                <span className="block text-[11px] font-semibold text-blue-300 mt-1.5">
+                  {isListening ? 'Ouvindo... Fale agora!' : 'Clique no mic para falar'}
                 </span>
                 {speechTranscript && (
-                  <p className="text-xs text-amber-300 mt-2 italic font-mono">
+                  <p className="text-[10px] text-amber-300 mt-1 italic font-mono">
                     "{speechTranscript}"
                   </p>
                 )}
               </div>
             </div>
 
-            {/* Importação em Lote (Texto) */}
-            <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
-              <div className="flex items-center gap-2 mb-1">
-                <FileText className="w-5 h-5 text-blue-300" />
-                <h3 className="font-bold text-white text-base font-serif">
-                  Colar Lista de Texto (WhatsApp / Bloco)
+            {/* Texto Colado */}
+            <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+              <div className="flex items-center gap-1.5 mb-1">
+                <FileText className="w-4 h-4 text-blue-300" />
+                <h3 className="font-bold text-white text-sm font-serif">
+                  Colar Lista de Texto
                 </h3>
               </div>
-              <p className="text-xs text-blue-200 mb-3">
-                Cole itens, um por linha (opcional: Nome - Descrição/Cargo):
+              <p className="text-[11px] text-blue-200 mb-2">
+                Cole itens, um por linha (opcional: Nome - Descrição):
               </p>
               <textarea
-                rows={4}
+                rows={3}
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
-                placeholder={"Carlos Eduardo - Ministério Diaconal\nTema 1: Conectados com Cristo\nBíblia Missionária - Brinde de Sorteio"}
-                className="w-full p-3 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white placeholder-slate-500 font-mono outline-none focus:border-[#d4af37] mb-3"
+                placeholder={"Carlos Eduardo - Ministério Diaconal\nTema 1: Conectados com Cristo"}
+                className="w-full p-2 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white placeholder-slate-500 font-mono outline-none focus:border-[#d4af37] mb-2"
               />
               <button
                 type="button"
                 onClick={handleBulkImport}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow transition"
+                className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg shadow transition cursor-pointer"
               >
                 Importar Lista Colada
               </button>
@@ -900,49 +898,48 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           </div>
 
           {/* Adicionar Individualmente */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
-            <h3 className="font-bold text-white text-base font-serif mb-3">
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+            <h3 className="font-bold text-white text-sm font-serif mb-2">
               Adicionar Item Individualmente
             </h3>
-            <form onSubmit={handleAddCandidate} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <form onSubmit={handleAddCandidate} className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <input
                 type="text"
-                placeholder="Nome / Tema / Brinde (Ex: Carlos Silva ou Tema 1)"
+                placeholder="Nome / Tema / Brinde"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                className="px-3.5 py-2.5 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white outline-none focus:border-[#d4af37]"
+                className="px-3 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white outline-none focus:border-[#d4af37]"
               />
               <input
                 type="text"
-                placeholder="Subtítulo / Descrição (Ex: Diácono ou Sorteio #1)"
+                placeholder="Subtítulo / Descrição"
                 value={newSubtitle}
                 onChange={(e) => setNewSubtitle(e.target.value)}
-                className="px-3.5 py-2.5 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white outline-none focus:border-[#d4af37]"
+                className="px-3 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white outline-none focus:border-[#d4af37]"
               />
               <button
                 type="submit"
-                className="py-2.5 bg-[#d4af37] hover:bg-amber-400 text-blue-950 font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
+                className="py-1.5 bg-[#d4af37] hover:bg-amber-400 text-blue-950 font-black text-xs rounded-lg shadow transition flex items-center justify-center gap-1 cursor-pointer"
               >
-                <Plus className="w-4 h-4" />
-                Adicionar Item
+                <Plus className="w-3.5 h-3.5" />
+                Adicionar
               </button>
             </form>
           </div>
 
-          {/* Lista de Itens Cadastrados */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
-            <h3 className="font-bold text-white text-base font-serif mb-4 flex items-center justify-between">
+          {/* Lista de Itens Cadastrados (Reduzida em 30%) */}
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+            <h3 className="font-bold text-white text-sm font-serif mb-3 flex items-center justify-between">
               <span>Itens Cadastrados ({session.options.length})</span>
-              <span className="text-xs font-normal text-blue-300">Toque na câmera para carregar foto</span>
+              <span className="text-[11px] font-normal text-blue-300">Toque na câmera para carregar foto</span>
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-3.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5">
               {session.options.map((option) => (
                 <div
                   key={option.id}
-                  className="p-3.5 bg-[#07132a] border border-blue-900 rounded-2xl flex items-center gap-3 relative group"
+                  className="p-2.5 bg-[#07132a] border border-blue-900 rounded-xl flex items-center gap-2.5 relative group"
                 >
-                  {/* Foto com botão de upload */}
                   <label className="relative shrink-0 cursor-pointer">
                     <input
                       type="file"
@@ -954,10 +951,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       <img
                         src={option.photoUrl}
                         alt={option.name}
-                        className="w-12 h-12 rounded-xl object-cover border border-blue-600"
+                        className="w-9 h-9 rounded-lg object-cover border border-blue-600"
                       />
                     ) : (
-                      <div className="w-12 h-12 rounded-xl bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-sm">
+                      <div className="w-9 h-9 rounded-lg bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-xs">
                         {option.name
                           .split(' ')
                           .map((n) => n[0])
@@ -965,28 +962,26 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                           .join('')}
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-black/50 rounded-xl opacity-0 hover:opacity-100 flex items-center justify-center text-white transition">
-                      <Camera className="w-4 h-4" />
+                    <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 hover:opacity-100 flex items-center justify-center text-white transition">
+                      <Camera className="w-3.5 h-3.5" />
                     </div>
                   </label>
 
-                  {/* Nome e Votos */}
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-sm text-white truncate">{option.name}</h4>
+                    <h4 className="font-bold text-xs text-white truncate">{option.name}</h4>
                     {option.subtitle && (
-                      <p className="text-[11px] text-blue-300/80 truncate">{option.subtitle}</p>
+                      <p className="text-[10px] text-blue-300/80 truncate">{option.subtitle}</p>
                     )}
-                    <span className="text-[11px] font-mono text-emerald-400 font-bold">
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
                       {option.votesCount || 0} votos
                     </span>
                   </div>
 
-                  {/* Botão de Excluir */}
                   <button
                     onClick={() => handleRemoveCandidate(option.id)}
-                    className="p-1.5 text-slate-500 hover:text-rose-400 rounded-lg hover:bg-rose-950/40 transition cursor-pointer"
+                    className="p-1 text-slate-500 hover:text-rose-400 rounded hover:bg-rose-950/40 transition cursor-pointer"
                   >
-                    <Trash2 className="w-4 h-4" />
+                    <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
@@ -995,114 +990,114 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* ABA 3: CONFIGURAÇÕES E MIGRAÇÃO */}
+      {/* ABA 3: CONFIGURAÇÕES E MIGRAÇÃO (REDUZIDO EM 30%) */}
       {activeTab === 'settings' && (
-        <div className="space-y-6">
-          <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
-            <h3 className="font-bold text-white text-base font-serif mb-4">
+        <div className="space-y-3.5">
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+            <h3 className="font-bold text-white text-sm font-serif mb-3">
               Parâmetros da Sessão de Votação
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               <div>
-                <label className="text-xs font-semibold text-blue-200 block mb-1">Título da Pauta:</label>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Título da Pauta:</label>
                 <input
                   type="text"
                   value={session.title}
                   onChange={(e) => saveSession({ ...session, title: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-blue-200 block mb-1">Título Público no Telão:</label>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Título Público no Telão:</label>
                 <input
                   type="text"
                   placeholder="Ex: VOTAÇÃO ESCOLHA DIÁCONOS"
                   value={session.publicTitle || ''}
                   onChange={(e) => saveSession({ ...session, publicTitle: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-blue-200 block mb-1">Categoria / Departamento:</label>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Categoria / Departamento:</label>
                 <input
                   type="text"
                   value={session.category || ''}
                   onChange={(e) => saveSession({ ...session, category: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-blue-200 block mb-1">Código PIN (Segurança):</label>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Código PIN (Segurança):</label>
                 <input
                   type="text"
                   maxLength={6}
                   value={session.pin}
                   onChange={(e) => saveSession({ ...session, pin: e.target.value })}
-                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-amber-300 font-mono font-bold"
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-amber-300 font-mono font-bold"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-blue-200 block mb-1">Quantidade de Vagas Principais (Titulares):</label>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Vagas Titulares:</label>
                 <input
                   type="number"
                   min={1}
                   value={session.vacancies}
                   onChange={(e) => saveSession({ ...session, vacancies: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-blue-200 block mb-1">Quantidade de Suplentes:</label>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Suplentes:</label>
                 <input
                   type="number"
                   min={0}
                   value={session.suplentesCount}
                   onChange={(e) => saveSession({ ...session, suplentesCount: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white"
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-blue-200 block mb-1">Limite de Votos por Membro:</label>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Limite Votos / Membro:</label>
                 <input
                   type="number"
                   min={1}
                   value={session.maxVotesPerVoter}
                   onChange={(e) => saveSession({ ...session, maxVotesPerVoter: Number(e.target.value) })}
-                  className="w-full px-3 py-2 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white"
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white"
                 />
               </div>
             </div>
           </div>
 
-          {/* FERRAMENTA DE MIGRAÇÃO: EXPORTAR E IMPORTAR PARA CONTA DA IGREJA */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
-            <h3 className="font-bold text-white text-base font-serif mb-2 flex items-center gap-2">
-              <Download className="w-5 h-5 text-[#d4af37]" />
+          {/* FERRAMENTA DE MIGRAÇÃO: EXPORTAR E IMPORTAR (COMPACTO) */}
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+            <h3 className="font-bold text-white text-sm font-serif mb-1.5 flex items-center gap-1.5">
+              <Download className="w-4 h-4 text-[#d4af37]" />
               Migração entre Contas Google / Backup
             </h3>
-            <p className="text-xs text-blue-200 mb-5 leading-relaxed">
-              Você pode montar todas as pautas e membros agora no seu computador. Quando for migrar para a conta oficial da igreja (Google Free/Spark), basta exportar o arquivo JSON e importá-lo no outro ambiente com um clique!
+            <p className="text-[11px] text-blue-200 mb-3 leading-relaxed">
+              Exporte todos os dados e cadastros em JSON para migrar para a conta oficial da igreja em segundos.
             </p>
 
-            <div className="flex flex-wrap items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={handleExportJson}
-                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer active:scale-95"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95"
               >
-                <Download className="w-4 h-4" />
+                <Download className="w-3.5 h-3.5" />
                 Exportar Pauta e Membros (JSON)
               </button>
 
-              <label className="px-5 py-3 bg-blue-700 hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow transition flex items-center gap-2 cursor-pointer active:scale-95">
-                <Upload className="w-4 h-4" />
+              <label className="px-4 py-2 bg-blue-700 hover:bg-blue-600 text-white font-bold text-xs rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer active:scale-95">
+                <Upload className="w-3.5 h-3.5" />
                 Importar Arquivo JSON
                 <input
                   ref={importFileRef}
