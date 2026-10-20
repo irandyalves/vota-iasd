@@ -1178,10 +1178,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </div>
             </div>
 
-            {/* CAMPO DE DIGITAÇÃO 3X MAIS ALTO + DUAS COLUNAS PEQUENAS DE BOTÕES NA PONTA */}
+            {/* CAMPO DE DIGITAÇÃO COM MICROFONE VERDE CENTRALIZADO À DIREITA + COLUNA DE BOTÕES NA PONTA */}
             <div className="flex flex-col lg:flex-row gap-3 items-stretch">
-              {/* Textarea limpo sem microfone sobrepondo texto */}
-              <div className="flex-1">
+              {/* Textarea com Microfone Verde no canto direito centralizado */}
+              <div className="flex-1 relative">
                 <textarea
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
@@ -1192,107 +1192,78 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     }
                   }}
                   placeholder="DIGITE OU COLE OS NOMES AQUI (DÊ ENTER OU SEPARE POR VÍRGULA OU LINHA)..."
-                  className="w-full h-32 sm:h-36 p-3.5 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
+                  className="w-full h-32 sm:h-36 p-3.5 pr-16 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
                 />
+
+                {/* Microfone Verde no Canto Direito Centralizado */}
+                <button
+                  type="button"
+                  onClick={() => setIsListening(!isListening)}
+                  title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
+                  className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full border-2 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                    isListening
+                      ? 'bg-rose-600/70 border-rose-300 text-white shadow-[0_0_20px_rgba(244,63,94,0.75)] animate-pulse'
+                      : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.45)] hover:shadow-[0_0_22px_rgba(52,211,153,0.65)]'
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                </button>
               </div>
 
-              {/* DUAS COLUNAS PEQUENAS NA PONTA */}
-              <div className="flex gap-2.5 shrink-0 justify-between">
-                {/* PRIMEIRA COLUNA PEQUENA: ADICIONAR, MOSTRAR NO TELÃO E LIMPAR */}
-                <div className="flex flex-col gap-2 shrink-0 w-36 sm:w-44 justify-between">
-                  {/* Botão ADICIONAR (verde 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
-                  <button
-                    type="button"
-                    onClick={() => handleAddCandidateName(newName)}
-                    className="flex-1 min-h-[42px] px-3 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-[10.5px] rounded-xl transition-all duration-150 active:scale-90 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                  >
-                    <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                    <span>ADICIONAR</span>
-                  </button>
+              {/* COLUNA DE BOTÕES NA PONTA: ADICIONAR, MOSTRAR NO TELÃO E LIMPAR */}
+              <div className="flex flex-col gap-2 shrink-0 w-36 sm:w-44 justify-between">
+                {/* Botão ADICIONAR (verde 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
+                <button
+                  type="button"
+                  onClick={() => handleAddCandidateName(newName)}
+                  className="flex-1 min-h-[42px] px-3 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-[10.5px] rounded-xl transition-all duration-150 active:scale-90 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>ADICIONAR</span>
+                </button>
 
-                  {/* Botão MOSTRAR NO TELÃO (azul 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
-                      saveSession({ ...session, telaoMode: nextMode });
-                      openTelaoOnSecondMonitor();
-                      showNotification(
-                        'success',
-                        nextMode === 'names'
-                          ? 'Exibindo Nomes para Escolha no Telão!'
-                          : 'Exibindo Votação/Resultados no Telão!'
-                      );
-                    }}
-                    className={`flex-1 min-h-[38px] px-2.5 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-bold text-[10px] ${
-                      session.telaoMode === 'names'
-                        ? 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.4)]'
-                        : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_20px_rgba(96,165,250,0.55)]'
-                    }`}
-                    title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
-                  >
-                    <Tv className="w-3.5 h-3.5 shrink-0" />
-                    <span>
-                      {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
-                    </span>
-                  </button>
+                {/* Botão MOSTRAR NO TELÃO (azul 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
+                    saveSession({ ...session, telaoMode: nextMode });
+                    openTelaoOnSecondMonitor();
+                    showNotification(
+                      'success',
+                      nextMode === 'names'
+                        ? 'Exibindo Nomes para Escolha no Telão!'
+                        : 'Exibindo Votação/Resultados no Telão!'
+                    );
+                  }}
+                  className={`flex-1 min-h-[38px] px-2.5 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-bold text-[10px] ${
+                    session.telaoMode === 'names'
+                      ? 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.4)]'
+                      : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_20px_rgba(96,165,250,0.55)]'
+                  }`}
+                  title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
+                >
+                  <Tv className="w-3.5 h-3.5 shrink-0" />
+                  <span>
+                    {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
+                  </span>
+                </button>
 
-                  {/* Botão lixeirinha LIMPAR (vermelho 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
-                        saveSession({ ...session, options: [] });
-                        showNotification('success', 'Todos os nomes foram apagados.');
-                      }
-                    }}
-                    className="min-h-[36px] px-2.5 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-bold text-[10px] rounded-xl transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                    title="Apagar todos os nomes cadastrados"
-                  >
-                    <Trash2 className="w-3 h-3 shrink-0" />
-                    <span>LIMPAR</span>
-                  </button>
-                </div>
-
-                {/* SEGUNDA COLUNA PEQUENA: MICROFONE (FALAR), IMPORTAR E MODELO */}
-                <div className="flex flex-col gap-2 shrink-0 w-28 sm:w-32 justify-between">
-                  {/* Botão Microfone / FALAR */}
-                  <button
-                    type="button"
-                    onClick={() => setIsListening(!isListening)}
-                    className={`flex-1 min-h-[42px] px-2 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-black text-[10px] ${
-                      isListening
-                        ? 'bg-rose-600/60 border-rose-400 text-white shadow-[0_0_18px_rgba(244,63,94,0.6)] animate-pulse'
-                        : 'bg-amber-600/50 hover:bg-amber-600/70 border-amber-400 text-amber-100 shadow-[0_0_15px_rgba(251,191,36,0.35)] hover:shadow-[0_0_20px_rgba(251,191,36,0.55)]'
-                    }`}
-                    title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
-                  >
-                    {isListening ? <MicOff className="w-3.5 h-3.5 shrink-0" /> : <Mic className="w-3.5 h-3.5 shrink-0" />}
-                    <span>{isListening ? 'OUVINDO' : 'FALAR'}</span>
-                  </button>
-
-                  {/* Botão IMPORTAR Arquivo */}
-                  <button
-                    type="button"
-                    onClick={() => fileUploadAppendRef.current?.click()}
-                    className="flex-1 min-h-[38px] px-2 bg-indigo-600/40 hover:bg-indigo-600/60 border-2 border-indigo-400 text-indigo-100 shadow-[0_0_15px_rgba(129,140,248,0.35)] hover:shadow-[0_0_20px_rgba(129,140,248,0.55)] rounded-xl text-[10px] font-bold transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                    title="Importar de arquivo Excel, CSV ou TXT"
-                  >
-                    <Upload className="w-3.5 h-3.5 shrink-0" />
-                    <span>IMPORTAR</span>
-                  </button>
-
-                  {/* Botão MODELO (.csv) */}
-                  <button
-                    type="button"
-                    onClick={handleDownloadSampleTemplate}
-                    className="min-h-[36px] px-2 bg-slate-700/50 hover:bg-slate-700/70 border-2 border-slate-400 text-slate-100 shadow-[0_0_15px_rgba(148,163,184,0.35)] hover:shadow-[0_0_20px_rgba(148,163,184,0.55)] rounded-xl text-[10px] font-bold transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                    title="Baixar planilha/arquivo modelo (.csv)"
-                  >
-                    <Download className="w-3 h-3 shrink-0" />
-                    <span>MODELO</span>
-                  </button>
-                </div>
+                {/* Botão lixeirinha LIMPAR (vermelho 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
+                      saveSession({ ...session, options: [] });
+                      showNotification('success', 'Todos os nomes foram apagados.');
+                    }
+                  }}
+                  className="min-h-[36px] px-2.5 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-bold text-[10px] rounded-xl transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  title="Apagar todos os nomes cadastrados"
+                >
+                  <Trash2 className="w-3 h-3 shrink-0" />
+                  <span>LIMPAR</span>
+                </button>
               </div>
             </div>
 

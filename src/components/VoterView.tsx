@@ -590,37 +590,48 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         </motion.div>
       )}
 
-      {/* CABEÇALHO: ARIAL NARROW, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ */}
+      {/* CABEÇALHO: FONTE BONITA E MENOR, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ */}
+      {/* Formato: Escolha xx nomes | eleição do tesoureiro | 0/6 */}
       <div
-        className={`${isTieBreak ? 'rounded-xl' : '-mx-4 -mt-5'} mb-4 px-4 py-3 border-b-[3px] border-[#e6d3a8] shadow-lg`}
+        className={`${isTieBreak ? 'rounded-xl' : '-mx-4 -mt-5'} mb-4 px-3.5 py-2.5 border-b-[3px] border-[#e6d3a8] shadow-lg`}
         style={{
-          fontFamily: '"Arial Narrow", "Roboto Condensed", "Helvetica Neue Condensed", Arial, sans-serif',
+          fontFamily: '"Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif',
           backgroundColor: '#0b4a4a',
           backgroundImage:
             'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 5px), linear-gradient(180deg, #0f5c5a 0%, #083b3c 100%)',
         }}
       >
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-white uppercase tracking-wide text-xl sm:text-2xl leading-none flex items-baseline gap-2">
+        <div className="flex items-center justify-between gap-2 text-xs sm:text-sm text-white">
+          {/* Esquerda: Escolha xx nomes */}
+          <div className="flex items-baseline gap-1 font-semibold shrink-0">
             <span>Escolha</span>
             <span className="font-black text-amber-300" style={{ fontSize: '1.15em' }}>
               {maxVotes}
             </span>
             <span>{maxVotes === 1 ? 'nome' : 'nomes'}</span>
-          </h1>
+          </div>
 
-          {/* Contador de selecionados: o número da esquerda aumenta a cada clique */}
+          <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
+
+          {/* Centro: Título da eleição */}
+          <div className="flex-1 min-w-0 text-center font-medium text-[#f4ead2] truncate px-1">
+            {session.title}
+          </div>
+
+          <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
+
+          {/* Direita: Contador 0/6 */}
           <div
-            className={`text-sm font-bold tabular-nums flex items-baseline shrink-0 ${
+            className={`text-xs sm:text-sm font-bold tabular-nums flex items-baseline shrink-0 ${
               isReadyToConfirm ? 'text-emerald-300' : 'text-[#e6d3a8]'
             }`}
           >
             <motion.span
               key={selectedIds.length}
-              initial={{ scale: 1.6, opacity: 0.4 }}
+              initial={{ scale: 1.5, opacity: 0.4 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ type: 'spring', damping: 12, stiffness: 300 }}
-              className="inline-block font-black text-base"
+              className="inline-block font-black"
             >
               {selectedIds.length}
             </motion.span>
