@@ -584,63 +584,37 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   key={option.id}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => handleToggleCandidate(option.id)}
-                  className={`p-2.5 sm:p-3 rounded-xl border-2 transition-all duration-200 cursor-pointer select-none flex items-center gap-2 sm:gap-2.5 shadow-md relative overflow-hidden active:scale-95 ${
+                  className={`py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border-2 transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm relative overflow-hidden active:scale-95 min-h-[42px] ${
                     isSelected
                       ? 'bg-gradient-to-r from-blue-900/90 to-[#002f6c] border-[#d4af37] ring-2 ring-[#d4af37]/40 shadow-amber-900/20'
                       : 'bg-[#001f47]/70 hover:bg-[#001f47] border-blue-900/80 text-slate-200'
                   }`}
                 >
-                  {/* Foto ou Avatar com Iniciais */}
-                  <div className="relative shrink-0">
-                    {option.photoUrl ? (
-                      <img
-                        src={option.photoUrl}
-                        alt={option.name}
-                        className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-cover border-2 border-blue-600/50 shadow"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-gradient-to-br from-blue-800 to-indigo-900 border-2 border-blue-500/40 flex items-center justify-center text-amber-300 font-extrabold text-xs sm:text-sm shadow">
-                        {option.name
-                          .split(' ')
-                          .map((n) => n[0])
-                          .slice(0, 2)
-                          .join('')}
-                      </div>
-                    )}
-
-                    {/* Badge de Selecionado */}
-                    {isSelected && (
-                      <div className="absolute -top-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 bg-[#d4af37] text-blue-950 rounded-full flex items-center justify-center shadow-lg border border-white">
-                        <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 font-bold" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Informações do Candidato */}
-                  <div className="flex-1 min-w-0">
+                  {/* Informações do Candidato (Sem letra à esquerda) */}
+                  <div className="flex-1 min-w-0 pr-1">
                     <h4
-                      className={`font-bold text-xs sm:text-sm leading-snug line-clamp-2 ${
+                      className={`font-black text-xs sm:text-[13px] leading-tight uppercase truncate ${
                         isSelected ? 'text-white' : 'text-slate-100'
                       }`}
                     >
                       {option.name}
                     </h4>
                     {option.subtitle && (
-                      <p className="text-[10px] sm:text-xs text-blue-200/75 mt-0.5 truncate">
+                      <p className="text-[10px] text-blue-200/75 mt-0.5 truncate">
                         {option.subtitle}
                       </p>
                     )}
                   </div>
 
-                  {/* Indicador Touch */}
+                  {/* Indicador Touch Circular */}
                   <div
-                    className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center shrink-0 transition-colors ${
+                    className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
                       isSelected
-                        ? 'border-[#d4af37] bg-[#d4af37] text-blue-950'
+                        ? 'border-[#d4af37] bg-[#d4af37] text-blue-950 scale-105'
                         : 'border-blue-700 bg-blue-950/60'
                     }`}
                   >
-                    {isSelected && <CheckCircle2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 font-extrabold" />}
+                    {isSelected && <CheckCircle2 className="w-3.5 h-3.5 font-black stroke-[3]" />}
                   </div>
                 </motion.div>
               );
