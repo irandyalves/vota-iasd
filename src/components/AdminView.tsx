@@ -9,9 +9,7 @@ import {
   RotateCcw,
   Download,
   Upload,
-  AlertTriangle,
   CheckCircle,
-  Flame,
   FileSpreadsheet,
   FileText,
   QrCode,
@@ -26,7 +24,6 @@ import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
 import { openTelaoOnSecondMonitor } from '../utils/screen';
-import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -35,8 +32,41 @@ interface AdminViewProps {
 export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [activeTab, setActiveTab] = useState<'candidates' | 'control' | 'settings'>('candidates');
   const [isBottomSectionOpen, setIsBottomSectionOpen] = useState<boolean>(true);
+  const [isGearOpen, setIsGearOpen] = useState<boolean>(false);
   const [eventNameInput, setEventNameInput] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
+  const gearPanelRef = useRef<HTMLDivElement>(null);
+  const gearButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Fecha o painel da engrenagem ao pressionar ESC ou clicar fora
+  useEffect(() => {
+    if (!isGearOpen) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsGearOpen(false);
+      }
+    };
+
+    const handleMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (
+        gearPanelRef.current &&
+        !gearPanelRef.current.contains(target) &&
+        gearButtonRef.current &&
+        !gearButtonRef.current.contains(target)
+      ) {
+        setIsGearOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleMouseDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleMouseDown);
+    };
+  }, [isGearOpen]);
 
   // Garante lista de eventos (inicializando com o evento atual caso ainda não exista)
   const eventsList: VotingEventItem[] =
@@ -252,10 +282,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }
   }, [session.options]);
 
-  // Estados de Desempate
-  const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
-  const [tieVacancies, setTieVacancies] = useState(1);
-
   const importFileRef = useRef<HTMLInputElement>(null);
   const fileUploadReplaceRef = useRef<HTMLInputElement>(null);
   const fileUploadAppendRef = useRef<HTMLInputElement>(null);
@@ -442,39 +468,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     showNotification('success', 'Votação encerrada! Resultados consolidados no telão.');
   };
 
-  // Zerar Votos e Reiniciar Votação mantendo os MESMOS nomes cadastrados
-  const handleResetVotes = () => {
-    if (
-      window.confirm(
-        'Deseja zerar os votos e reiniciar a votação? Todos os nomes atualmente cadastrados serão mantidos!'
-      )
-    ) {
-      // Preserva a lista de nomes cadastrados, zerando a apuração e ordenando alfabeticamente
-      const resetOptions = [...session.options]
-        .map((o) => ({ ...o, votesCount: 0 }))
-        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
-      const nextIteration = (session.votingIteration || 1) + 1;
-      saveSession({
-        ...session,
-        status: 'WAITING',
-        options: resetOptions,
-        tieBreak: undefined,
-        votingIteration: nextIteration,
-      });
-
-      // Limpa APENAS as travas locais de voto ('voted_*'), PRESERVANDO a sessão e todos os nomes!
-      try {
-        Object.keys(localStorage).forEach((key) => {
-          if (key.startsWith('voted_')) {
-            localStorage.removeItem(key);
-          }
-        });
-      } catch (_) {}
-
-      showNotification('success', 'Votação reiniciada! Nomes mantidos e votos zerados.');
-    }
-  };
-
   // Adicionar Candidato(s) por Texto ou Voz em Tempo Real (Maiúsculo)
   const handleAddCandidateName = (rawText: string) => {
     if (!rawText.trim()) return;
@@ -535,46 +528,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     });
   };
 
-  // Iniciar Rodada de Desempate
-  const handleStartTieBreak = () => {
-    if (selectedTieCandidateIds.length < 2) {
-      showNotification('error', 'Selecione pelo menos 2 candidatos empatados.');
-      return;
-    }
-
-    const tieOptions = session.options
-      .filter((o) => selectedTieCandidateIds.includes(o.id))
-      .map((o) => ({ ...o, votesCount: 0 }));
-
-    const nextIteration = (session.votingIteration || 1) + 1;
-
-    saveSession({
-      ...session,
-      status: 'TIE_BREAK',
-      votingIteration: nextIteration,
-      telaoMode: 'voting',
-      tieBreak: {
-        active: true,
-        title: `Desempate: ${tieVacancies} ${tieVacancies === 1 ? 'Vaga' : 'Vagas'}`,
-        vacancies: tieVacancies,
-        maxVotesPerVoter: tieVacancies,
-        options: tieOptions,
-      },
-    });
-
-    showNotification('success', 'Rodada de desempate iniciada nos celulares!');
-  };
-
-  // Cancelar Desempate
-  const handleCancelTieBreak = () => {
-    saveSession({
-      ...session,
-      status: 'VOTING',
-      tieBreak: undefined,
-    });
-    showNotification('success', 'Rodada de desempate finalizada.');
-  };
-
   // Exportar Backup para Migração (JSON)
   const handleExportJson = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(session, null, 2));
@@ -623,60 +576,29 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* BANNER DE ALERTA DE EMPATE PARA O LÍDER (SOMENTE PARA ADMIN) */}
-      {session.status === 'CLOSED' && detectVotingTies(session).length > 0 && (
-        <div className="mb-3.5 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-950/90 to-red-950/90 border-2 border-amber-400 text-white shadow-xl flex flex-wrap items-center justify-between gap-3 animate-pulse">
-          <div className="flex items-center gap-2.5">
-            <AlertTriangle className="w-6 h-6 text-amber-400 shrink-0" />
-            <div>
-              <h4 className="font-black text-sm sm:text-base text-amber-300 uppercase tracking-wide">
-                Atenção: Empate Detectado na Apuração!
-              </h4>
-              <p className="text-xs text-slate-200">
-                Há empate em: <strong className="text-white">{detectVotingTies(session).map((t) => t.label).join(', ')}</strong>.
-                Configure e inicie a rodada de desempate abaixo.
-              </p>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              setActiveTab('control');
-              const firstTie = detectVotingTies(session)[0];
-              if (firstTie) {
-                setSelectedTieCandidateIds(firstTie.tiedCandidates.map((c) => c.id));
-                setTieVacancies(firstTie.vacanciesInDispute);
-              }
-            }}
-            className="px-4 py-2 bg-amber-400 hover:bg-amber-300 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow transition cursor-pointer active:scale-95 flex items-center gap-1.5"
-          >
-            <Flame className="w-4 h-4" />
-            Configurar Desempate
-          </button>
-        </div>
-      )}
+      {/* BARRA DE EVENTOS: LADO ESQUERDO AMARELO DE CIMA EMBAIXO ("EVENTOS"), À DIREITA AZUL COM "+ CRIAR EVENTO" E EVENTOS TANGENCIANDO A LINHA VERTICAL */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 shadow-xl mb-3 flex items-stretch justify-between min-h-[64px]">
+        {/* LADO ESQUERDO: AMARELO DE CIMA EMBAIXO ONDE ESTÁ "EVENTOS" */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab('candidates');
+            setIsBottomSectionOpen(true);
+          }}
+          className="bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-xs sm:text-sm uppercase tracking-wider px-5 sm:px-6 flex items-center justify-center shrink-0 border-r-2 border-amber-300 transition cursor-pointer select-none"
+          title="Mostrar seção de nomes do evento"
+        >
+          EVENTOS
+        </button>
 
-      {/* BARRA DE EVENTOS COMPACTA (50% MENOR EM ALTURA) — ENCOSTA NAS BORDAS DA JANELA */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 px-4 sm:px-6 lg:px-8 py-1.5 shadow-xl mb-3">
-        <div className="flex items-center justify-between gap-2">
-          {/* ESQUERDA: RÓTULO "EVENTOS" (SEM FUNDO PRETO) + BOTÃO "+ CRIAR EVENTO" À DIREITA DELE + BOTÕES DE EVENTOS */}
-          <div className="flex-1 min-w-0 flex flex-col gap-1">
-            {/* LINHA 1: EVENTOS (SEM FUNDO PRETO) + BOTÃO CRIAR EVENTO NA DIREITA DELE */}
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('candidates');
-                  setIsBottomSectionOpen(true);
-                }}
-                className="px-2.5 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] uppercase tracking-wider shadow transition cursor-pointer active:scale-95"
-              >
-                EVENTOS
-              </button>
-
-              {/* Botão + Criar Evento movido para a direita de EVENTOS */}
+        {/* LADO DIREITO AZUL: TANGENCIANDO A LINHA VERTICAL (+ CRIAR EVENTO EM CIMA E EVENTOS EMBAIXO) + ENGRENAGEM À DIREITA */}
+        <div className="flex-1 min-w-0 flex items-center justify-between pl-2.5 sm:pl-3 pr-4 sm:pr-6 lg:pr-8 py-2 gap-3">
+          {/* COLUNA TANGENCIANDO A LINHA VERTICAL */}
+          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
+            {/* EM CIMA: + CRIAR EVENTO (COM ARREDONDAMENTO DE BORDAS REDUZIDO) */}
+            <div className="flex flex-wrap items-center gap-1.5">
               {isCreatingNewEvent ? (
-                <div className="flex items-center gap-1.5 bg-[#07132a] border-2 border-amber-400 rounded-lg px-2 py-0.5 shadow-lg">
+                <div className="flex items-center gap-1.5 bg-[#07132a] border border-amber-400 rounded-[4px] px-2 py-0.5 shadow-lg">
                   <input
                     type="text"
                     autoFocus
@@ -695,7 +617,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   <button
                     type="button"
                     onClick={() => handleCreateEvent(eventNameInput)}
-                    className="px-2 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-blue-950 font-black text-[10px] rounded uppercase cursor-pointer"
+                    className="px-2 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-blue-950 font-black text-[10px] rounded-[3px] uppercase cursor-pointer"
                   >
                     Salvar
                   </button>
@@ -718,7 +640,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     setIsCreatingNewEvent(true);
                   }}
                   title="Criar um novo evento de votação (ex: Escolha do Tesoureiro)"
-                  className="px-2.5 py-0.5 rounded-lg bg-blue-600/30 hover:bg-blue-600/50 border border-dashed border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95"
+                  className="px-2.5 py-0.5 rounded-[4px] bg-blue-600/35 hover:bg-blue-600/55 border border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95"
                 >
                   <FolderPlus className="w-3 h-3 text-amber-400" />
                   <span>+ Criar Evento</span>
@@ -726,8 +648,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               )}
             </div>
 
-            {/* LINHA 2: LISTA DE EVENTOS ESTILO BOTÕES (COMPACTA) */}
-            <div className="flex flex-wrap items-center gap-1.5">
+            {/* EMBAIXO TANGENCIANDO A LINHA VERTICAL: COMEÇAM OS EVENTOS (REDUZIDOS E COM MENOS ARREDONDAMENTO) */}
+            <div className="flex flex-wrap items-center gap-1">
               {eventsList.map((evt) => {
                 const isSelected = evt.id === currentActiveEventId;
                 const count = isSelected ? session.options.length : (evt.options?.length || 0);
@@ -737,18 +659,18 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     key={evt.id}
                     onClick={() => handleSelectEventButton(evt)}
                     title="Clique para abrir/recolher os nomes deste evento"
-                    className={`group px-2.5 py-1 rounded-lg font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
+                    className={`group px-2 py-0.5 rounded-[4px] font-black text-[10px] uppercase tracking-wider flex items-center gap-1 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
                       isSelected
-                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_10px_rgba(251,191,36,0.2)]'
+                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
                         : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
                     }`}
                   >
                     <span>{displayName}</span>
-                    <span className="px-1.5 py-0 rounded bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
+                    <span className="px-1 py-0 rounded-[3px] bg-[#07132a] border border-blue-700 text-[9.5px] font-mono text-white">
                       {count}
                     </span>
                     <ChevronDown
-                      className={`w-3 h-3 transition-transform ${
+                      className={`w-2.5 h-2.5 transition-transform ${
                         isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
                       }`}
                     />
@@ -759,7 +681,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         title="Excluir este evento"
                         className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer"
                       >
-                        <Trash2 className="w-3 h-3" />
+                        <Trash2 className="w-2.5 h-2.5" />
                       </button>
                     )}
                   </div>
@@ -768,14 +690,15 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             </div>
           </div>
 
-          {/* CANTO DIREITO: CONFIGURAR EVENTO (ENGRENAGEM COLORIDA: DENTES CINZA CLARO, CENTRO VERMELHO ESCURO, GIRA SUAVE SENTIDO HORÁRIO NO HOVER) */}
+          {/* CANTO DIREITO: ENGRENAGEM COLORIDA (AO CLICAR REVELA SUAVEMENTE AS OPÇÕES EMPURRANDO AS DEMAIS PARA BAIXO) */}
           <div className="flex items-center shrink-0">
             <button
+              ref={gearButtonRef}
               type="button"
-              onClick={() => setActiveTab(activeTab === 'control' ? 'candidates' : 'control')}
-              title="Configurar Evento (Vagas, Suplentes, Nome do Evento e Desempate)"
+              onClick={() => setIsGearOpen((prev) => !prev)}
+              title="Abrir/Recolher Opções (ESC ou clique fora para recolher)"
               className={`group relative p-1.5 rounded-xl border-2 transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center ${
-                activeTab === 'control'
+                isGearOpen
                   ? 'bg-[#07132a] border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.45)]'
                   : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 hover:border-amber-400/70 shadow-md'
               }`}
@@ -841,628 +764,436 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       </div>
 
-      {/* ABA 1: CONFIGURAR EVENTO (NOME DO EVENTO, VAGAS, SUPLENTES E DESEMPATE) */}
-      {activeTab === 'control' && (
-        <div className="space-y-3.5">
-          {/* SEÇÃO DE CRIAR / EDITAR NOME DO EVENTO */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-blue-900/80">
-              <div className="flex items-center gap-2">
-                <Pencil className="w-4 h-4 text-amber-400" />
-                <h3 className="text-base font-bold text-white font-sans tracking-tight">
-                  Criar ou Editar Evento
-                </h3>
-              </div>
-              <span className="text-[11px] text-blue-300">
-                Defina o nome do evento (ex: Escolha do Tesoureiro) — ele ficará disponível como botão no cabeçalho acima
-              </span>
-            </div>
-
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
-              <div className="flex-1">
-                <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-1">
-                  Nome do Evento:
-                </label>
-                <input
-                  type="text"
-                  value={eventNameInput}
-                  onChange={(e) => setEventNameInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      handleRenameCurrentEvent();
-                    }
-                  }}
-                  placeholder="Ex: ESCOLHA DO TESOUREIRO"
-                  className="w-full px-3.5 py-2.5 bg-[#07132a] border-2 border-blue-700 focus:border-amber-400 rounded-xl text-sm sm:text-base font-black text-white uppercase outline-none transition shadow-inner"
-                />
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 sm:self-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleRenameCurrentEvent();
-                    setActiveTab('candidates');
-                    setIsBottomSectionOpen(true);
-                  }}
-                  className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Salvar Nome e Abrir Nomes</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleCreateEvent(eventNameInput)}
-                  className="px-4 py-2.5 bg-emerald-600/40 hover:bg-emerald-600/60 border-2 border-emerald-400 text-emerald-100 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
-                >
-                  <FolderPlus className="w-4 h-4" />
-                  <span>Criar Como Novo Evento</span>
-                </button>
-              </div>
-            </div>
-          </div>
-          {/* PAINEL DE CONFIGURAÇÃO DE VAGAS E SUPLENTES */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-3.5">
-            <div className="flex items-center justify-between pb-2.5 border-b border-blue-900/80">
-              <div className="flex items-center gap-2">
-                <Sliders className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-bold text-white font-sans tracking-tight">
-                  Configuração de Vagas & Suplentes
-                </h3>
-              </div>
-              <span className="text-[11px] text-blue-300">
-                Digite o número diretamente ou use os botões / slider
-              </span>
-            </div>
-
-            {/* 3 COLUNAS NA MESMA LINHA: TITULARES, 1º SUPLENTE, 2º SUPLENTE */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-stretch">
-              {/* 1. TITULARES */}
-              <div className="bg-[#07132a]/90 border border-emerald-500/50 rounded-2xl p-3.5 flex flex-col justify-between shadow-inner">
-                <div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-                    <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-wide">
-                      Titulares (Eleitos)
-                    </h4>
+      {/* PAINEL REVELADO PELA ENGRENAGEM: DESLIZA SUAVEMENTE EMPURRANDO AS SEÇÕES ABAIXO, RECOLHE COM ESC / CLIQUE FORA / ENGRENAGEM */}
+      <AnimatePresence initial={false}>
+        {isGearOpen && (
+          <motion.div
+            ref={gearPanelRef}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
+            className="overflow-hidden mb-3.5"
+          >
+            <div className="space-y-3.5 pt-0.5 pb-1">
+              {/* SEÇÃO DE CRIAR / EDITAR NOME DO EVENTO */}
+              <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-blue-900/80">
+                  <div className="flex items-center gap-2">
+                    <Pencil className="w-4 h-4 text-amber-400" />
+                    <h3 className="text-base font-bold text-white font-sans tracking-tight">
+                      Criar ou Editar Evento
+                    </h3>
                   </div>
-                  <p className="text-[10px] text-blue-200/80 mb-3">
-                    Candidatos que assumirão o cargo
-                  </p>
-                </div>
-
-                <div className="flex flex-col gap-2.5">
-                  {/* Seletor Numérico Centralizado com Input Digitável */}
-                  <div className="flex items-center justify-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newVac = Math.max(1, session.vacancies - 1);
-                        saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
-                      }}
-                      disabled={session.vacancies <= 1}
-                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                    >
-                      -
-                    </button>
-
-                    <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-emerald-400 focus-within:border-emerald-300 focus-within:ring-2 focus-within:ring-emerald-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
-                      <input
-                        type="number"
-                        min={1}
-                        max={50}
-                        value={session.vacancies}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (!isNaN(val)) {
-                            const safeVal = Math.max(1, Math.min(50, val));
-                            saveSession({ ...session, vacancies: safeVal, maxVotesPerVoter: safeVal });
-                          }
-                        }}
-                        className="w-full text-center bg-transparent text-2xl font-black font-mono text-emerald-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
-                      />
-                      <span className="text-[8.5px] font-bold text-emerald-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                        {session.vacancies === 1 ? 'Vaga' : 'Vagas'}
-                      </span>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const newVac = Math.min(50, session.vacancies + 1);
-                        saveSession({ ...session, vacancies: newVac, maxVotesPerVoter: newVac });
-                      }}
-                      disabled={session.vacancies >= 50}
-                      className="w-10 h-10 rounded-xl bg-transparent hover:bg-emerald-500/10 border-2 border-emerald-500/80 disabled:opacity-30 disabled:pointer-events-none text-emerald-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                    >
-                      +
-                    </button>
-                  </div>
-
-                  {/* Slider */}
-                  <div className="flex flex-col gap-1 px-1">
-                    <div className="flex justify-between text-[10px] font-bold text-blue-200">
-                      <span>1 vaga</span>
-                      <span className="text-emerald-300 font-mono">
-                        Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{session.vacancies}</strong>
-                      </span>
-                      <span>20 vagas</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={1}
-                      max={20}
-                      value={session.vacancies}
-                      onChange={(e) => {
-                        const val = Number(e.target.value);
-                        saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
-                      }}
-                      className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-emerald-400 border border-blue-700"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* 2. 1º SUPLENTE */}
-              {(() => {
-                const { s1Enabled, s2Enabled } = getEffectiveSuplentes(session);
-                return (
-                  <>
-                    <div className={`bg-[#07132a]/90 border rounded-2xl p-3.5 flex flex-col justify-between shadow-inner transition-all ${
-                      s1Enabled ? 'border-red-600/50' : 'border-slate-800 opacity-75'
-                    }`}>
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s1Enabled ? 'bg-red-400 animate-pulse' : 'bg-slate-600'}`} />
-                            <h4 className={`text-xs sm:text-sm font-bold uppercase tracking-wide ${s1Enabled ? 'text-white' : 'text-slate-400'}`}>
-                              1º Suplente
-                            </h4>
-                          </div>
-
-                          {/* BOTÃO HABILITAR / DESABILITAR 1º SUPLENTE */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const nextState = !s1Enabled;
-                              if (!nextState) {
-                                // Se desabilitado 1º, automaticamente desabilita o 2º!
-                                saveSession({
-                                  ...session,
-                                  habilitarSuplente1: false,
-                                  habilitarSuplente2: false,
-                                  suplentesCount: 0,
-                                  segundoSuplentesCount: 0,
-                                });
-                                showNotification('success', '1º e 2º Suplentes desabilitados.');
-                              } else {
-                                saveSession({
-                                  ...session,
-                                  habilitarSuplente1: true,
-                                  suplentesCount: (session.suplentesCount && session.suplentesCount > 0) ? session.suplentesCount : 2,
-                                });
-                                showNotification('success', '1º Suplente habilitado.');
-                              }
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-150 cursor-pointer active:scale-95 border shadow-sm ${
-                              s1Enabled
-                                ? 'bg-red-500/20 text-red-300 border-red-500 hover:bg-red-500/30'
-                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700'
-                            }`}
-                          >
-                            {s1Enabled ? '● Habilitado' : '○ Desabilitado'}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-blue-200/80 mb-3">
-                          {s1Enabled ? 'Substitutos imediatos' : 'Desabilitado (não aparecerá no telão)'}
-                        </p>
-                      </div>
-
-                      <div className={`flex flex-col gap-2.5 transition-opacity ${!s1Enabled ? 'opacity-30 pointer-events-none select-none' : ''}`}>
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => saveSession({ ...session, suplentesCount: Math.max(0, (session.suplentesCount || 0) - 1) })}
-                            disabled={!s1Enabled || (session.suplentesCount || 0) <= 0}
-                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                          >
-                            -
-                          </button>
-
-                          <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-red-400 focus-within:border-red-300 focus-within:ring-2 focus-within:ring-red-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
-                            <input
-                              type="number"
-                              min={0}
-                              max={20}
-                              disabled={!s1Enabled}
-                              value={s1Enabled ? (session.suplentesCount || 0) : 0}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val)) saveSession({ ...session, suplentesCount: Math.max(0, Math.min(20, val)) });
-                              }}
-                              className="w-full text-center bg-transparent text-2xl font-black font-mono text-red-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
-                            />
-                            <span className="text-[8.5px] font-bold text-red-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                              {(session.suplentesCount || 0) === 1 ? 'Suplente' : 'Suplentes'}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => saveSession({ ...session, suplentesCount: Math.min(20, (session.suplentesCount || 0) + 1) })}
-                            disabled={!s1Enabled || (session.suplentesCount || 0) >= 20}
-                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-red-500/10 border-2 border-red-500/80 disabled:opacity-30 disabled:pointer-events-none text-red-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        <div className="flex flex-col gap-1 px-1">
-                          <div className="flex justify-between text-[10px] font-bold text-blue-200">
-                            <span>0 suplentes</span>
-                            <span className="text-red-300 font-mono">
-                              Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{s1Enabled ? (session.suplentesCount || 0) : 0}</strong>
-                            </span>
-                            <span>10 suplentes</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={10}
-                            disabled={!s1Enabled}
-                            value={s1Enabled ? (session.suplentesCount || 0) : 0}
-                            onChange={(e) => saveSession({ ...session, suplentesCount: Number(e.target.value) })}
-                            className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-red-400 border border-blue-700"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 3. 2º SUPLENTE */}
-                    <div className={`bg-[#07132a]/90 border rounded-2xl p-3.5 flex flex-col justify-between shadow-inner transition-all ${
-                      s2Enabled ? 'border-amber-600/50' : 'border-slate-800 opacity-75'
-                    }`}>
-                      <div>
-                        <div className="flex items-center justify-between gap-2 mb-1.5">
-                          <div className="flex items-center gap-2">
-                            <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s2Enabled ? 'bg-amber-400 animate-pulse' : 'bg-slate-600'}`} />
-                            <h4 className={`text-xs sm:text-sm font-bold uppercase tracking-wide ${s2Enabled ? 'text-white' : 'text-slate-400'}`}>
-                              2º Suplente
-                            </h4>
-                          </div>
-
-                          {/* BOTÃO HABILITAR / DESABILITAR 2º SUPLENTE */}
-                          <button
-                            type="button"
-                            disabled={!s1Enabled}
-                            onClick={() => {
-                              if (!s1Enabled) {
-                                showNotification('error', 'Para habilitar o 2º Suplente, habilite primeiro o 1º Suplente.');
-                                return;
-                              }
-                              const nextState = !s2Enabled;
-                              saveSession({
-                                ...session,
-                                habilitarSuplente2: nextState,
-                                segundoSuplentesCount: nextState
-                                  ? ((session.segundoSuplentesCount && session.segundoSuplentesCount > 0) ? session.segundoSuplentesCount : 1)
-                                  : 0,
-                              });
-                              showNotification('success', nextState ? '2º Suplente habilitado.' : '2º Suplente desabilitado.');
-                            }}
-                            className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-150 border shadow-sm ${
-                              !s1Enabled
-                                ? 'opacity-40 cursor-not-allowed bg-slate-900 text-slate-500 border-slate-800'
-                                : s2Enabled
-                                ? 'bg-amber-500/20 text-amber-300 border-amber-500 hover:bg-amber-500/30 cursor-pointer active:scale-95'
-                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:bg-slate-700 cursor-pointer active:scale-95'
-                            }`}
-                          >
-                            {!s1Enabled ? 'Bloqueado' : s2Enabled ? '● Habilitado' : '○ Desabilitado'}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-blue-200/80 mb-3">
-                          {!s1Enabled
-                            ? 'Requer 1º Suplente habilitado'
-                            : s2Enabled
-                            ? 'Segunda linha de suplência'
-                            : 'Desabilitado (não aparecerá no telão)'}
-                        </p>
-                      </div>
-
-                      <div className={`flex flex-col gap-2.5 transition-opacity ${!s2Enabled ? 'opacity-30 pointer-events-none select-none' : ''}`}>
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.max(0, (session.segundoSuplentesCount || 0) - 1) })}
-                            disabled={!s2Enabled || (session.segundoSuplentesCount || 0) <= 0}
-                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                          >
-                            -
-                          </button>
-
-                          <div className="min-w-[76px] h-12 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-xl flex flex-col items-center justify-center shadow-lg px-2 transition">
-                            <input
-                              type="number"
-                              min={0}
-                              max={20}
-                              disabled={!s2Enabled}
-                              value={s2Enabled ? (session.segundoSuplentesCount || 0) : 0}
-                              onChange={(e) => {
-                                const val = parseInt(e.target.value, 10);
-                                if (!isNaN(val)) saveSession({ ...session, segundoSuplentesCount: Math.max(0, Math.min(20, val)) });
-                              }}
-                              className="w-full text-center bg-transparent text-2xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
-                            />
-                            <span className="text-[8.5px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                              {(session.segundoSuplentesCount || 0) === 1 ? '2º Suplente' : '2º Suplentes'}
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => saveSession({ ...session, segundoSuplentesCount: Math.min(20, (session.segundoSuplentesCount || 0) + 1) })}
-                            disabled={!s2Enabled || (session.segundoSuplentesCount || 0) >= 20}
-                            className="w-10 h-10 rounded-xl bg-transparent hover:bg-amber-500/10 border-2 border-amber-500/80 disabled:opacity-30 disabled:pointer-events-none text-amber-400 font-black text-xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                          >
-                            +
-                          </button>
-                        </div>
-
-                        <div className="flex flex-col gap-1 px-1">
-                          <div className="flex justify-between text-[10px] font-bold text-blue-200">
-                            <span>0 suplentes</span>
-                            <span className="text-amber-300 font-mono">
-                              Deslize: <strong className="text-white bg-blue-950 px-1 rounded border border-blue-800">{s2Enabled ? (session.segundoSuplentesCount || 0) : 0}</strong>
-                            </span>
-                            <span>10 suplentes</span>
-                          </div>
-                          <input
-                            type="range"
-                            min={0}
-                            max={10}
-                            disabled={!s2Enabled}
-                            value={s2Enabled ? (session.segundoSuplentesCount || 0) : 0}
-                            onChange={(e) => saveSession({ ...session, segundoSuplentesCount: Number(e.target.value) })}
-                            className="w-full h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  </>
-                );
-              })()}
-            </div>
-          </div>
-
-          {/* Seção de Desempate (somente exibida após encerrar a votação ou durante rodada de desempate) */}
-          {(session.status === 'CLOSED' || session.status === 'TIE_BREAK') && (
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
-            {/* Cabeçalho do Motor de Desempate */}
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Flame className="w-5 h-5 text-amber-400" />
-                <h3 className="text-base font-bold text-white font-serif">
-                  Motor de Desempate Inteligente
-                </h3>
-              </div>
-              {session.status === 'TIE_BREAK' && (
-                <button
-                  onClick={handleCancelTieBreak}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition active:scale-95 cursor-pointer shadow"
-                >
-                  Finalizar Desempate
-                </button>
-              )}
-            </div>
-
-            {/* CASOS DE EMPATE DETECTADOS AUTOMATICAMENTE */}
-            {(() => {
-              const detected = detectVotingTies(session);
-              if (detected.length === 0) return null;
-              return (
-                <div className="mb-4 p-3.5 bg-amber-950/80 border-2 border-amber-400 rounded-2xl shadow-xl">
-                  <div className="flex items-center gap-2 mb-2.5 text-amber-300 font-bold text-xs sm:text-sm">
-                    <AlertTriangle className="w-4 h-4 text-amber-400 animate-bounce shrink-0" />
-                    <span>Empates Identificados na Apuração Oficial ({detected.length}):</span>
-                  </div>
-                  <div className="space-y-2">
-                    {detected.map((tie, idx) => (
-                      <div
-                        key={idx}
-                        className="flex flex-wrap items-center justify-between gap-3 p-2.5 bg-[#07132a] rounded-xl border border-amber-600/50 text-xs"
-                      >
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-extrabold text-amber-300 uppercase">{tie.label}</span>
-                            <span className="text-[10px] font-mono bg-amber-400 text-blue-950 px-1.5 py-0.2 rounded font-black">
-                              {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'} cada
-                            </span>
-                          </div>
-                          <p className="text-white font-semibold mt-1">
-                            Candidatos: {tie.tiedCandidates.map((c) => c.name).join(', ')}
-                          </p>
-                          <p className="text-[11px] text-blue-200 mt-0.5">
-                            Vagas restantes em disputa nesta categoria: <strong className="text-amber-300 font-bold">{tie.vacanciesInDispute}</strong>
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedTieCandidateIds(tie.tiedCandidates.map((c) => c.id));
-                            setTieVacancies(tie.vacanciesInDispute);
-                            showNotification('success', `Candidatos empatados para ${tie.label} carregados no motor!`);
-                          }}
-                          className="px-3.5 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black rounded-xl text-xs transition cursor-pointer active:scale-95 shadow-md flex items-center gap-1.5"
-                        >
-                          <Flame className="w-3.5 h-3.5" />
-                          Carregar este Desempate
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* SEÇÃO DE VAGAS EM DISPUTA DO DESEMPATE (COM NÚMERO DIGITÁVEL) */}
-            <div className="bg-[#07132a]/90 border border-amber-500/40 rounded-2xl p-4 mb-4 shadow-inner">
-              <div className="flex items-center gap-2 mb-3">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-                <h4 className="text-base font-bold text-white font-serif uppercase tracking-wide">
-                  Vagas em Disputa (Desempate)
-                </h4>
-                <span className="text-xs text-blue-300 font-normal ml-1">
-                  (quantos candidatos serão eleitos nesta rodada de desempate)
-                </span>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-between gap-4">
-                {/* Seletor Numérico 2.5x Maior com Botões + e - e Input Digitável */}
-                <div className="flex items-center gap-2.5">
-                  <button
-                    type="button"
-                    onClick={() => setTieVacancies(Math.max(1, tieVacancies - 1))}
-                    disabled={tieVacancies <= 1}
-                    title="Diminuir vagas em disputa"
-                    className="w-12 h-12 rounded-xl bg-transparent hover:bg-blue-900/40 border-2 border-blue-600 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    -
-                  </button>
-
-                  <div className="min-w-[80px] h-14 bg-[#001f47] border-2 border-amber-400 focus-within:border-amber-300 focus-within:ring-2 focus-within:ring-amber-400/40 rounded-2xl flex flex-col items-center justify-center shadow-lg shadow-amber-500/10 px-2 transition">
-                    <input
-                      type="number"
-                      min={1}
-                      max={Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10)}
-                      value={tieVacancies}
-                      onChange={(e) => {
-                        const val = parseInt(e.target.value, 10);
-                        if (!isNaN(val)) {
-                          const maxLimit = Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10);
-                          setTieVacancies(Math.max(1, Math.min(maxLimit, val)));
-                        }
-                      }}
-                      className="w-full text-center bg-transparent text-2xl sm:text-3xl font-black font-mono text-amber-300 outline-none p-0 leading-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none cursor-text"
-                    />
-                    <span className="text-[9px] font-bold text-amber-200/90 uppercase pointer-events-none -mt-0.5 select-none">
-                      {tieVacancies === 1 ? 'Vaga' : 'Vagas'}
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const maxLimit = Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10);
-                      setTieVacancies(Math.min(maxLimit, tieVacancies + 1));
-                    }}
-                    title="Aumentar vagas em disputa"
-                    className="w-12 h-12 rounded-xl bg-transparent hover:bg-blue-900/40 border-2 border-blue-600 hover:border-amber-400 disabled:opacity-30 disabled:pointer-events-none text-amber-300 font-black text-2xl flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer shadow-md select-none"
-                  >
-                    +
-                  </button>
-                </div>
-
-                {/* Slider Elegante e Intuitivo */}
-                <div className="flex-1 min-w-[220px] max-w-sm flex flex-col gap-1.5 px-2">
-                  <div className="flex justify-between text-[11px] font-bold text-blue-200">
-                    <span>1 vaga</span>
-                    <span className="text-amber-300 flex items-center gap-1 font-mono">
-                      <span>Deslize para regular:</span>
-                      <strong className="text-white bg-blue-950 px-1.5 py-0.2 rounded border border-blue-800">
-                        {tieVacancies}
-                      </strong>
-                    </span>
-                    <span>
-                      {Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10)} vagas
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min={1}
-                    max={Math.max(selectedTieCandidateIds.length > 1 ? selectedTieCandidateIds.length - 1 : 1, 10)}
-                    value={tieVacancies}
-                    onChange={(e) => setTieVacancies(Number(e.target.value))}
-                    className="w-full h-3.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-700 hover:border-amber-400 transition"
-                  />
-                </div>
-
-                {/* Botão de Disparo do Desempate (2.5x maior, alinhado e destacado) */}
-                <button
-                  onClick={handleStartTieBreak}
-                  disabled={selectedTieCandidateIds.length < 2}
-                  className="h-14 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 disabled:pointer-events-none text-blue-950 font-black text-xs sm:text-sm rounded-xl shadow-lg shadow-amber-950/40 transition active:scale-95 cursor-pointer flex items-center justify-center gap-2 shrink-0 border border-amber-300/60"
-                >
-                  <Flame className="w-5 h-5 text-blue-950 fill-current animate-pulse" />
-                  <span>Iniciar Rodada de Desempate nos Celulares</span>
-                </button>
-              </div>
-            </div>
-
-            {/* SEÇÃO DOS NOMES / CANDIDATOS EM DISPUTA */}
-            <div className="pt-2">
-              <div className="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-                <p className="text-xs font-bold text-white flex items-center gap-2">
-                  <span>Candidatos Participantes do Desempate:</span>
-                  <span className="px-2.5 py-0.5 rounded-full bg-blue-950 text-amber-300 border border-blue-800 text-[11px] font-mono font-bold">
-                    {selectedTieCandidateIds.length} selecionados
+                  <span className="text-[11px] text-blue-300">
+                    Pressione ESC ou clique fora para recolher
                   </span>
-                </p>
-                <span className="text-[11px] text-blue-300">
-                  Clique nos nomes para selecionar ou desmarcar
-                </span>
-              </div>
+                </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
-                {session.options.map((opt) => {
-                  const isSelected = selectedTieCandidateIds.includes(opt.id);
-                  return (
-                    <div
-                      key={opt.id}
-                      onClick={() => {
-                        if (isSelected) {
-                          setSelectedTieCandidateIds(selectedTieCandidateIds.filter((id) => id !== opt.id));
-                        } else {
-                          setSelectedTieCandidateIds([...selectedTieCandidateIds, opt.id]);
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                  <div className="flex-1">
+                    <label className="text-[11px] font-bold text-amber-300 uppercase tracking-wider block mb-1">
+                      Nome do Evento:
+                    </label>
+                    <input
+                      type="text"
+                      value={eventNameInput}
+                      onChange={(e) => setEventNameInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          handleRenameCurrentEvent();
                         }
                       }}
-                      className={`p-2.5 rounded-xl border-2 cursor-pointer select-none text-[11px] font-bold flex items-center justify-between transition-all duration-150 ${
-                        isSelected
-                          ? 'bg-amber-950/90 border-amber-400 text-amber-200 shadow-md shadow-amber-950/40 scale-[1.02]'
-                          : 'bg-[#07132a] border-blue-900/80 hover:border-blue-700 text-slate-300'
-                      }`}
+                      placeholder="Ex: ESCOLHA DO TESOUREIRO"
+                      className="w-full px-3.5 py-2.5 bg-[#07132a] border-2 border-blue-700 focus:border-amber-400 rounded-xl text-sm sm:text-base font-black text-white uppercase outline-none transition shadow-inner"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 sm:self-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        handleRenameCurrentEvent();
+                        setIsBottomSectionOpen(true);
+                      }}
+                      className="px-4 py-2.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
                     >
-                      <span className="truncate">{opt.name}</span>
-                      <span className="font-mono ml-1.5 text-blue-300 text-[10px] bg-blue-950 px-1.5 py-0.5 rounded border border-blue-800">
-                        {opt.votesCount || 0}v
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Salvar Nome</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleCreateEvent(eventNameInput)}
+                      className="px-4 py-2.5 bg-emerald-600/40 hover:bg-emerald-600/60 border-2 border-emerald-400 text-emerald-100 font-black text-xs uppercase tracking-wider rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center gap-1.5"
+                    >
+                      <FolderPlus className="w-4 h-4" />
+                      <span>Criar Como Novo Evento</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* 4. PERSONALIZAR LAYOUT E CORES DOS CARDS NO PAINEL / TELÃO (DEPOIS DOS NOMES ESCOLHIDOS) */}
+          {(() => {
+            const layout = session.telaoLayout || {};
+            const cols = layout.columns ?? 2;
+            const height = layout.cardHeight ?? 38;
+            const gap = layout.cardGap ?? 8;
+            const winnerColor = layout.winnerColor || '#10b981';
+            const suplenteColor = layout.suplenteColor || '#3b82f6';
+            const suplente2Color = layout.suplente2Color || '#64748b';
+            const unclassifiedColor = layout.unclassifiedColor || '#1e293b';
+
+            const updateLayout = (patch: Partial<typeof layout>) => {
+              saveSession({
+                ...session,
+                telaoLayout: {
+                  columns: cols,
+                  cardHeight: height,
+                  cardGap: gap,
+                  winnerColor,
+                  suplenteColor,
+                  suplente2Color,
+                  unclassifiedColor,
+                  ...patch,
+                },
+              });
+            };
+
+            return (
+              <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-4">
+                {/* Cabeçalho com Botão Rápido de Alternar Layout e Restaurar Padrão */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-blue-900/80">
+                  <div className="flex items-center gap-2.5">
+                    <Sliders className="w-5 h-5 text-amber-400" />
+                    <div>
+                      <h3 className="font-bold text-white text-sm sm:text-base font-sans tracking-tight">
+                        Layout e Cores dos Cards no Painel (Telão)
+                      </h3>
+                      <p className="text-[11px] text-blue-300">
+                        Ajuste em tempo real as colunas, altura, espaçamento e cores dos cards exibidos no Telão
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Botão para mudar rapidamente o layout dos cards (1 Coluna <-> 2 Colunas) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextCols = cols === 2 ? 1 : 2;
+                        updateLayout({ columns: nextCols });
+                        showNotification('success', `Layout alterado para ${nextCols} ${nextCols === 1 ? 'Coluna' : 'Colunas'} no Telão!`);
+                      }}
+                      className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 border-2 border-amber-400 text-amber-300 hover:text-amber-200 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition active:scale-95 cursor-pointer shadow"
+                    >
+                      <Tv className="w-4 h-4" />
+                      <span>Mudar Layout: {cols === 2 ? '2 Colunas (Ativo)' : '1 Coluna (Ativo)'}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        saveSession({
+                          ...session,
+                          telaoLayout: {
+                            columns: 2,
+                            cardHeight: 38,
+                            cardGap: 8,
+                            winnerColor: '#10b981',
+                            suplenteColor: '#3b82f6',
+                            suplente2Color: '#64748b',
+                            unclassifiedColor: '#1e293b',
+                          },
+                        });
+                        showNotification('success', 'Layout e cores dos cards restaurados para o padrão!');
+                      }}
+                      className="px-3 py-2 bg-[#07132a] hover:bg-blue-950 border border-blue-700 text-blue-200 hover:text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
+                      title="Voltar tamanho, espaçamento, colunas e cores ao padrão original"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Restaurar Padrão</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* LINHA 1: COLUNAS (1 OU 2), ALTURA DOS CARDS E ESPAÇO ENTRE ELES */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* 1. QUANTIDADE DE COLUNAS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="mb-2.5">
+                      <span className="text-xs font-black text-white uppercase tracking-wide block">
+                        Disposição das Colunas
+                      </span>
+                      <span className="text-[11px] text-blue-300">
+                        Escolha se os cards ficarão em 1 ou 2 colunas
                       </span>
                     </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          )}
 
-          {/* Ações de Gestão */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <h4 className="font-bold text-white text-sm">Zerar Apuração / Reiniciar Votação</h4>
-              <p className="text-[11px] text-blue-200">
-                Zera a apuração dos votos mantendo <strong>intactos todos os nomes cadastrados na tela</strong> e libera os celulares para votar novamente.
-              </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ columns: 1 })}
+                        className={`py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition cursor-pointer active:scale-95 flex flex-col items-center gap-1 ${
+                          cols === 1
+                            ? 'bg-amber-500 text-blue-950 border-amber-300 shadow-lg'
+                            : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600'
+                        }`}
+                      >
+                        <div className="w-8 flex flex-col gap-0.5">
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                        </div>
+                        <span>1 Coluna</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ columns: 2 })}
+                        className={`py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition cursor-pointer active:scale-95 flex flex-col items-center gap-1 ${
+                          cols === 2
+                            ? 'bg-amber-500 text-blue-950 border-amber-300 shadow-lg'
+                            : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600'
+                        }`}
+                      >
+                        <div className="w-8 grid grid-cols-2 gap-0.5">
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
+                        </div>
+                        <span>2 Colunas</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 2. ALTURA DOS CARDS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="text-xs font-black text-white uppercase tracking-wide block">
+                          Altura dos Cards
+                        </span>
+                        <span className="text-[11px] text-blue-300">
+                          Aumentar ou diminuir altura
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg bg-[#001f47] border border-amber-400/60 text-amber-300 font-mono font-black text-xs">
+                        {height}px
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardHeight: Math.max(26, height - 4) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="range"
+                        min={26}
+                        max={76}
+                        value={height}
+                        onChange={(e) => updateLayout({ cardHeight: Number(e.target.value) })}
+                        className="flex-1 h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardHeight: Math.min(76, height + 4) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-blue-300 font-mono">
+                      <span>Compacto (26px)</span>
+                      <span>Padrão (38px)</span>
+                      <span>Grande (76px)</span>
+                    </div>
+                  </div>
+
+                  {/* 3. ESPAÇO ENTRE OS CARDS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
+                    <div className="flex items-center justify-between mb-2">
+                      <div>
+                        <span className="text-xs font-black text-white uppercase tracking-wide block">
+                          Espaço entre os Cards
+                        </span>
+                        <span className="text-[11px] text-blue-300">
+                          Distância vertical e horizontal
+                        </span>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-lg bg-[#001f47] border border-amber-400/60 text-amber-300 font-mono font-black text-xs">
+                        {gap}px
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2 mb-2">
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardGap: Math.max(2, gap - 2) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="range"
+                        min={2}
+                        max={28}
+                        value={gap}
+                        onChange={(e) => updateLayout({ cardGap: Number(e.target.value) })}
+                        className="flex-1 h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => updateLayout({ cardGap: Math.min(28, gap + 2) })}
+                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    <div className="flex justify-between text-[10px] text-blue-300 font-mono">
+                      <span>Junto (2px)</span>
+                      <span>Padrão (8px)</span>
+                      <span>Espaçado (28px)</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* LINHA 2: CORES DOS CARDS (VENCEDORES, 1º SUPLENTES, 2º SUPLENTES E NÃO CLASSIFICADOS) */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {/* COR VENCEDORES / TITULARES */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: Vencedores
+                      </span>
+                      <input
+                        type="color"
+                        value={winnerColor}
+                        onChange={(e) => updateLayout({ winnerColor: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para os Vencedores (Titulares)"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#10b981', '#059669', '#22c55e', '#eab308', '#3b82f6', '#8b5cf6', '#06b6d4', '#f43f5e'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ winnerColor: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            winnerColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COR 1º SUPLENTES */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: 1º Suplentes
+                      </span>
+                      <input
+                        type="color"
+                        value={suplenteColor}
+                        onChange={(e) => updateLayout({ suplenteColor: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para 1º Suplentes"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#3b82f6', '#2563eb', '#06b6d4', '#6366f1', '#f59e0b', '#a855f7', '#14b8a6', '#ec4899'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ suplenteColor: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            suplenteColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COR 2º SUPLENTES */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: 2º Suplentes
+                      </span>
+                      <input
+                        type="color"
+                        value={suplente2Color}
+                        onChange={(e) => updateLayout({ suplente2Color: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para 2º Suplentes"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#64748b', '#475569', '#0d9488', '#d97706', '#7c3aed', '#0284c7', '#9333ea', '#e11d48'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ suplente2Color: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            suplente2Color.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* COR NÃO CLASSIFICADOS */}
+                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-black text-white uppercase tracking-wide">
+                        Cor: Não Classif.
+                      </span>
+                      <input
+                        type="color"
+                        value={unclassifiedColor}
+                        onChange={(e) => updateLayout({ unclassifiedColor: e.target.value })}
+                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
+                        title="Escolher cor personalizada para Não Classificados"
+                      />
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['#1e293b', '#0f172a', '#334155', '#1f2937', '#1e1b4b', '#172554', '#27272a', '#3f3f46'].map((preset) => (
+                        <button
+                          key={preset}
+                          type="button"
+                          onClick={() => updateLayout({ unclassifiedColor: preset })}
+                          style={{ backgroundColor: preset }}
+                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
+                            unclassifiedColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
+                          }`}
+                          title={`Cor ${preset}`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
             </div>
-            <button
-              onClick={handleResetVotes}
-              className="px-3 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 transition active:scale-95 cursor-pointer shadow"
-            >
-              <RotateCcw className="w-3.5 h-3.5" />
-              Reiniciar com os Nomes Atuais
-            </button>
-          </div>
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ABA: NOMES / CANDIDATOS (ABRE AO CLICAR NO BOTÃO DO EVENTO NO CABEÇALHO) */}
       {activeTab === 'candidates' && isBottomSectionOpen && (
@@ -1840,362 +1571,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             )}
           </div>
 
-          {/* 4. PERSONALIZAR LAYOUT E CORES DOS CARDS NO PAINEL / TELÃO (DEPOIS DOS NOMES ESCOLHIDOS) */}
-          {(() => {
-            const layout = session.telaoLayout || {};
-            const cols = layout.columns ?? 2;
-            const height = layout.cardHeight ?? 38;
-            const gap = layout.cardGap ?? 8;
-            const winnerColor = layout.winnerColor || '#10b981';
-            const suplenteColor = layout.suplenteColor || '#3b82f6';
-            const suplente2Color = layout.suplente2Color || '#64748b';
-            const unclassifiedColor = layout.unclassifiedColor || '#1e293b';
-
-            const updateLayout = (patch: Partial<typeof layout>) => {
-              saveSession({
-                ...session,
-                telaoLayout: {
-                  columns: cols,
-                  cardHeight: height,
-                  cardGap: gap,
-                  winnerColor,
-                  suplenteColor,
-                  suplente2Color,
-                  unclassifiedColor,
-                  ...patch,
-                },
-              });
-            };
-
-            return (
-              <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg space-y-4">
-                {/* Cabeçalho com Botão Rápido de Alternar Layout e Restaurar Padrão */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-blue-900/80">
-                  <div className="flex items-center gap-2.5">
-                    <Sliders className="w-5 h-5 text-amber-400" />
-                    <div>
-                      <h3 className="font-bold text-white text-sm sm:text-base font-sans tracking-tight">
-                        Layout e Cores dos Cards no Painel (Telão)
-                      </h3>
-                      <p className="text-[11px] text-blue-300">
-                        Ajuste em tempo real as colunas, altura, espaçamento e cores dos cards exibidos no Telão
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Botão para mudar rapidamente o layout dos cards (1 Coluna <-> 2 Colunas) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const nextCols = cols === 2 ? 1 : 2;
-                        updateLayout({ columns: nextCols });
-                        showNotification('success', `Layout alterado para ${nextCols} ${nextCols === 1 ? 'Coluna' : 'Colunas'} no Telão!`);
-                      }}
-                      className="px-3.5 py-2 bg-amber-500/20 hover:bg-amber-500/30 border-2 border-amber-400 text-amber-300 hover:text-amber-200 rounded-xl font-black text-xs uppercase tracking-wider flex items-center gap-2 transition active:scale-95 cursor-pointer shadow"
-                    >
-                      <Tv className="w-4 h-4" />
-                      <span>Mudar Layout: {cols === 2 ? '2 Colunas (Ativo)' : '1 Coluna (Ativo)'}</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        saveSession({
-                          ...session,
-                          telaoLayout: {
-                            columns: 2,
-                            cardHeight: 38,
-                            cardGap: 8,
-                            winnerColor: '#10b981',
-                            suplenteColor: '#3b82f6',
-                            suplente2Color: '#64748b',
-                            unclassifiedColor: '#1e293b',
-                          },
-                        });
-                        showNotification('success', 'Layout e cores dos cards restaurados para o padrão!');
-                      }}
-                      className="px-3 py-2 bg-[#07132a] hover:bg-blue-950 border border-blue-700 text-blue-200 hover:text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition active:scale-95 cursor-pointer"
-                      title="Voltar tamanho, espaçamento, colunas e cores ao padrão original"
-                    >
-                      <RotateCcw className="w-3.5 h-3.5" />
-                      <span>Restaurar Padrão</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* LINHA 1: COLUNAS (1 OU 2), ALTURA DOS CARDS E ESPAÇO ENTRE ELES */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* 1. QUANTIDADE DE COLUNAS */}
-                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="mb-2.5">
-                      <span className="text-xs font-black text-white uppercase tracking-wide block">
-                        Disposição das Colunas
-                      </span>
-                      <span className="text-[11px] text-blue-300">
-                        Escolha se os cards ficarão em 1 ou 2 colunas
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => updateLayout({ columns: 1 })}
-                        className={`py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition cursor-pointer active:scale-95 flex flex-col items-center gap-1 ${
-                          cols === 1
-                            ? 'bg-amber-500 text-blue-950 border-amber-300 shadow-lg'
-                            : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600'
-                        }`}
-                      >
-                        <div className="w-8 flex flex-col gap-0.5">
-                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
-                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
-                        </div>
-                        <span>1 Coluna</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => updateLayout({ columns: 2 })}
-                        className={`py-2.5 px-3 rounded-xl font-black text-xs uppercase tracking-wider border-2 transition cursor-pointer active:scale-95 flex flex-col items-center gap-1 ${
-                          cols === 2
-                            ? 'bg-amber-500 text-blue-950 border-amber-300 shadow-lg'
-                            : 'bg-[#001f47] text-slate-300 border-blue-800 hover:border-blue-600'
-                        }`}
-                      >
-                        <div className="w-8 grid grid-cols-2 gap-0.5">
-                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
-                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
-                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
-                          <span className="h-1.5 w-full rounded-sm bg-current opacity-85" />
-                        </div>
-                        <span>2 Colunas</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* 2. ALTURA DOS CARDS */}
-                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <span className="text-xs font-black text-white uppercase tracking-wide block">
-                          Altura dos Cards
-                        </span>
-                        <span className="text-[11px] text-blue-300">
-                          Aumentar ou diminuir altura
-                        </span>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-lg bg-[#001f47] border border-amber-400/60 text-amber-300 font-mono font-black text-xs">
-                        {height}px
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => updateLayout({ cardHeight: Math.max(26, height - 4) })}
-                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="range"
-                        min={26}
-                        max={76}
-                        value={height}
-                        onChange={(e) => updateLayout({ cardHeight: Number(e.target.value) })}
-                        className="flex-1 h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => updateLayout({ cardHeight: Math.min(76, height + 4) })}
-                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <div className="flex justify-between text-[10px] text-blue-300 font-mono">
-                      <span>Compacto (26px)</span>
-                      <span>Padrão (38px)</span>
-                      <span>Grande (76px)</span>
-                    </div>
-                  </div>
-
-                  {/* 3. ESPAÇO ENTRE OS CARDS */}
-                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3.5 flex flex-col justify-between">
-                    <div className="flex items-center justify-between mb-2">
-                      <div>
-                        <span className="text-xs font-black text-white uppercase tracking-wide block">
-                          Espaço entre os Cards
-                        </span>
-                        <span className="text-[11px] text-blue-300">
-                          Distância vertical e horizontal
-                        </span>
-                      </div>
-                      <span className="px-2.5 py-1 rounded-lg bg-[#001f47] border border-amber-400/60 text-amber-300 font-mono font-black text-xs">
-                        {gap}px
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mb-2">
-                      <button
-                        type="button"
-                        onClick={() => updateLayout({ cardGap: Math.max(2, gap - 2) })}
-                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
-                      >
-                        -
-                      </button>
-                      <input
-                        type="range"
-                        min={2}
-                        max={28}
-                        value={gap}
-                        onChange={(e) => updateLayout({ cardGap: Number(e.target.value) })}
-                        className="flex-1 h-2.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => updateLayout({ cardGap: Math.min(28, gap + 2) })}
-                        className="w-9 h-9 rounded-lg bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-lg flex items-center justify-center cursor-pointer active:scale-90"
-                      >
-                        +
-                      </button>
-                    </div>
-
-                    <div className="flex justify-between text-[10px] text-blue-300 font-mono">
-                      <span>Junto (2px)</span>
-                      <span>Padrão (8px)</span>
-                      <span>Espaçado (28px)</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* LINHA 2: CORES DOS CARDS (VENCEDORES, 1º SUPLENTES, 2º SUPLENTES E NÃO CLASSIFICADOS) */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                  {/* COR VENCEDORES / TITULARES */}
-                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-white uppercase tracking-wide">
-                        Cor: Vencedores
-                      </span>
-                      <input
-                        type="color"
-                        value={winnerColor}
-                        onChange={(e) => updateLayout({ winnerColor: e.target.value })}
-                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
-                        title="Escolher cor personalizada para os Vencedores (Titulares)"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['#10b981', '#059669', '#22c55e', '#eab308', '#3b82f6', '#8b5cf6', '#06b6d4', '#f43f5e'].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => updateLayout({ winnerColor: preset })}
-                          style={{ backgroundColor: preset }}
-                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
-                            winnerColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
-                          }`}
-                          title={`Cor ${preset}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* COR 1º SUPLENTES */}
-                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-white uppercase tracking-wide">
-                        Cor: 1º Suplentes
-                      </span>
-                      <input
-                        type="color"
-                        value={suplenteColor}
-                        onChange={(e) => updateLayout({ suplenteColor: e.target.value })}
-                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
-                        title="Escolher cor personalizada para 1º Suplentes"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['#3b82f6', '#2563eb', '#06b6d4', '#6366f1', '#f59e0b', '#a855f7', '#14b8a6', '#ec4899'].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => updateLayout({ suplenteColor: preset })}
-                          style={{ backgroundColor: preset }}
-                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
-                            suplenteColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
-                          }`}
-                          title={`Cor ${preset}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* COR 2º SUPLENTES */}
-                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-white uppercase tracking-wide">
-                        Cor: 2º Suplentes
-                      </span>
-                      <input
-                        type="color"
-                        value={suplente2Color}
-                        onChange={(e) => updateLayout({ suplente2Color: e.target.value })}
-                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
-                        title="Escolher cor personalizada para 2º Suplentes"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['#64748b', '#475569', '#0d9488', '#d97706', '#7c3aed', '#0284c7', '#9333ea', '#e11d48'].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => updateLayout({ suplente2Color: preset })}
-                          style={{ backgroundColor: preset }}
-                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
-                            suplente2Color.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
-                          }`}
-                          title={`Cor ${preset}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* COR NÃO CLASSIFICADOS */}
-                  <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-xl p-3 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-black text-white uppercase tracking-wide">
-                        Cor: Não Classif.
-                      </span>
-                      <input
-                        type="color"
-                        value={unclassifiedColor}
-                        onChange={(e) => updateLayout({ unclassifiedColor: e.target.value })}
-                        className="w-8 h-7 rounded cursor-pointer bg-transparent border border-white/30"
-                        title="Escolher cor personalizada para Não Classificados"
-                      />
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['#1e293b', '#0f172a', '#334155', '#1f2937', '#1e1b4b', '#172554', '#27272a', '#3f3f46'].map((preset) => (
-                        <button
-                          key={preset}
-                          type="button"
-                          onClick={() => updateLayout({ unclassifiedColor: preset })}
-                          style={{ backgroundColor: preset }}
-                          className={`w-6 h-6 rounded-full cursor-pointer transition transform active:scale-90 ${
-                            unclassifiedColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-80 hover:opacity-100'
-                          }`}
-                          title={`Cor ${preset}`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
         </div>
       )}
 
