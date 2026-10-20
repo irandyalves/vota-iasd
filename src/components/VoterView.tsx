@@ -199,19 +199,15 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             <CheckCircle2 className="w-14 h-14 text-emerald-400" />
           </div>
 
-          <span className="inline-block px-3 py-1 rounded-full text-xs font-semibold bg-emerald-950/80 text-emerald-300 border border-emerald-700/60 mb-3">
-            Urna Eletrônica • FIM
-          </span>
-
-          <h2 className="text-2xl font-bold text-white mb-2 font-serif">
-            Voto Computado com Sucesso!
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-serif uppercase tracking-wide">
+            SEU VOTO FOI COMPUTADO!
           </h2>
 
           <p className="text-sm text-blue-200 mb-6 leading-relaxed">
             Seu voto foi registrado com sigilo e segurança. Seu aparelho foi travado para garantir a legitimidade da apuração.
           </p>
 
-          <div className="bg-[#07132a]/80 rounded-2xl p-4 border border-blue-900/80 text-left mb-6 space-y-2">
+          <div className="bg-[#07132a]/80 rounded-2xl p-4 border border-blue-900/80 text-left space-y-2">
             <div className="flex items-center justify-between text-xs text-blue-300">
               <span>Pauta:</span>
               <span className="font-semibold text-white truncate max-w-[200px]">{session.title}</span>
@@ -223,11 +219,6 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                 Voto Registrado
               </span>
             </div>
-          </div>
-
-          <div className="flex items-center justify-center gap-2 text-xs text-blue-300/60">
-            <Lock className="w-4 h-4 text-emerald-400" />
-            Acompanhe o resultado pelo telão da igreja.
           </div>
         </motion.div>
       </div>
