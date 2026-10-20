@@ -1,0 +1,18 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --iasd-blue: #002f6c;
+    --iasd-blue-dark: #001a3d;
+    --iasd-gold: #d4af37;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background-color: #0b132b;
+    color: #f8fafc;
+    -webkit-font-smoothing: antialiased;
+  }
+}

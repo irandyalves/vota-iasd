@@ -1,0 +1,19 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Leitura aberta da sessão (status, candidatos, pauta)
+    match /sessions/{sessionId} {
+      allow read: if true;
+      allow write: if true; // No ambiente de produção, pode ser restrito ao admin autenticado
+      
+      // Cédula individual por votante (evita que um usuário sobrescreva o voto de outro)
+      match /ballots/{ballotId} {
+        allow read: if true;
+        allow create: if true;
+        allow update, delete: if false; // Voto computado não pode ser alterado nem apagado
+      }
+    }
+    
+  }
+}
