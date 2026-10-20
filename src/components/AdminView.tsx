@@ -16,9 +16,12 @@ import {
   Camera,
   CheckCircle,
   Flame,
+  FileSpreadsheet,
+  FileText,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
+import { parseImportFile } from '../utils/fileImporter';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -38,10 +41,69 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [tieVacancies, setTieVacancies] = useState(1);
 
   const importFileRef = useRef<HTMLInputElement>(null);
+  const fileUploadReplaceRef = useRef<HTMLInputElement>(null);
+  const fileUploadAppendRef = useRef<HTMLInputElement>(null);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
+  };
+
+  // Processador de Arquivos (.TXT, .CSV, .XLS, .XLSX)
+  const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>, mode: 'append' | 'replace') => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await parseImportFile(file);
+      if (result.options.length === 0) {
+        showNotification('error', 'Nenhum item válido foi encontrado no arquivo.');
+        return;
+      }
+
+      if (mode === 'replace') {
+        saveSession({
+          ...session,
+          options: result.options,
+        });
+        showNotification('success', `Lista substituída por ${result.count} itens de "${result.fileName}"!`);
+      } else {
+        saveSession({
+          ...session,
+          options: [...session.options, ...result.options],
+        });
+        showNotification('success', `Adicionados ${result.count} novos itens de "${result.fileName}"!`);
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Erro ao processar arquivo.';
+      showNotification('error', msg);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  // Download do Modelo de Exemplo (Compatível com Excel e Bloco de Notas)
+  const handleDownloadSampleTemplate = () => {
+    const sampleContent =
+`Nome / Tema / Brinde,Subtítulo / Descrição,Foto URL
+Carlos Eduardo Silva,Ministério Diaconal,
+Marcos Vinícius Santos,Sonoplastia e Mídia,
+Débora Rodrigues Lima,Líder de Pequenos Grupos,
+Tema 1: Conectados com Deus,Acampamento de Jovens 2026,
+Tema 2: Servir com Propósito,Semana de Oração,
+Bíblia de Estudo Luxo,Brinde de Boas-Vindas 01,
+Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
+
+    const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'modelo_importacao_vota_iasd.csv';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    showNotification('success', 'Modelo de exemplo (.CSV compatível com Excel) baixado!');
   };
 
   // Detector Automático de Empate no Ponto de Corte
@@ -593,10 +655,100 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         </div>
       )}
 
-      {/* ABA 2: CANDIDATOS (Voz, Lote, Fotos) */}
+      {/* ABA 2: CANDIDATOS / TEMAS / BRINDES (Arquivos .XLS, .CSV, .TXT, Voz, Lote) */}
       {activeTab === 'candidates' && (
         <div className="space-y-6">
-          {/* Adicionar por Voz ou Lote */}
+          {/* Card Especial de Importação por Arquivos (.XLS, .XLSX, .CSV, .TXT) */}
+          <div className="bg-[#001f47] border-2 border-[#d4af37]/60 rounded-3xl p-6 shadow-2xl relative overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border border-[#d4af37] flex items-center justify-center text-[#d4af37]">
+                  <FileSpreadsheet className="w-7 h-7" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-lg font-serif flex items-center gap-2">
+                    Importar Arquivos (.XLS, .XLSX, .CSV, .TXT)
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-600/50 uppercase font-sans">
+                      Excel • Bloco de Notas • Planilhas
+                    </span>
+                  </h3>
+                  <p className="text-xs text-blue-200">
+                    Importe listas de <strong>Nomes, Temas de Votação, Brindes de Sorteio ou Enquetes</strong> direto do seu computador.
+                  </p>
+                </div>
+              </div>
+
+              {/* Botão Baixar Modelo */}
+              <button
+                type="button"
+                onClick={handleDownloadSampleTemplate}
+                className="px-4 py-2 bg-blue-900/80 hover:bg-blue-800 text-blue-200 hover:text-white border border-blue-700/60 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer active:scale-95 shadow-sm"
+              >
+                <Download className="w-4 h-4 text-amber-400" />
+                Baixar Planilha Modelo (.CSV / Excel)
+              </button>
+            </div>
+
+            {/* Inputs de Upload Ocultos com Gatilhos Visuais */}
+            <input
+              ref={fileUploadAppendRef}
+              type="file"
+              accept=".txt,.csv,.xls,.xlsx"
+              className="hidden"
+              onChange={(e) => handleFileImport(e, 'append')}
+            />
+            <input
+              ref={fileUploadReplaceRef}
+              type="file"
+              accept=".txt,.csv,.xls,.xlsx"
+              className="hidden"
+              onChange={(e) => handleFileImport(e, 'replace')}
+            />
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <button
+                type="button"
+                onClick={() => fileUploadAppendRef.current?.click()}
+                className="p-4 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-blue-600/80 hover:border-[#d4af37] rounded-2xl flex items-center gap-4 text-left transition cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-blue-900/60 flex items-center justify-center text-blue-300 group-hover:text-amber-300 shrink-0">
+                  <Plus className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm group-hover:text-amber-300">
+                    Adicionar aos Itens Existentes
+                  </h4>
+                  <p className="text-[11px] text-blue-300/80">
+                    Mantém a lista atual e acrescenta os itens do arquivo .xls, .xlsx, .csv ou .txt
+                  </p>
+                </div>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Atenção: isso substituirá todos os candidatos/temas atuais pelos do arquivo. Deseja continuar?')) {
+                    fileUploadReplaceRef.current?.click();
+                  }
+                }}
+                className="p-4 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-amber-600/80 hover:border-amber-400 rounded-2xl flex items-center gap-4 text-left transition cursor-pointer group"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-950/60 flex items-center justify-center text-amber-400 shrink-0">
+                  <Upload className="w-6 h-6" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-white text-sm group-hover:text-amber-300">
+                    Substituir Lista Completa
+                  </h4>
+                  <p className="text-[11px] text-blue-300/80">
+                    Limpa a lista atual e preenche com os itens da nova planilha
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Adicionar por Voz ou Texto Colado */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Adição por Voz (Microfone) */}
             <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl flex flex-col justify-between">
@@ -604,11 +756,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 <div className="flex items-center gap-2 mb-2">
                   <Mic className="w-5 h-5 text-[#d4af37]" />
                   <h3 className="font-bold text-white text-base font-serif">
-                    Adicionar Candidatos por Voz
+                    Adicionar Itens por Voz
                   </h3>
                 </div>
                 <p className="text-xs text-blue-200 mb-4 leading-relaxed">
-                  Clique no microfone e fale os nomes em sequência (ex: <em>"Carlos Eduardo, Marcos Santos, Débora Lima"</em>).
+                  Clique no microfone e fale nomes, temas ou brindes em sequência (ex: <em>"Carlos Eduardo, Tema 1 Conectados, Bíblia de Estudo"</em>).
                 </p>
               </div>
 
@@ -625,7 +777,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   {isListening ? <MicOff className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
                 </button>
                 <span className="block text-xs font-semibold text-blue-300 mt-2">
-                  {isListening ? 'Ouvindo... Fale os nomes agora!' : 'Clique para falar'}
+                  {isListening ? 'Ouvindo... Fale agora!' : 'Clique para falar'}
                 </span>
                 {speechTranscript && (
                   <p className="text-xs text-amber-300 mt-2 italic font-mono">
@@ -637,17 +789,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
             {/* Importação em Lote (Texto) */}
             <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
-              <h3 className="font-bold text-white text-base font-serif mb-1">
-                Colar Lista de Nomes (WhatsApp / Excel)
-              </h3>
+              <div className="flex items-center gap-2 mb-1">
+                <FileText className="w-5 h-5 text-blue-300" />
+                <h3 className="font-bold text-white text-base font-serif">
+                  Colar Lista de Texto (WhatsApp / Bloco)
+                </h3>
+              </div>
               <p className="text-xs text-blue-200 mb-3">
-                Cole vários nomes, um por linha (opcional: Nome - Cargo):
+                Cole itens, um por linha (opcional: Nome - Descrição/Cargo):
               </p>
               <textarea
                 rows={4}
                 value={bulkText}
                 onChange={(e) => setBulkText(e.target.value)}
-                placeholder={"Pastor Carlos - Ministério Pastoral\nMarcos Vinícius - Diácono\nJuliana Castro - Escola Sabatina"}
+                placeholder={"Carlos Eduardo - Ministério Diaconal\nTema 1: Conectados com Cristo\nBíblia Missionária - Brinde de Sorteio"}
                 className="w-full p-3 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white placeholder-slate-500 font-mono outline-none focus:border-[#d4af37] mb-3"
               />
               <button
@@ -655,7 +810,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 onClick={handleBulkImport}
                 className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow transition"
               >
-                Importar Lista de Nomes
+                Importar Lista Colada
               </button>
             </div>
           </div>
@@ -663,19 +818,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           {/* Adicionar Individualmente */}
           <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
             <h3 className="font-bold text-white text-base font-serif mb-3">
-              Adicionar Candidato Individual
+              Adicionar Item Individualmente
             </h3>
             <form onSubmit={handleAddCandidate} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input
                 type="text"
-                placeholder="Nome completo (Ex: João da Silva)"
+                placeholder="Nome / Tema / Brinde (Ex: Carlos Silva ou Tema 1)"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 className="px-3.5 py-2.5 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white outline-none focus:border-[#d4af37]"
               />
               <input
                 type="text"
-                placeholder="Subtítulo / Ministério (Ex: Membro há 5 anos)"
+                placeholder="Subtítulo / Descrição (Ex: Diácono ou Sorteio #1)"
                 value={newSubtitle}
                 onChange={(e) => setNewSubtitle(e.target.value)}
                 className="px-3.5 py-2.5 bg-[#07132a] border border-blue-700 rounded-xl text-xs text-white outline-none focus:border-[#d4af37]"
@@ -685,15 +840,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 className="py-2.5 bg-[#d4af37] hover:bg-amber-400 text-blue-950 font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5"
               >
                 <Plus className="w-4 h-4" />
-                Adicionar Candidato
+                Adicionar Item
               </button>
             </form>
           </div>
 
-          {/* Lista de Candidatos Cadastrados */}
+          {/* Lista de Itens Cadastrados */}
           <div className="bg-[#001f47] border border-blue-800 rounded-3xl p-6 shadow-xl">
             <h3 className="font-bold text-white text-base font-serif mb-4 flex items-center justify-between">
-              <span>Candidatos Atuais ({session.options.length})</span>
+              <span>Itens Cadastrados ({session.options.length})</span>
               <span className="text-xs font-normal text-blue-300">Toque na câmera para carregar foto</span>
             </h3>
 
