@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Play } from 'lucide-react';
+import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Vote } from 'lucide-react';
 import { IasdLogo } from './IasdLogo';
 import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 import type { VotingSession } from '../types';
@@ -123,7 +123,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-3 min-h-[65px] flex items-center w-full">
+    <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-4 min-h-[76px] flex items-center w-full">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 items-center gap-3">
         {/* ESQUERDA: Logo + VOTA IASD + SENHA sem borda */}
         <div className="flex items-center gap-2.5 justify-self-start">
@@ -192,7 +192,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* CENTRO: BOTÃO NOVA VOTAÇÃO / APURAÇÃO COM RODINHA GIRANDO */}
+        {/* CENTRO: BOTÃO NOVA VOTAÇÃO / APURAÇÃO MAIS ALTO E COM ÍCONE DE VOTAR */}
         <div className="flex items-center justify-center justify-self-center">
           <button
             type="button"
@@ -204,7 +204,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? 'Votação em andamento (clique para abrir a Apuração)'
                 : 'Iniciar Nova Votação mantendo os nomes em ordem A-Z'
             }
-            className={`px-5 py-2 rounded-xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 ${
+            className={`px-6 py-3 min-h-[46px] rounded-xl border-2 font-black text-xs sm:text-sm uppercase tracking-wider transition-all duration-200 active:scale-95 cursor-pointer flex items-center justify-center gap-2.5 ${
               showApuracaoCaption
                 ? 'bg-amber-500/30 hover:bg-amber-500/45 border-amber-300 text-amber-200 shadow-[0_0_18px_rgba(251,191,36,0.45)] hover:shadow-[0_0_24px_rgba(251,191,36,0.65)]'
                 : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_22px_rgba(52,211,153,0.55)]'
@@ -236,7 +236,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 />
               </svg>
             ) : (
-              <Play className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 fill-current" />
+              <Vote className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" />
             )}
             <span>{showApuracaoCaption ? 'APURAÇÃO' : 'NOVA VOTAÇÃO'}</span>
           </button>
