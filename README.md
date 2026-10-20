@@ -4,6 +4,15 @@ Sistema de votação em tempo real desenvolvido sob medida para assembleias e co
 
 ---
 
+## 🌐 Links Online em Produção (No Ar!)
+
+* 📱 **Celular do Votante**: [https://vota-iasd-central.web.app](https://vota-iasd-central.web.app)
+* 🖥️ **Telão de Projeção (TV / Projetor)**: [https://vota-iasd-central.web.app/?view=telao](https://vota-iasd-central.web.app/?view=telao)
+* 🎛️ **Painel do Administrador (Líder)**: [https://vota-iasd-central.web.app/?view=admin](https://vota-iasd-central.web.app/?view=admin)
+* 📦 **Repositório GitHub**: [https://github.com/irandyalves/vota-iasd](https://github.com/irandyalves/vota-iasd)
+
+---
+
 ## ✨ Principais Funcionalidades
 
 1. **📱 Celular do Votante (PWA)**:
