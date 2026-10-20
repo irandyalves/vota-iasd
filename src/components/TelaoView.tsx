@@ -8,6 +8,7 @@ import {
   Maximize,
   Minimize,
   QrCode as QrIcon,
+  Users,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { IasdLogo } from './IasdLogo';
@@ -198,7 +199,67 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
           {/* COLUNA DA DIREITA: LISTA DE CANDIDATOS / CORRIDA DE BARRAS OU VOTO SECRETO */}
           <div className={`${showQrCode ? 'md:col-span-8 lg:col-span-9 xl:col-span-9' : 'w-full'}`}>
-            {!session.showResultsLive && session.status === 'VOTING' ? (
+            {session.telaoMode === 'names' ? (
+              /* MODO: NOMES PARA ESCOLHA (PRINT 2 REDIMENSIONADO PARA O TELÃO) */
+              <div className="bg-[#001f47]/90 border border-blue-700/70 rounded-2xl p-4 sm:p-5 shadow-2xl">
+                <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-blue-800/80">
+                  <div className="flex items-center gap-2.5">
+                    <Users className="w-5 h-5 text-amber-400" />
+                    <h3 className="font-extrabold text-base sm:text-lg lg:text-xl text-white font-sans tracking-tight">
+                      NOMES PARA ESCOLHA ({optionsToDisplay.length})
+                    </h3>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-3.5 py-1 rounded-full bg-blue-900 border border-blue-600/80 text-white font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 shadow">
+                      <span>ESCOLHA</span>
+                      <span className="text-amber-400 font-black">
+                        {session.maxVotesPerVoter}
+                      </span>
+                      <span>{session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {optionsToDisplay.length === 0 ? (
+                  <div className="p-12 text-center text-slate-300 text-sm border-2 border-dashed border-blue-800 rounded-2xl bg-[#07132a]/60">
+                    Aguardando cadastro dos nomes no painel...
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                    <AnimatePresence>
+                      {optionsToDisplay.map((option) => (
+                        <motion.div
+                          key={option.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                          className="px-3.5 py-2.5 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-blue-700/80 rounded-xl flex items-center gap-3 shadow-lg transition"
+                        >
+                          {/* Inicial do Nome (Destaque Azul e Amarelo como no Print 2) */}
+                          <div className="w-9 h-9 rounded-lg bg-blue-900 border border-blue-400/50 flex items-center justify-center text-amber-300 font-black text-sm shrink-0 select-none shadow-inner">
+                            {option.name
+                              .split(' ')
+                              .map((n) => n[0])
+                              .slice(0, 2)
+                              .join('')
+                              .toUpperCase()}
+                          </div>
+
+                          {/* Nome do Candidato em Destaque Maiúsculo */}
+                          <div className="flex-1 min-w-0">
+                            <h4 className="font-extrabold text-xs sm:text-sm lg:text-base text-white uppercase tracking-wide truncate">
+                              {option.name}
+                            </h4>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )}
+              </div>
+            ) : !session.showResultsLive && session.status === 'VOTING' ? (
               <div className="h-full min-h-[360px] flex flex-col items-center justify-center text-center p-6 bg-[#001f47]/80 rounded-2xl border border-blue-800/60 shadow-xl">
                 <div className="w-16 h-16 rounded-full bg-blue-900/40 border-2 border-blue-500/40 flex items-center justify-center mb-4">
                   <Trophy className="w-8 h-8 text-amber-300 animate-pulse" />

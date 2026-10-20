@@ -221,6 +221,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     saveSession({
       ...session,
       status: 'VOTING',
+      telaoMode: 'voting',
     });
     showNotification('success', 'Votação iniciada! Celulares liberados para votar.');
   };
@@ -863,14 +864,27 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 <button
                   type="button"
                   onClick={() => {
+                    const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
+                    saveSession({ ...session, telaoMode: nextMode });
                     openTelaoOnSecondMonitor();
-                    showNotification('success', 'Telão aberto e sincronizado!');
+                    showNotification(
+                      'success',
+                      nextMode === 'names'
+                        ? 'Exibindo Nomes para Escolha no Telão!'
+                        : 'Exibindo Votação/Resultados no Telão!'
+                    );
                   }}
-                  className="flex-1 min-h-[40px] px-4 bg-blue-700 hover:bg-blue-600 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                  title="Abrir o Telão no 2º monitor ou projetor"
+                  className={`flex-1 min-h-[40px] px-4 font-bold text-xs rounded-xl shadow-md transition active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider ${
+                    session.telaoMode === 'names'
+                      ? 'bg-emerald-600 hover:bg-emerald-500 text-white ring-2 ring-emerald-300'
+                      : 'bg-blue-700 hover:bg-blue-600 text-white'
+                  }`}
+                  title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
                 >
                   <Tv className="w-4 h-4" />
-                  <span>MOSTRAR NO TELÃO</span>
+                  <span>
+                    {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
+                  </span>
                 </button>
 
                 <button
@@ -900,11 +914,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           {/* 3. NOMES CADASTRADOS (CARDS EM LINHA, SEM SUBTITULO, SEM VOTOS) */}
           <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-white text-sm font-serif flex items-center gap-2">
-                <span>Nomes Cadastrados ({session.options.length})</span>
-                <span className="text-[11px] text-blue-300 font-normal">
-                  (clique no nome para corrigir rapidamente)
-                </span>
+              <h3 className="font-bold text-white text-sm sm:text-base font-sans tracking-tight flex items-center gap-2">
+                <span>Nomes para escolha ({session.options.length})</span>
               </h3>
               {session.options.length > 0 && (
                 <button
