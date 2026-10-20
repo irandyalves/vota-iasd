@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   Mic,
   MicOff,
-  Plus,
   Trash2,
   Play,
   StopCircle,
@@ -212,7 +212,39 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [newName, setNewName] = useState('');
   const [editingCandidateId, setEditingCandidateId] = useState<string | null>(null);
   const [editingCandidateName, setEditingCandidateName] = useState('');
+  const [glowingIds, setGlowingIds] = useState<Record<string, boolean>>({});
+  const knownOptionIdsRef = useRef<Set<string>>(new Set((session.options || []).map((o) => o.id)));
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Ativa o brilho de 1.5s nos novos nomes que entram na lista
+  const triggerGlow = (ids: string[]) => {
+    if (ids.length === 0) return;
+    setGlowingIds((prev) => {
+      const next = { ...prev };
+      ids.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+    setTimeout(() => {
+      setGlowingIds((prev) => {
+        const next = { ...prev };
+        ids.forEach((id) => {
+          delete next[id];
+        });
+        return next;
+      });
+    }, 1500);
+  };
+
+  useEffect(() => {
+    const currentIds = (session.options || []).map((o) => o.id);
+    const newlyAdded = currentIds.filter((id) => !knownOptionIdsRef.current.has(id));
+    knownOptionIdsRef.current = new Set(currentIds);
+    if (newlyAdded.length > 0) {
+      triggerGlow(newlyAdded);
+    }
+  }, [session.options]);
 
   // Estados de Desempate
   const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
@@ -239,18 +271,29 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         return;
       }
 
+      const now = Date.now();
+      const stampedOptions = result.options.map((o) => ({ ...o, createdAt: now }));
+      const newIds = stampedOptions.map((o) => o.id);
+      triggerGlow(newIds);
+
       if (mode === 'replace') {
+        const sortedReplace = [...stampedOptions].sort((a, b) =>
+          a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+        );
         saveSession({
           ...session,
-          options: result.options,
+          options: sortedReplace,
         });
-        showNotification('success', `Lista substituída por ${result.count} itens de "${result.fileName}"!`);
+        showNotification('success', `Lista substituída por ${result.count} itens de "${result.fileName}" (em ordem A-Z)!`);
       } else {
+        const sortedAppend = [...session.options, ...stampedOptions].sort((a, b) =>
+          a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+        );
         saveSession({
           ...session,
-          options: [...session.options, ...result.options],
+          options: sortedAppend,
         });
-        showNotification('success', `Adicionados ${result.count} novos itens de "${result.fileName}"!`);
+        showNotification('success', `Adicionados ${result.count} novos itens de "${result.fileName}" (em ordem A-Z)!`);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao processar arquivo.';
@@ -342,15 +385,23 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
     if (rawNames.length === 0) return;
 
+    const now = Date.now();
     const newOptions: VotingOption[] = rawNames.map((name, idx) => ({
-      id: 'opt_' + Date.now() + '_' + idx,
+      id: 'opt_' + now + '_' + idx,
       name: name.toUpperCase(),
       votesCount: 0,
+      createdAt: now,
     }));
+
+    triggerGlow(newOptions.map((o) => o.id));
+
+    const sortedOptions = [...session.options, ...newOptions].sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+    );
 
     const updated = {
       ...session,
-      options: [...session.options, ...newOptions],
+      options: sortedOptions,
     };
 
     saveSession(updated);
@@ -437,15 +488,23 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
     if (names.length === 0) return;
 
+    const now = Date.now();
     const newOptions: VotingOption[] = names.map((name, idx) => ({
-      id: 'opt_' + Date.now() + '_' + idx,
+      id: 'opt_' + now + '_' + idx,
       name,
       votesCount: 0,
+      createdAt: now,
     }));
+
+    triggerGlow(newOptions.map((o) => o.id));
+
+    const sortedOptions = [...session.options, ...newOptions].sort((a, b) =>
+      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+    );
 
     saveSession({
       ...session,
-      options: [...session.options, ...newOptions],
+      options: sortedOptions,
     });
 
     setNewName('');
@@ -462,9 +521,10 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
       setEditingCandidateId(null);
       return;
     }
-    const updated = session.options.map((opt) =>
-      opt.id === id ? { ...opt, name: trimmed } : opt
-    );
+    const updated = session.options
+      .map((opt) => (opt.id === id ? { ...opt, name: trimmed, createdAt: Date.now() } : opt))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+    triggerGlow([id]);
     saveSession({ ...session, options: updated });
     setEditingCandidateId(null);
     showNotification('success', 'Nome corrigido com sucesso!');
@@ -1541,19 +1601,31 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 </button>
               </div>
 
-              {/* COLUNA DE BOTÕES NA PONTA: ADICIONAR, MOSTRAR NO TELÃO E LIMPAR */}
-              <div className="flex flex-col gap-2 shrink-0 w-36 sm:w-44 justify-between">
-                {/* Botão ADICIONAR (verde 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
+              {/* SEÇÃO À DIREITA: NOVA VOTAÇÃO (VERDE), ENCERRAR VOTAÇÃO (VERMELHO), MOSTRAR NO TELÃO */}
+              <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-2xl p-2.5 flex flex-col gap-2 shrink-0 w-44 sm:w-52 justify-between shadow-inner">
+                {/* Botão NOVA VOTAÇÃO (EM VERDE) */}
                 <button
                   type="button"
-                  onClick={() => handleAddCandidateName(newName)}
-                  className="flex-1 min-h-[42px] px-3 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-[10.5px] rounded-xl transition-all duration-150 active:scale-90 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  onClick={handleStartVoting}
+                  className="flex-1 min-h-[38px] px-3 bg-emerald-600/50 hover:bg-emerald-600/70 border-2 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.35)] hover:shadow-[0_0_20px_rgba(52,211,153,0.55)] font-black text-[10.5px] rounded-xl transition-all duration-150 active:scale-90 active:bg-emerald-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  title="Iniciar Nova Votação mantendo os nomes em ordem A-Z"
                 >
-                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
-                  <span>ADICIONAR</span>
+                  <Play className="w-3.5 h-3.5 shrink-0 fill-current" />
+                  <span>NOVA VOTAÇÃO</span>
                 </button>
 
-                {/* Botão MOSTRAR NO TELÃO (azul 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
+                {/* Botão ENCERRAR VOTAÇÃO (EM VERMELHO) */}
+                <button
+                  type="button"
+                  onClick={handleCloseVoting}
+                  className="flex-1 min-h-[38px] px-3 bg-rose-600/50 hover:bg-rose-600/70 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-black text-[10.5px] rounded-xl transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
+                  title="Encerrar Votação e consolidar resultados no Telão"
+                >
+                  <StopCircle className="w-3.5 h-3.5 shrink-0" />
+                  <span>ENCERRAR VOTAÇÃO</span>
+                </button>
+
+                {/* Botão MOSTRAR NO TELÃO */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1567,9 +1639,9 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         : 'Exibindo Votação/Resultados no Telão!'
                     );
                   }}
-                  className={`flex-1 min-h-[38px] px-2.5 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-bold text-[10px] ${
+                  className={`flex-1 min-h-[38px] px-2.5 border-2 rounded-xl transition-all duration-150 active:scale-90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-black text-[10.5px] ${
                     session.telaoMode === 'names'
-                      ? 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.4)]'
+                      ? 'bg-amber-500/50 hover:bg-amber-500/70 border-amber-300 text-amber-100 shadow-[0_0_15px_rgba(251,191,36,0.45)]'
                       : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_15px_rgba(96,165,250,0.35)] hover:shadow-[0_0_20px_rgba(96,165,250,0.55)]'
                   }`}
                   title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
@@ -1578,22 +1650,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                   <span>
                     {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
                   </span>
-                </button>
-
-                {/* Botão lixeirinha LIMPAR (vermelho 50% transparente, borda brilho, efeito clique, caption 20% menor) */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (window.confirm('Atenção: deseja realmente limpar todos os nomes cadastrados?')) {
-                      saveSession({ ...session, options: [] });
-                      showNotification('success', 'Todos os nomes foram apagados.');
-                    }
-                  }}
-                  className="min-h-[36px] px-2.5 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_15px_rgba(244,63,94,0.35)] hover:shadow-[0_0_20px_rgba(244,63,94,0.55)] font-bold text-[10px] rounded-xl transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider"
-                  title="Apagar todos os nomes cadastrados"
-                >
-                  <Trash2 className="w-3 h-3 shrink-0" />
-                  <span>LIMPAR</span>
                 </button>
               </div>
             </div>
@@ -1652,52 +1708,80 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
-                {session.options.map((option) => {
-                  const isEditing = editingCandidateId === option.id;
-                  return (
-                    <div
-                      key={option.id}
-                      className="w-full px-3 py-2 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800/80 hover:border-amber-400/80 rounded-xl flex items-center justify-between gap-2 shadow-sm transition group min-w-0"
-                    >
-                      {/* Nome Editável Inline (Largura Fixa na Coluna) */}
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          autoFocus
-                          value={editingCandidateName}
-                          onChange={(e) => setEditingCandidateName(e.target.value)}
-                          onBlur={() => handleSaveCandidateEdit(option.id)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
-                            if (e.key === 'Escape') setEditingCandidateId(null);
+                <AnimatePresence mode="popLayout">
+                  {[...session.options]
+                    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
+                    .map((option) => {
+                      const isEditing = editingCandidateId === option.id;
+                      const isGlowing = Boolean(
+                        glowingIds[option.id] ||
+                          (option.createdAt && Date.now() - option.createdAt < 1500)
+                      );
+                      return (
+                        <motion.div
+                          layout
+                          key={option.id}
+                          initial={{ opacity: 0, scale: 0.82, y: -10 }}
+                          animate={{
+                            opacity: 1,
+                            scale: isGlowing ? 1.04 : 1,
+                            y: 0,
                           }}
-                          className="w-full min-w-0 px-2 py-0.5 bg-blue-950 border border-amber-400 rounded text-xs text-white font-bold uppercase outline-none"
-                        />
-                      ) : (
-                        <span
-                          onClick={() => {
-                            setEditingCandidateId(option.id);
-                            setEditingCandidateName(option.name);
+                          exit={{ opacity: 0, scale: 0.85 }}
+                          transition={{
+                            layout: { type: 'spring', stiffness: 320, damping: 26 },
+                            duration: 0.35,
                           }}
-                          className="flex-1 min-w-0 truncate font-black text-xs text-white uppercase tracking-wide cursor-pointer hover:text-amber-300 transition"
-                          title={`${option.name} (Clique para editar)`}
+                          className={`w-full px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 transition-all duration-500 group min-w-0 ${
+                            isGlowing
+                              ? 'bg-gradient-to-r from-amber-500/40 via-yellow-400/35 to-amber-500/40 border-2 border-yellow-300 ring-2 ring-amber-300/90 shadow-[0_0_30px_rgba(251,191,36,0.95),inset_0_0_16px_rgba(254,240,138,0.65)] z-10'
+                              : 'bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800/80 hover:border-amber-400/80 shadow-sm'
+                          }`}
                         >
-                          {option.name}
-                        </span>
-                      )}
+                          {/* Nome Editável Inline (Largura Fixa na Coluna) */}
+                          {isEditing ? (
+                            <input
+                              type="text"
+                              autoFocus
+                              value={editingCandidateName}
+                              onChange={(e) => setEditingCandidateName(e.target.value)}
+                              onBlur={() => handleSaveCandidateEdit(option.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
+                                if (e.key === 'Escape') setEditingCandidateId(null);
+                              }}
+                              className="w-full min-w-0 px-2 py-0.5 bg-blue-950 border border-amber-400 rounded text-xs text-white font-bold uppercase outline-none"
+                            />
+                          ) : (
+                            <span
+                              onClick={() => {
+                                setEditingCandidateId(option.id);
+                                setEditingCandidateName(option.name);
+                              }}
+                              className={`flex-1 min-w-0 truncate font-black text-xs uppercase tracking-wide cursor-pointer transition-colors duration-500 ${
+                                isGlowing
+                                  ? 'text-yellow-100 drop-shadow-[0_0_10px_rgba(254,240,138,1)]'
+                                  : 'text-white hover:text-amber-300'
+                              }`}
+                              title={`${option.name} (Clique para editar)`}
+                            >
+                              {option.name}
+                            </span>
+                          )}
 
-                      {/* Botão de Excluir */}
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveCandidate(option.id)}
-                        title="Remover nome"
-                        className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  );
-                })}
+                          {/* Botão de Excluir */}
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveCandidate(option.id)}
+                            title="Remover nome"
+                            className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </motion.div>
+                      );
+                    })}
+                </AnimatePresence>
               </div>
             )}
           </div>

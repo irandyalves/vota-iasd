@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
@@ -59,6 +59,39 @@ function getCardColorStyles(hexColor: string, isUnclassified = false) {
 export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const [voterUrl, setVoterUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [glowingIds, setGlowingIds] = useState<Record<string, boolean>>({});
+  const knownOptionIdsRef = useRef<Set<string>>(new Set((session.options || []).map((o) => o.id)));
+
+  // Detecta novos nomes que entram no Telão e ativa brilho intenso por 1.5s
+  useEffect(() => {
+    const currentOptions = session.options || [];
+    const currentIds = currentOptions.map((o) => o.id);
+    const now = Date.now();
+    const newlyAdded = currentOptions
+      .filter((o) => !knownOptionIdsRef.current.has(o.id) || (o.createdAt && now - o.createdAt < 1500))
+      .map((o) => o.id);
+    knownOptionIdsRef.current = new Set(currentIds);
+
+    if (newlyAdded.length > 0) {
+      setGlowingIds((prev) => {
+        const next = { ...prev };
+        newlyAdded.forEach((id) => {
+          next[id] = true;
+        });
+        return next;
+      });
+      const timer = setTimeout(() => {
+        setGlowingIds((prev) => {
+          const next = { ...prev };
+          newlyAdded.forEach((id) => {
+            delete next[id];
+          });
+          return next;
+        });
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [session.options]);
 
   // Identifica se estamos em rodada de desempate
   const isTieBreak = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
@@ -273,25 +306,51 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
                     }`}
                   >
-                    <AnimatePresence>
-                      {optionsToDisplay.map((option) => (
-                        <motion.div
-                          key={option.id}
-                          initial={{ opacity: 0, scale: 0.95 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.95 }}
-                          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                          style={{ minHeight: `${cardHeight}px` }}
-                          className="px-3.5 py-1.5 sm:py-2 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-blue-700/80 rounded-lg flex items-center shadow-md transition"
-                        >
-                          {/* Nome do Candidato em Destaque Maiúsculo (Sem iniciais CE..) */}
-                          <div className="flex-1 min-w-0">
-                            <h4 className="font-extrabold text-xs sm:text-sm lg:text-[15px] text-white uppercase tracking-wide truncate">
-                              {option.name}
-                            </h4>
-                          </div>
-                        </motion.div>
-                      ))}
+                    <AnimatePresence mode="popLayout">
+                      {[...optionsToDisplay]
+                        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
+                        .map((option) => {
+                          const isGlowing = Boolean(
+                            glowingIds[option.id] ||
+                              (option.createdAt && Date.now() - option.createdAt < 1500)
+                          );
+                          return (
+                            <motion.div
+                              layout
+                              key={option.id}
+                              initial={{ opacity: 0, scale: 0.82, y: -10 }}
+                              animate={{
+                                opacity: 1,
+                                scale: isGlowing ? 1.04 : 1,
+                                y: 0,
+                              }}
+                              exit={{ opacity: 0, scale: 0.85 }}
+                              transition={{
+                                layout: { type: 'spring', stiffness: 320, damping: 26 },
+                                duration: 0.35,
+                              }}
+                              style={{ minHeight: `${cardHeight}px` }}
+                              className={`px-3.5 py-1.5 sm:py-2 rounded-lg flex items-center transition-all duration-500 ${
+                                isGlowing
+                                  ? 'bg-gradient-to-r from-amber-500/45 via-yellow-400/40 to-amber-500/45 border-2 border-yellow-300 ring-2 ring-amber-300/90 shadow-[0_0_32px_rgba(251,191,36,0.98),inset_0_0_18px_rgba(254,240,138,0.7)] z-10'
+                                  : 'bg-[#07132a] hover:bg-[#0c1f44] border-2 border-blue-700/80 shadow-md'
+                              }`}
+                            >
+                              {/* Nome do Candidato em Destaque Maiúsculo (Sem iniciais CE..) */}
+                              <div className="flex-1 min-w-0">
+                                <h4
+                                  className={`font-extrabold text-xs sm:text-sm lg:text-[15px] uppercase tracking-wide truncate transition-colors duration-500 ${
+                                    isGlowing
+                                      ? 'text-yellow-100 drop-shadow-[0_0_10px_rgba(254,240,138,1)]'
+                                      : 'text-white'
+                                  }`}
+                                >
+                                  {option.name}
+                                </h4>
+                              </div>
+                            </motion.div>
+                          );
+                        })}
                     </AnimatePresence>
                   </div>
                 )}

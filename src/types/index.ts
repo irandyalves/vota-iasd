@@ -4,6 +4,7 @@ export interface VotingOption {
   subtitle?: string;
   photoUrl?: string;
   votesCount: number;
+  createdAt?: number;
 }
 
 export type SessionStatus = 'WAITING' | 'VOTING' | 'CLOSED' | 'TIE_BREAK';
