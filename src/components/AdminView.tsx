@@ -657,14 +657,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     style={{ transformOrigin: 'top left' }}
                     className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
                   >
-                    <div className="bg-[#001f47] border-2 border-amber-400 rounded-xl p-3 shadow-[0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80 flex flex-col gap-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10.5px] font-black text-amber-300 uppercase tracking-wider">
-                          {editingEventId ? 'Editar Nome da Votação' : 'Nova Votação / Evento'}
-                        </span>
-                        <span className="text-[9.5px] text-blue-300">ESC p/ sair</span>
-                      </div>
-
+                    <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl p-2.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
                       <div className="flex items-center gap-1.5">
                         <input
                           type="text"
@@ -678,7 +671,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                               handleSaveEventModal();
                             }
                           }}
-                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-[#07132a] border border-blue-600 focus:border-amber-400 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
+                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-[#07132a] border border-emerald-500/70 focus:border-emerald-300 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
                         />
                         <button
                           type="button"
