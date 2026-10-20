@@ -154,6 +154,10 @@ export function App() {
           onUpdateLogo={(url) => {
             saveSession({ ...session, logoUrl: url });
           }}
+          title={session?.title}
+          onUpdateTitle={(newTitle) => {
+            saveSession({ ...session, title: newTitle });
+          }}
         />
       )}
 
