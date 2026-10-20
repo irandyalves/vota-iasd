@@ -37,7 +37,7 @@ export function closeSecondaryScreen(): void {
 export async function openTelaoOnSecondMonitor(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
 
-  const url = `${window.location.origin}/?view=telao&fullscreen=true`;
+  const url = `${window.location.origin}${window.location.pathname}?view=telao&fullscreen=true`;
   
   // Coordenadas padrão para o 2º monitor no Windows (Extended Desktop)
   let targetLeft = window.screen.availWidth || 1920;
