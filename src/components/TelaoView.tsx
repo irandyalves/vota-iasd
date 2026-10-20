@@ -166,7 +166,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      setVoterUrl(`${window.location.origin}/?view=voter&pin=${session.pin}`);
+      const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const baseOrigin = isLocal ? 'https://vota-iasd-central.web.app' : window.location.origin;
+      setVoterUrl(`${baseOrigin}/?view=voter&pin=${session.pin}`);
       const params = new URLSearchParams(window.location.search);
       if (params.get('fullscreen') === 'true' && !document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => {});
