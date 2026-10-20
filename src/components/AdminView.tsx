@@ -5,42 +5,33 @@ import {
   Plus,
   Trash2,
   Play,
-  Pause,
   StopCircle,
-  Eye,
-  EyeOff,
   RotateCcw,
   Download,
   Upload,
   AlertTriangle,
-  Camera,
   CheckCircle,
   Flame,
   FileSpreadsheet,
   FileText,
-  Tv,
-  MonitorOff,
-  ExternalLink,
   Pencil,
   QrCode,
-  X,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
-import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 
 interface AdminViewProps {
   session: VotingSession;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
-  const [activeTab, setActiveTab] = useState<'control' | 'candidates' | 'settings'>('control');
+  const [activeTab, setActiveTab] = useState<'candidates' | 'control' | 'settings'>('candidates');
   const [isListening, setIsListening] = useState(false);
   const [speechTranscript, setSpeechTranscript] = useState('');
-  const [bulkText, setBulkText] = useState('');
   const [newName, setNewName] = useState('');
-  const [newSubtitle, setNewSubtitle] = useState('');
+  const [editingCandidateId, setEditingCandidateId] = useState<string | null>(null);
+  const [editingCandidateName, setEditingCandidateName] = useState('');
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -48,12 +39,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   // Estados de Desempate
   const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
   const [tieVacancies, setTieVacancies] = useState(1);
-  const [isScreen2Open, setIsScreen2Open] = useState(false);
-
-  useEffect(() => {
-    const unsub = subscribeSecondaryScreen(setIsScreen2Open);
-    return unsub;
-  }, []);
 
   const importFileRef = useRef<HTMLInputElement>(null);
   const fileUploadReplaceRef = useRef<HTMLInputElement>(null);
@@ -216,8 +201,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
 
     const newOptions: VotingOption[] = rawNames.map((name, idx) => ({
       id: 'opt_' + Date.now() + '_' + idx,
-      name: name.charAt(0).toUpperCase() + name.slice(1),
-      subtitle: 'Adicionado por voz',
+      name: name.toUpperCase(),
       votesCount: 0,
     }));
 
@@ -257,14 +241,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     showNotification('success', 'Votação encerrada! Resultados consolidados no telão.');
   };
 
-  // Alternar Telão: Oculto vs Ao Vivo
-  const handleToggleLiveResults = () => {
-    saveSession({
-      ...session,
-      showResultsLive: !session.showResultsLive,
-    });
-  };
-
   // Zerar Votos
   const handleResetVotes = () => {
     if (window.confirm('Tem certeza que deseja zerar a contagem de votos desta sessão?')) {
@@ -282,55 +258,47 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
     }
   };
 
-  // Adicionar Candidato Manualmente
-  const handleAddCandidate = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName.trim()) return;
+  // Adicionar Candidato(s) por Texto ou Voz em Tempo Real (Maiúsculo)
+  const handleAddCandidateName = (rawText: string) => {
+    if (!rawText.trim()) return;
+    const names = rawText
+      .split(/,|\n/)
+      .map((n) => n.trim().toUpperCase())
+      .filter((n) => n.length > 0);
 
-    const newCandidate: VotingOption = {
-      id: 'opt_' + Date.now(),
-      name: newName.trim(),
-      subtitle: newSubtitle.trim() || undefined,
+    if (names.length === 0) return;
+
+    const newOptions: VotingOption[] = names.map((name, idx) => ({
+      id: 'opt_' + Date.now() + '_' + idx,
+      name,
       votesCount: 0,
-    };
+    }));
 
     saveSession({
       ...session,
-      options: [...session.options, newCandidate],
+      options: [...session.options, ...newOptions],
     });
 
     setNewName('');
-    setNewSubtitle('');
-    showNotification('success', `Candidato ${newCandidate.name} adicionado!`);
+    showNotification(
+      'success',
+      names.length === 1 ? `"${names[0]}" adicionado!` : `${names.length} nomes adicionados!`
+    );
   };
 
-  // Importar Lista em Lote (Texto colado)
-  const handleBulkImport = () => {
-    const lines = bulkText
-      .split('\n')
-      .map((l) => l.trim())
-      .filter((l) => l.length > 0);
-
-    if (lines.length === 0) return;
-
-    const imported: VotingOption[] = lines.map((line, idx) => {
-      // Suporta formato "Nome - Subtítulo" ou só "Nome"
-      const parts = line.split('-');
-      return {
-        id: 'opt_' + Date.now() + '_' + idx,
-        name: parts[0].trim(),
-        subtitle: parts[1]?.trim() || undefined,
-        votesCount: 0,
-      };
-    });
-
-    saveSession({
-      ...session,
-      options: [...session.options, ...imported],
-    });
-
-    setBulkText('');
-    showNotification('success', `${imported.length} candidatos importados com sucesso!`);
+  // Salvar Correção de Nome Inline
+  const handleSaveCandidateEdit = (id: string) => {
+    const trimmed = editingCandidateName.trim().toUpperCase();
+    if (!trimmed) {
+      setEditingCandidateId(null);
+      return;
+    }
+    const updated = session.options.map((opt) =>
+      opt.id === id ? { ...opt, name: trimmed } : opt
+    );
+    saveSession({ ...session, options: updated });
+    setEditingCandidateId(null);
+    showNotification('success', 'Nome corrigido com sucesso!');
   };
 
   // Remover Candidato
@@ -339,40 +307,6 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
       ...session,
       options: session.options.filter((o) => o.id !== id),
     });
-  };
-
-  // Upload de Foto de Candidato (Converte para imagem leve WebP/Base64)
-  const handlePhotoUpload = (candidateId: string, e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const img = new Image();
-      img.src = event.target?.result as string;
-      img.onload = () => {
-        // Redimensiona para miniatura leve (160x160)
-        const canvas = document.createElement('canvas');
-        canvas.width = 160;
-        canvas.height = 160;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-          ctx.drawImage(img, 0, 0, 160, 160);
-          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-          const updatedOptions = session.options.map((opt) =>
-            opt.id === candidateId ? { ...opt, photoUrl: compressedDataUrl } : opt
-          );
-
-          saveSession({
-            ...session,
-            options: updatedOptions,
-          });
-          showNotification('success', 'Foto atualizada com sucesso!');
-        }
-      };
-    };
-    reader.readAsDataURL(file);
   };
 
   // Iniciar Rodada de Desempate
@@ -544,74 +478,56 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             </p>
           </div>
 
-          {/* Abas Compactas */}
+          {/* Abas com Nomes em PRIMEIRO */}
           <div className="flex items-center bg-[#07132a] p-1 rounded-xl border border-blue-900">
             <button
-              onClick={() => setActiveTab('control')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                activeTab === 'control' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+              onClick={() => setActiveTab('candidates')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'candidates' ? 'bg-amber-500 text-blue-950 font-black shadow-md' : 'text-slate-300 hover:text-white'
               }`}
             >
-              Comandos & Votação
+              <span>Nomes ({session.options.length})</span>
             </button>
             <button
-              onClick={() => setActiveTab('candidates')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                activeTab === 'candidates' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+              onClick={() => setActiveTab('control')}
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                activeTab === 'control' ? 'bg-blue-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
               }`}
             >
-              Candidatos ({session.options.length})
+              <span>Comandos & Votação</span>
             </button>
             <button
               onClick={() => setActiveTab('settings')}
-              className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition cursor-pointer ${
-                activeTab === 'settings' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer ${
+                activeTab === 'settings' ? 'bg-purple-600 text-white font-black shadow-md' : 'text-slate-300 hover:text-white'
               }`}
             >
-              Configuração & Migração
+              <span>Configuração & Migração</span>
             </button>
           </div>
         </div>
 
-        {/* BARRA DE GATILHOS DA ELEIÇÃO (REDUZIDA EM 30%) */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 pt-3 border-t border-blue-900/80">
+        {/* BARRA DE COMANDOS DA VOTAÇÃO (REFINADA: SEM SALA DE ESPERA, SEM TELÃO AO VIVO, SEM 2A TELA) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-3 border-t border-blue-900/80">
           <button
-            onClick={handleStartVoting}
-            disabled={session.status === 'VOTING'}
-            className="p-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
+            onClick={session.status === 'VOTING' ? handlePauseVoting : handleStartVoting}
+            className={`p-2.5 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition active:scale-95 cursor-pointer ${
+              session.status === 'VOTING'
+                ? 'bg-amber-600 hover:bg-amber-500'
+                : 'bg-emerald-600 hover:bg-emerald-500'
+            }`}
           >
             <Play className="w-4 h-4 fill-current" />
-            INICIAR VOTAÇÃO
-          </button>
-
-          <button
-            onClick={handlePauseVoting}
-            disabled={session.status === 'WAITING'}
-            className="p-2.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
-          >
-            <Pause className="w-4 h-4 fill-current" />
-            SALA DE ESPERA
+            <span>{session.status === 'VOTING' ? 'PAUSAR VOTAÇÃO' : 'INICIAR VOTAÇÃO'}</span>
           </button>
 
           <button
             onClick={handleCloseVoting}
             disabled={session.status === 'CLOSED'}
-            className="p-2.5 bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer"
+            className="p-2.5 bg-purple-700 hover:bg-purple-600 disabled:opacity-40 disabled:pointer-events-none text-white rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition active:scale-95 cursor-pointer"
           >
             <StopCircle className="w-4 h-4 fill-current" />
-            ENCERRAR
-          </button>
-
-          <button
-            onClick={handleToggleLiveResults}
-            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer ${
-              session.showResultsLive
-                ? 'bg-blue-700 hover:bg-blue-600 text-white'
-                : 'bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/40'
-            }`}
-          >
-            {session.showResultsLive ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            {session.showResultsLive ? 'Telão: Ao Vivo' : 'Telão: Oculto'}
+            <span>ENCERRAR VOTAÇÃO</span>
           </button>
 
           {/* Botão de Controle do QR Code no Telão */}
@@ -622,37 +538,16 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 showQrOnTelao: session.showQrOnTelao === false ? true : false,
               });
             }}
-            title="Mostrar ou ocultar o QR Code no Telão a qualquer momento"
-            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow transition active:scale-95 cursor-pointer ${
+            title="Mostrar ou ocultar o QR Code no Telão"
+            className={`p-2.5 rounded-xl font-bold text-xs flex items-center justify-center gap-2 shadow transition active:scale-95 cursor-pointer ${
               session.showQrOnTelao !== false
                 ? 'bg-blue-900/90 hover:bg-blue-800 text-amber-300 border border-amber-500/40'
                 : 'bg-slate-800 hover:bg-slate-700 text-slate-400 border border-slate-700'
             }`}
           >
             <QrCode className="w-4 h-4" />
-            {session.showQrOnTelao !== false ? 'QR Telão: Sim' : 'QR Telão: Não'}
+            <span>{session.showQrOnTelao !== false ? 'QR Telão: Visível' : 'QR Telão: Oculto'}</span>
           </button>
-
-          {/* Botão de 2ª Tela para o Projetor / TV */}
-          {isScreen2Open ? (
-            <button
-              onClick={() => toggleSecondaryScreen()}
-              className="p-2.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-500/50 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-rose-950/40 transition active:scale-95 cursor-pointer"
-            >
-              <MonitorOff className="w-4 h-4 text-rose-400" />
-              <span>OCULTAR 2ª TELA</span>
-              <X className="w-3 h-3 opacity-80" />
-            </button>
-          ) : (
-            <button
-              onClick={() => toggleSecondaryScreen()}
-              className="p-2.5 bg-gradient-to-r from-[#d4af37] to-amber-500 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-xl font-black text-xs flex items-center justify-center gap-1.5 shadow-md shadow-amber-900/20 transition active:scale-95 cursor-pointer"
-            >
-              <Tv className="w-4 h-4" />
-              <span>2ª TELA (TELÃO)</span>
-              <ExternalLink className="w-3 h-3 opacity-80" />
-            </button>
-          )}
         </div>
       </div>
 
@@ -823,39 +718,72 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* ABA 2: CANDIDATOS / TEMAS / BRINDES (REDUZIDO EM 30%) */}
+      {/* ABA: NOMES / CANDIDATOS (AGORA EM PRIMEIRO) */}
       {activeTab === 'candidates' && (
         <div className="space-y-3.5">
-          {/* Card Especial de Importação por Arquivos */}
-          <div className="bg-[#001f47] border border-[#d4af37]/60 rounded-2xl p-4 shadow-lg relative overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-amber-500/20 border border-[#d4af37] flex items-center justify-center text-[#d4af37]">
-                  <FileSpreadsheet className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-white text-sm sm:text-base font-serif flex items-center gap-1.5">
-                    Importar Arquivos (.XLS, .XLSX, .CSV, .TXT)
-                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-600/50 uppercase font-sans">
-                      Excel • TXT • CSV
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-blue-200">
-                    Importe listas de <strong>Nomes, Temas ou Brindes</strong> do seu computador.
-                  </p>
-                </div>
+          {/* 1. CAMPO PARA DIGITAR OU FALAR EM TEMPO REAL */}
+          <div className="bg-[#001f47] border-2 border-amber-400/80 rounded-2xl p-4 shadow-xl">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs sm:text-sm font-bold text-white flex items-center gap-2 font-serif">
+                <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
+                <span>Digite ou Fale os Nomes (Atualiza o Telão em Tempo Real)</span>
+              </label>
+              {isListening && (
+                <span className="text-[11px] font-bold text-rose-400 bg-rose-950/80 px-2.5 py-0.5 rounded-full border border-rose-700 animate-pulse flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-ping" />
+                  Microfone Ativo • Fale agora!
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddCandidateName(newName);
+                    }
+                  }}
+                  placeholder="Digite o nome e dê Enter (ou separe por vírgula para vários)..."
+                  className="w-full h-11 pl-3.5 pr-12 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-xl text-white font-bold text-xs sm:text-sm placeholder-slate-400 outline-none transition shadow-inner uppercase"
+                />
+                <button
+                  type="button"
+                  onClick={() => setIsListening(!isListening)}
+                  title={isListening ? 'Parar microfone' : 'Falar nomes pelo microfone'}
+                  className={`absolute right-1.5 top-1.5 w-8 h-8 rounded-lg flex items-center justify-center transition cursor-pointer ${
+                    isListening
+                      ? 'bg-rose-600 text-white animate-pulse shadow-md'
+                      : 'bg-amber-500 hover:bg-amber-400 text-blue-950'
+                  }`}
+                >
+                  {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                </button>
               </div>
 
               <button
                 type="button"
-                onClick={handleDownloadSampleTemplate}
-                className="px-3 py-1.5 bg-blue-900/80 hover:bg-blue-800 text-blue-200 hover:text-white border border-blue-700/60 rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                onClick={() => handleAddCandidateName(newName)}
+                className="h-11 px-5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black text-xs rounded-xl shadow-lg transition active:scale-95 cursor-pointer flex items-center gap-1.5 shrink-0 uppercase tracking-wider"
               >
-                <Download className="w-3.5 h-3.5 text-amber-400" />
-                Baixar Planilha Modelo (.CSV)
+                <Plus className="w-4 h-4 stroke-[3]" />
+                <span>Adicionar</span>
               </button>
             </div>
 
+            {speechTranscript && isListening && (
+              <p className="text-xs text-amber-300 font-mono mt-2 bg-blue-950/80 p-2 rounded-lg border border-blue-800">
+                Ouvindo: <span className="text-white font-bold">"{speechTranscript}"</span>
+              </p>
+            )}
+          </div>
+
+          {/* 2. SEÇÃO LISTA: IMPORTAÇÃO DE ARQUIVOS EM UMA LINHA */}
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-3 shadow-md">
             <input
               ref={fileUploadAppendRef}
               type="file"
@@ -871,205 +799,169 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
               onChange={(e) => handleFileImport(e, 'replace')}
             />
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-              <button
-                type="button"
-                onClick={() => fileUploadAppendRef.current?.click()}
-                className="p-3 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-blue-600/80 hover:border-[#d4af37] rounded-xl flex items-center gap-3 text-left transition cursor-pointer group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-blue-900/60 flex items-center justify-center text-blue-300 group-hover:text-amber-300 shrink-0">
-                  <Plus className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-white text-xs group-hover:text-amber-300">
-                    Adicionar aos Itens Existentes
-                  </h4>
-                  <p className="text-[10px] text-blue-300/80">
-                    Mantém a lista atual e acrescenta os itens do arquivo
-                  </p>
-                </div>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm('Atenção: isso substituirá todos os candidatos/temas atuais pelos do arquivo. Deseja continuar?')) {
-                    fileUploadReplaceRef.current?.click();
-                  }
-                }}
-                className="p-3 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-amber-600/80 hover:border-amber-400 rounded-xl flex items-center gap-3 text-left transition cursor-pointer group"
-              >
-                <div className="w-8 h-8 rounded-lg bg-amber-950/60 flex items-center justify-center text-amber-400 shrink-0">
-                  <Upload className="w-4 h-4" />
-                </div>
-                <div>
-                  <h4 className="font-bold text-white text-xs group-hover:text-amber-300">
-                    Substituir Lista Completa
-                  </h4>
-                  <p className="text-[10px] text-blue-300/80">
-                    Limpa a lista atual e preenche com a nova planilha
-                  </p>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Adicionar por Voz ou Texto Colado */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Voz */}
-            <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Mic className="w-4 h-4 text-[#d4af37]" />
-                  <h3 className="font-bold text-white text-sm font-serif">
-                    Adicionar Itens por Voz
-                  </h3>
-                </div>
-                <p className="text-[11px] text-blue-200 mb-2 leading-relaxed">
-                  Fale os nomes ou temas em sequência (ex: <em>"Carlos Eduardo, Tema 1, Bíblia"</em>).
-                </p>
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black text-amber-300 uppercase font-serif tracking-wider flex items-center gap-1.5">
+                  <FileSpreadsheet className="w-4 h-4 text-amber-400" />
+                  SEÇÃO LISTA:
+                </span>
+                <span className="text-[11px] text-blue-200">Importar Arquivos:</span>
               </div>
 
-              <div className="text-center py-2">
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Botão Excel */}
                 <button
                   type="button"
-                  onClick={() => setIsListening(!isListening)}
-                  className={`w-12 h-12 rounded-full flex items-center justify-center mx-auto shadow-lg transition-all cursor-pointer ${
-                    isListening
-                      ? 'bg-rose-600 text-white ring-4 ring-rose-400 animate-pulse'
-                      : 'bg-gradient-to-tr from-[#d4af37] to-amber-400 text-blue-950 hover:scale-105'
-                  }`}
+                  onClick={() => fileUploadAppendRef.current?.click()}
+                  className="px-3 py-1.5 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-600/70 text-emerald-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  title="Importar de arquivo Excel (.xlsx, .xls)"
                 >
-                  {isListening ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  <span>Excel (.xlsx)</span>
                 </button>
-                <span className="block text-[11px] font-semibold text-blue-300 mt-1.5">
-                  {isListening ? 'Ouvindo... Fale agora!' : 'Clique no mic para falar'}
-                </span>
-                {speechTranscript && (
-                  <p className="text-[10px] text-amber-300 mt-1 italic font-mono">
-                    "{speechTranscript}"
-                  </p>
-                )}
-              </div>
-            </div>
 
-            {/* Texto Colado */}
-            <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
-              <div className="flex items-center gap-1.5 mb-1">
-                <FileText className="w-4 h-4 text-blue-300" />
-                <h3 className="font-bold text-white text-sm font-serif">
-                  Colar Lista de Texto
-                </h3>
-              </div>
-              <p className="text-[11px] text-blue-200 mb-2">
-                Cole itens, um por linha (opcional: Nome - Descrição):
-              </p>
-              <textarea
-                rows={3}
-                value={bulkText}
-                onChange={(e) => setBulkText(e.target.value)}
-                placeholder={"Carlos Eduardo - Ministério Diaconal\nTema 1: Conectados com Cristo"}
-                className="w-full p-2 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white placeholder-slate-500 font-mono outline-none focus:border-[#d4af37] mb-2"
-              />
-              <button
-                type="button"
-                onClick={handleBulkImport}
-                className="w-full py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-lg shadow transition cursor-pointer"
-              >
-                Importar Lista Colada
-              </button>
-            </div>
-          </div>
-
-          {/* Adicionar Individualmente */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
-            <h3 className="font-bold text-white text-sm font-serif mb-2">
-              Adicionar Item Individualmente
-            </h3>
-            <form onSubmit={handleAddCandidate} className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
-              <input
-                type="text"
-                placeholder="Nome / Tema / Brinde"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                className="px-3 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white outline-none focus:border-[#d4af37]"
-              />
-              <input
-                type="text"
-                placeholder="Subtítulo / Descrição"
-                value={newSubtitle}
-                onChange={(e) => setNewSubtitle(e.target.value)}
-                className="px-3 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white outline-none focus:border-[#d4af37]"
-              />
-              <button
-                type="submit"
-                className="py-1.5 bg-[#d4af37] hover:bg-amber-400 text-blue-950 font-black text-xs rounded-lg shadow transition flex items-center justify-center gap-1 cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Adicionar
-              </button>
-            </form>
-          </div>
-
-          {/* Lista de Itens Cadastrados (Reduzida em 30%) */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
-            <h3 className="font-bold text-white text-sm font-serif mb-3 flex items-center justify-between">
-              <span>Itens Cadastrados ({session.options.length})</span>
-              <span className="text-[11px] font-normal text-blue-300">Toque na câmera para carregar foto</span>
-            </h3>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2.5">
-              {session.options.map((option) => (
-                <div
-                  key={option.id}
-                  className="p-2.5 bg-[#07132a] border border-blue-900 rounded-xl flex items-center gap-2.5 relative group"
+                {/* Botão CSV */}
+                <button
+                  type="button"
+                  onClick={() => fileUploadAppendRef.current?.click()}
+                  className="px-3 py-1.5 bg-blue-950/80 hover:bg-blue-900 border border-blue-600/70 text-blue-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  title="Importar de arquivo CSV"
                 >
-                  <label className="relative shrink-0 cursor-pointer">
-                    <input
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={(e) => handlePhotoUpload(option.id, e)}
-                    />
-                    {option.photoUrl ? (
-                      <img
-                        src={option.photoUrl}
-                        alt={option.name}
-                        className="w-9 h-9 rounded-lg object-cover border border-blue-600"
-                      />
-                    ) : (
-                      <div className="w-9 h-9 rounded-lg bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-xs">
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>CSV (.csv)</span>
+                </button>
+
+                {/* Botão TXT */}
+                <button
+                  type="button"
+                  onClick={() => fileUploadAppendRef.current?.click()}
+                  className="px-3 py-1.5 bg-slate-900/80 hover:bg-slate-800 border border-slate-600/70 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                  title="Importar de arquivo TXT"
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>TXT (.txt)</span>
+                </button>
+
+                {/* Arrastar e Soltar */}
+                <div
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      const syntheticEvent = { target: { files: [file] } } as any;
+                      handleFileImport(syntheticEvent, 'append');
+                    }
+                  }}
+                  onClick={() => fileUploadAppendRef.current?.click()}
+                  className="px-3.5 py-1.5 bg-[#07132a] hover:bg-[#0c1f44] border-2 border-dashed border-blue-600 hover:border-amber-400 rounded-lg text-[11px] text-blue-300 hover:text-amber-300 font-semibold transition cursor-pointer flex items-center gap-1.5"
+                  title="Arraste qualquer arquivo Excel, CSV ou TXT e solte aqui"
+                >
+                  <Upload className="w-3.5 h-3.5 text-amber-400" />
+                  <span>ou arraste o arquivo aqui</span>
+                </div>
+
+                {/* Baixar Modelo */}
+                <button
+                  type="button"
+                  onClick={handleDownloadSampleTemplate}
+                  className="px-2.5 py-1.5 text-blue-300/80 hover:text-white rounded-lg text-[11px] font-semibold transition flex items-center gap-1 cursor-pointer"
+                  title="Baixar arquivo modelo de exemplo"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Modelo (.csv)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* 3. NOMES CADASTRADOS (CARDS EM LINHA, SEM SUBTITULO, SEM VOTOS) */}
+          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-bold text-white text-sm font-serif flex items-center gap-2">
+                <span>Nomes Cadastrados ({session.options.length})</span>
+                <span className="text-[11px] text-blue-300 font-normal">
+                  (clique no nome para corrigir rapidamente)
+                </span>
+              </h3>
+              {session.options.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm('Deseja limpar todos os nomes cadastrados?')) {
+                      saveSession({ ...session, options: [] });
+                    }
+                  }}
+                  className="text-[11px] text-rose-400 hover:text-rose-300 underline cursor-pointer"
+                >
+                  Limpar todos
+                </button>
+              )}
+            </div>
+
+            {session.options.length === 0 ? (
+              <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-blue-800 rounded-xl bg-[#07132a]/40">
+                Nenhum nome cadastrado ainda. Digite ou fale no campo acima para começar!
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2 items-center">
+                {session.options.map((option) => {
+                  const isEditing = editingCandidateId === option.id;
+                  return (
+                    <div
+                      key={option.id}
+                      className="px-3 py-2 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800/80 hover:border-amber-400/80 rounded-xl flex items-center gap-2 shadow-sm transition group"
+                    >
+                      {/* Inicial do Nome */}
+                      <div className="w-7 h-7 rounded-lg bg-blue-900 border border-blue-600/40 flex items-center justify-center text-amber-300 font-black text-xs shrink-0 select-none">
                         {option.name
                           .split(' ')
                           .map((n) => n[0])
                           .slice(0, 2)
                           .join('')}
                       </div>
-                    )}
-                    <div className="absolute inset-0 bg-black/50 rounded-lg opacity-0 hover:opacity-100 flex items-center justify-center text-white transition">
-                      <Camera className="w-3.5 h-3.5" />
+
+                      {/* Nome Editável Inline */}
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingCandidateName}
+                          onChange={(e) => setEditingCandidateName(e.target.value)}
+                          onBlur={() => handleSaveCandidateEdit(option.id)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
+                            if (e.key === 'Escape') setEditingCandidateId(null);
+                          }}
+                          className="px-2 py-0.5 bg-blue-950 border border-amber-400 rounded text-xs text-white font-bold uppercase outline-none"
+                        />
+                      ) : (
+                        <span
+                          onClick={() => {
+                            setEditingCandidateId(option.id);
+                            setEditingCandidateName(option.name);
+                          }}
+                          className="font-black text-xs text-white uppercase tracking-wide cursor-pointer hover:text-amber-300 transition"
+                          title="Clique para editar este nome"
+                        >
+                          {option.name}
+                        </span>
+                      )}
+
+                      {/* Botão de Excluir */}
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveCandidate(option.id)}
+                        title="Remover nome"
+                        className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                  </label>
-
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-xs text-white truncate">{option.name}</h4>
-                    {option.subtitle && (
-                      <p className="text-[10px] text-blue-300/80 truncate">{option.subtitle}</p>
-                    )}
-                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
-                      {option.votesCount || 0} votos
-                    </span>
-                  </div>
-
-                  <button
-                    onClick={() => handleRemoveCandidate(option.id)}
-                    className="p-1 text-slate-500 hover:text-rose-400 rounded hover:bg-rose-950/40 transition cursor-pointer"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}

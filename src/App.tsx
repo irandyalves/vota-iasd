@@ -6,12 +6,33 @@ import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, DEFAULT_INITIAL_SESSION } from './services/votingService';
 import { openTelaoOnSecondMonitor, subscribeSecondaryScreen } from './utils/screen';
-import { ExternalLink, X, MonitorPlay } from 'lucide-react';
+import { ExternalLink, X, MonitorPlay, ArrowLeft } from 'lucide-react';
 
 export function App() {
   const [session, setSession] = useState<VotingSession>(DEFAULT_INITIAL_SESSION);
   const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('admin');
   const [showPopupBlockedToast, setShowPopupBlockedToast] = useState(false);
+
+  // Navegar de volta ao Admin
+  const handleReturnToAdmin = () => {
+    setCurrentView('admin');
+    if (typeof window !== 'undefined') {
+      const url = new URL(window.location.href);
+      url.searchParams.set('view', 'admin');
+      window.history.pushState({}, '', url.toString());
+    }
+  };
+
+  // Tecla ESC global: volta instantaneamente para o Admin
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleReturnToAdmin();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Monitora se o Telão na 2ª tela está ativo
   useEffect(() => {
@@ -136,21 +157,16 @@ export function App() {
         />
       )}
 
-      {/* Botão de retorno discreto exclusivo no Telão */}
-      {currentView === 'telao' && (
-        <div className="fixed top-4 left-4 z-50 opacity-10 hover:opacity-100 transition-opacity">
+      {/* Botão de retorno superior direito quando estiver no Telão ou no Celular (ESC também volta) */}
+      {currentView !== 'admin' && (
+        <div className="fixed top-2.5 right-24 sm:right-28 z-50">
           <button
-            onClick={() => {
-              setCurrentView('admin');
-              if (typeof window !== 'undefined') {
-                const url = new URL(window.location.href);
-                url.searchParams.set('view', 'admin');
-                window.history.pushState({}, '', url.toString());
-              }
-            }}
-            className="px-3 py-1.5 bg-[#001f47]/80 text-slate-300 hover:text-white rounded-xl text-xs font-semibold border border-blue-800 shadow-md backdrop-blur-md cursor-pointer"
+            onClick={handleReturnToAdmin}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-[#001f47]/95 hover:bg-blue-900 border border-amber-400/80 hover:border-amber-400 text-amber-300 font-bold text-xs rounded-xl shadow-2xl backdrop-blur-md transition active:scale-95 cursor-pointer"
+            title="Pressione ESC ou clique para voltar ao Painel Admin"
           >
-            ← Painel Admin
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Voltar ao Admin (ESC)</span>
           </button>
         </div>
       )}

@@ -230,8 +230,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 <div className="flex items-center justify-between mb-2.5 pb-2 border-b border-blue-900/80">
                   <div className="flex items-center gap-1.5">
                     <Trophy className="w-4 h-4 text-[#d4af37]" />
-                    <h3 className="font-bold text-sm text-white font-serif">
-                      {session.status === 'CLOSED' ? 'Resultado Final Oficial' : 'Classificação em Tempo Real'}
+                    <h3 className="font-extrabold text-sm text-white font-serif uppercase tracking-wider">
+                      {session.status === 'CLOSED' ? 'Resultado Final Oficial' : 'NOMES PARA A ESCOLHA'}
                     </h3>
                   </div>
                   <div className="flex items-center gap-3 text-[11px] font-semibold">
@@ -342,8 +342,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             <div className="flex-1 min-w-0 z-10">
                               <div className="flex items-center gap-1.5">
                                 <h4
-                                  className={`font-bold text-xs sm:text-sm leading-tight truncate ${
-                                    isElected ? 'text-white' : 'text-slate-200'
+                                  className={`font-black text-xs sm:text-sm leading-tight truncate uppercase tracking-wide ${
+                                    isElected ? 'text-white' : 'text-slate-100'
                                   }`}
                                 >
                                   {option.name}
