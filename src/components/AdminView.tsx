@@ -35,28 +35,50 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isGearOpen, setIsGearOpen] = useState<boolean>(false);
   const [eventNameInput, setEventNameInput] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const gearPanelRef = useRef<HTMLDivElement>(null);
   const gearButtonRef = useRef<HTMLButtonElement>(null);
+  const eventModalRef = useRef<HTMLDivElement>(null);
+  const createEventBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Fecha o painel da engrenagem ao pressionar ESC ou clicar fora
+  // Fecha o painel da engrenagem ou o modalzinho de criar/editar evento ao pressionar ESC ou clicar fora
   useEffect(() => {
-    if (!isGearOpen) return;
+    if (!isGearOpen && !isCreatingNewEvent) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsGearOpen(false);
+        if (isCreatingNewEvent) {
+          setIsCreatingNewEvent(false);
+          setEditingEventId(null);
+          setEventNameInput(session.title || '');
+        } else if (isGearOpen) {
+          setIsGearOpen(false);
+        }
       }
     };
 
     const handleMouseDown = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (
-        gearPanelRef.current &&
-        !gearPanelRef.current.contains(target) &&
-        gearButtonRef.current &&
-        !gearButtonRef.current.contains(target)
-      ) {
-        setIsGearOpen(false);
+      if (isCreatingNewEvent) {
+        if (
+          eventModalRef.current &&
+          !eventModalRef.current.contains(target) &&
+          (!createEventBtnRef.current || !createEventBtnRef.current.contains(target))
+        ) {
+          setIsCreatingNewEvent(false);
+          setEditingEventId(null);
+          setEventNameInput(session.title || '');
+        }
+      }
+      if (isGearOpen) {
+        if (
+          gearPanelRef.current &&
+          !gearPanelRef.current.contains(target) &&
+          gearButtonRef.current &&
+          !gearButtonRef.current.contains(target)
+        ) {
+          setIsGearOpen(false);
+        }
       }
     };
 
@@ -66,7 +88,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       document.removeEventListener('keydown', handleKeyDown);
       document.removeEventListener('mousedown', handleMouseDown);
     };
-  }, [isGearOpen]);
+  }, [isGearOpen, isCreatingNewEvent, session.title]);
 
   // Garante lista de eventos (inicializando com o evento atual caso ainda não exista)
   const eventsList: VotingEventItem[] =
@@ -187,25 +209,31 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     showNotification('success', `Evento "${cleaned}" criado! Clique nele ou adicione os nomes abaixo.`);
   };
 
-  // Renomear / Salvar nome do evento atual
-  const handleRenameCurrentEvent = () => {
+  // Salvar nome no modalzinho (cria novo ou edita existente)
+  const handleSaveEventModal = () => {
     const cleaned = eventNameInput.trim().toUpperCase();
     if (!cleaned) {
-      showNotification('error', 'O nome do evento não pode ficar vazio.');
+      showNotification('error', 'Digite o nome da votação/evento.');
       return;
     }
 
-    const updatedEvents = eventsList.map((item) =>
-      item.id === currentActiveEventId ? { ...item, name: cleaned } : item
-    );
-
-    saveSession({
-      ...session,
-      activeEventId: currentActiveEventId,
-      title: cleaned,
-      events: updatedEvents,
-    });
-    showNotification('success', `Nome do evento atualizado para "${cleaned}"!`);
+    if (editingEventId) {
+      const updatedEvents = eventsList.map((item) =>
+        item.id === editingEventId ? { ...item, name: cleaned } : item
+      );
+      const isEditingActive = editingEventId === currentActiveEventId;
+      saveSession({
+        ...session,
+        title: isEditingActive ? cleaned : session.title,
+        events: updatedEvents,
+      });
+      setIsCreatingNewEvent(false);
+      setEditingEventId(null);
+      showNotification('success', `Evento atualizado para "${cleaned}"!`);
+    } else {
+      handleCreateEvent(cleaned);
+      setEditingEventId(null);
+    }
   };
 
   // Excluir um evento
@@ -576,8 +604,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* BARRA DE EVENTOS: LADO ESQUERDO AMARELO DE CIMA EMBAIXO ("EVENTOS"), À DIREITA AZUL COM "+ CRIAR EVENTO" E EVENTOS TANGENCIANDO A LINHA VERTICAL */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 shadow-xl mb-3 flex items-stretch justify-between min-h-[64px]">
+      {/* BARRA DE EVENTOS (+10% DE ALTURA): BLOCO AMARELO VERTICAL ESQUERDO, BOTÃO "+ CRIAR VOTAÇÃO" CENTRALIZADO VERTICALMENTE COM MODALZINHO SUAVE, E EVENTOS À DIREITA (+20% MAIS ALTOS COM BOTÃO EDITAR) */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 shadow-xl mb-3 flex items-stretch justify-between min-h-[71px] relative z-30">
         {/* LADO ESQUERDO: AMARELO DE CIMA EMBAIXO ONDE ESTÁ "EVENTOS" */}
         <button
           type="button"
@@ -591,103 +619,133 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
           EVENTOS
         </button>
 
-        {/* LADO DIREITO AZUL: TANGENCIANDO A LINHA VERTICAL (+ CRIAR EVENTO EM CIMA E EVENTOS EMBAIXO) + ENGRENAGEM À DIREITA */}
-        <div className="flex-1 min-w-0 flex items-center justify-between pl-2.5 sm:pl-3 pr-4 sm:pr-6 lg:pr-8 py-2 gap-3">
-          {/* COLUNA TANGENCIANDO A LINHA VERTICAL */}
-          <div className="flex-1 min-w-0 flex flex-col justify-center gap-1.5">
-            {/* EM CIMA: + CRIAR EVENTO (COM ARREDONDAMENTO DE BORDAS REDUZIDO) */}
-            <div className="flex flex-wrap items-center gap-1.5">
-              {isCreatingNewEvent ? (
-                <div className="flex items-center gap-1.5 bg-[#07132a] border border-amber-400 rounded-[4px] px-2 py-0.5 shadow-lg">
-                  <input
-                    type="text"
-                    autoFocus
-                    placeholder="EX: ESCOLHA DO TESOUREIRO"
-                    value={eventNameInput}
-                    onChange={(e) => setEventNameInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') handleCreateEvent(eventNameInput);
-                      if (e.key === 'Escape') {
-                        setIsCreatingNewEvent(false);
-                        setEventNameInput(session.title || '');
-                      }
-                    }}
-                    className="bg-transparent text-[11px] font-black text-white uppercase outline-none w-44 sm:w-52 placeholder-slate-500"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleCreateEvent(eventNameInput)}
-                    className="px-2 py-0.5 bg-emerald-500 hover:bg-emerald-400 text-blue-950 font-black text-[10px] rounded-[3px] uppercase cursor-pointer"
-                  >
-                    Salvar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsCreatingNewEvent(false);
-                      setEventNameInput(session.title || '');
-                    }}
-                    className="px-1.5 py-0.5 text-slate-400 hover:text-white text-[10px] font-bold cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
+        {/* LADO DIREITO AZUL: BOTÃO "+ CRIAR VOTAÇÃO" CENTRALIZADO VERTICALMENTE + EVENTOS À DIREITA (+20% MAIS ALTOS) + ENGRENAGEM */}
+        <div className="flex-1 min-w-0 flex items-center justify-between pl-3 sm:pl-4 pr-4 sm:pr-6 lg:pr-8 py-2.5 gap-3">
+          {/* LINHA CENTRALIZADA VERTICALMENTE: "+ CRIAR VOTAÇÃO" À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
+          <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+            {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO QUE REVELA PARA BAIXO */}
+            <div className="relative flex items-center shrink-0">
+              <button
+                ref={createEventBtnRef}
+                type="button"
+                onClick={() => {
+                  if (isCreatingNewEvent && !editingEventId) {
+                    setIsCreatingNewEvent(false);
+                    setEditingEventId(null);
+                  } else {
+                    setEditingEventId(null);
                     setEventNameInput('');
                     setIsCreatingNewEvent(true);
-                  }}
-                  title="Criar um novo evento de votação (ex: Escolha do Tesoureiro)"
-                  className="px-2.5 py-0.5 rounded-[4px] bg-blue-600/35 hover:bg-blue-600/55 border border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1 transition cursor-pointer active:scale-95"
-                >
-                  <FolderPlus className="w-3 h-3 text-amber-400" />
-                  <span>+ Criar Evento</span>
-                </button>
-              )}
+                  }
+                }}
+                title="Criar nova votação / evento"
+                className="px-3 py-1.5 rounded-[4px] bg-blue-600/35 hover:bg-blue-600/55 border border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
+              >
+                <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
+                <span>+ Criar Votação</span>
+              </button>
+
+              {/* MODALZINHO REVELADO SUAVEMENTE PARA BAIXO SOBRE OS OUTROS (ESC OU CLICAR FORA SAI SEM SALVAR) */}
+              <AnimatePresence>
+                {isCreatingNewEvent && (
+                  <motion.div
+                    ref={eventModalRef}
+                    initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
+                    animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
+                    exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
+                    transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                    style={{ transformOrigin: 'top left' }}
+                    className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
+                  >
+                    <div className="bg-[#001f47] border-2 border-amber-400 rounded-xl p-3 shadow-[0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80 flex flex-col gap-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10.5px] font-black text-amber-300 uppercase tracking-wider">
+                          {editingEventId ? 'Editar Nome da Votação' : 'Nova Votação / Evento'}
+                        </span>
+                        <span className="text-[9.5px] text-blue-300">ESC p/ sair</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          type="text"
+                          autoFocus
+                          placeholder="DIGITE O NOME DO EVENTO..."
+                          value={eventNameInput}
+                          onChange={(e) => setEventNameInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleSaveEventModal();
+                            }
+                          }}
+                          className="flex-1 min-w-0 px-2.5 py-1.5 bg-[#07132a] border border-blue-600 focus:border-amber-400 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleSaveEventModal}
+                          className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
+                        >
+                          Salvar
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
-            {/* EMBAIXO TANGENCIANDO A LINHA VERTICAL: COMEÇAM OS EVENTOS (REDUZIDOS E COM MENOS ARREDONDAMENTO) */}
-            <div className="flex flex-wrap items-center gap-1">
-              {eventsList.map((evt) => {
-                const isSelected = evt.id === currentActiveEventId;
-                const count = isSelected ? session.options.length : (evt.options?.length || 0);
-                const displayName = isSelected ? (session.title || evt.name) : evt.name;
-                return (
-                  <div
-                    key={evt.id}
-                    onClick={() => handleSelectEventButton(evt)}
-                    title="Clique para abrir/recolher os nomes deste evento"
-                    className={`group px-2 py-0.5 rounded-[4px] font-black text-[10px] uppercase tracking-wider flex items-center gap-1 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
-                      isSelected
-                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
-                        : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
+            {/* À DIREITA DO BOTÃO "+ CRIAR VOTAÇÃO": EVENTOS CRIADOS (20% MAIS ALTOS + BOTÃO EDITAR) */}
+            {eventsList.map((evt) => {
+              const isSelected = evt.id === currentActiveEventId;
+              const count = isSelected ? session.options.length : (evt.options?.length || 0);
+              const displayName = isSelected ? (session.title || evt.name) : evt.name;
+              return (
+                <div
+                  key={evt.id}
+                  onClick={() => handleSelectEventButton(evt)}
+                  title="Clique para abrir/recolher os nomes deste evento"
+                  className={`group px-2.5 py-1.5 rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer active:scale-95 select-none border shadow-sm ${
+                    isSelected
+                      ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.2)]'
+                      : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60'
+                  }`}
+                >
+                  <span>{displayName}</span>
+                  <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] border border-blue-700 text-[10px] font-mono text-white">
+                    {count}
+                  </span>
+                  <ChevronDown
+                    className={`w-3 h-3 transition-transform ${
+                      isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
                     }`}
+                  />
+                  {/* Botão Editar Nome do Evento */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingEventId(evt.id);
+                      setEventNameInput(displayName);
+                      setIsCreatingNewEvent(true);
+                    }}
+                    title="Editar nome deste evento"
+                    className="p-0.5 text-slate-400 hover:text-amber-300 transition cursor-pointer"
                   >
-                    <span>{displayName}</span>
-                    <span className="px-1 py-0 rounded-[3px] bg-[#07132a] border border-blue-700 text-[9.5px] font-mono text-white">
-                      {count}
-                    </span>
-                    <ChevronDown
-                      className={`w-2.5 h-2.5 transition-transform ${
-                        isSelected && activeTab === 'candidates' && isBottomSectionOpen ? 'rotate-180 text-amber-400' : 'opacity-60'
-                      }`}
-                    />
-                    {eventsList.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={(e) => handleDeleteEvent(evt.id, e)}
-                        title="Excluir este evento"
-                        className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer"
-                      >
-                        <Trash2 className="w-2.5 h-2.5" />
-                      </button>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                  {eventsList.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={(e) => handleDeleteEvent(evt.id, e)}
+                      title="Excluir este evento"
+                      className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           {/* CANTO DIREITO: ENGRENAGEM COLORIDA (AO CLICAR REVELA SUAVEMENTE AS OPÇÕES EMPURRANDO AS DEMAIS PARA BAIXO) */}
@@ -775,55 +833,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
             transition={{ duration: 0.45, ease: [0.25, 0.1, 0.25, 1] }}
             className="overflow-hidden mb-3"
           >
-            <div className="space-y-2 pt-0.5 pb-1">
-              {/* SEÇÃO DE CRIAR / EDITAR NOME DO EVENTO (COMPACTA) */}
-              <div className="bg-[#001f47] border border-blue-800 rounded-xl p-2.5 shadow-md">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <Pencil className="w-3.5 h-3.5 text-amber-400" />
-                    <span className="text-xs font-bold text-white font-sans">
-                      Evento:
-                    </span>
-                  </div>
-
-                  <input
-                    type="text"
-                    value={eventNameInput}
-                    onChange={(e) => setEventNameInput(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        handleRenameCurrentEvent();
-                      }
-                    }}
-                    placeholder="Ex: ESCOLHA DO TESOUREIRO"
-                    className="flex-1 px-2.5 py-1 bg-[#07132a] border border-blue-700 focus:border-amber-400 rounded-lg text-xs font-black text-white uppercase outline-none transition shadow-inner"
-                  />
-
-                  <div className="flex flex-wrap items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        handleRenameCurrentEvent();
-                        setIsBottomSectionOpen(true);
-                      }}
-                      className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[10.5px] uppercase tracking-wider rounded-lg shadow transition active:scale-95 cursor-pointer flex items-center gap-1"
-                    >
-                      <CheckCircle className="w-3 h-3" />
-                      <span>Salvar Nome</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleCreateEvent(eventNameInput)}
-                      className="px-2.5 py-1 bg-emerald-600/40 hover:bg-emerald-600/60 border border-emerald-400 text-emerald-100 font-black text-[10.5px] uppercase tracking-wider rounded-lg shadow transition active:scale-95 cursor-pointer flex items-center gap-1"
-                    >
-                      <FolderPlus className="w-3 h-3" />
-                      <span>Criar Novo</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-
+            <div className="pt-0.5 pb-1">
               {/* PERSONALIZAR LAYOUT E CORES DOS CARDS NO PAINEL / TELÃO (ESPREMIDO EM 50%) */}
               {(() => {
                 const layout = session.telaoLayout || {};
