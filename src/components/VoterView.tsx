@@ -27,23 +27,36 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [fontSizeLevel, setFontSizeLevel] = useState<'normal' | 'large' | 'xlarge'>(() => {
+  // Controle de escala da fonte dos cards: mín 0% (+0%), passos de 8% e 8% limitado a 24% (0%, 8%, 16%, 24%)
+  const [fontScalePercent, setFontScalePercent] = useState<number>(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('vota_font_size');
-      if (saved === 'large' || saved === 'xlarge') return saved;
+      const saved = Number(localStorage.getItem('vota_font_scale_pct'));
+      if ([0, 8, 16, 24].includes(saved)) return saved;
     }
-    return 'normal';
+    return 0; // tamanho mínimo por padrão
   });
 
-  const toggleFontSize = () => {
-    setFontSizeLevel((prev) => {
-      const next = prev === 'normal' ? 'large' : prev === 'large' ? 'xlarge' : 'normal';
+  const decreaseFont = () => {
+    setFontScalePercent((prev) => {
+      const next = Math.max(0, prev - 8);
       if (typeof window !== 'undefined') {
-        localStorage.setItem('vota_font_size', next);
+        localStorage.setItem('vota_font_scale_pct', String(next));
       }
       return next;
     });
   };
+
+  const increaseFont = () => {
+    setFontScalePercent((prev) => {
+      const next = Math.min(24, prev + 8);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('vota_font_scale_pct', String(next));
+      }
+      return next;
+    });
+  };
+
+  const fontMultiplier = 1 + fontScalePercent / 100;
 
   // Aviso em formato de cortina: some sozinho após alguns segundos
   useEffect(() => {
@@ -216,18 +229,35 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         >
           {/* Cabeçalho de Resultados (compacto) */}
           <div className="text-center pb-2 border-b border-blue-900/80 relative">
-            {/* Botão a A no canto direito para aumentar fonte */}
-            <button
-              type="button"
-              onClick={toggleFontSize}
-              title={`Ajustar tamanho da fonte (atual: ${
-                fontSizeLevel === 'xlarge' ? 'Extra Grande' : fontSizeLevel === 'large' ? 'Grande' : 'Normal'
-              })`}
-              className="absolute right-0 top-0 px-2 py-0.5 rounded-md bg-blue-950/80 border border-blue-700/80 hover:border-amber-400 text-blue-200 hover:text-white flex items-center justify-center gap-0.5 transition-all active:scale-90 cursor-pointer shadow-sm select-none"
-            >
-              <span className="text-[10px] font-bold leading-none">a</span>
-              <span className="text-xs font-black leading-none">A</span>
-            </button>
+            {/* A(menor) e A(maior) separados e sem borda com espaço de 2 caracteres */}
+            <div className="absolute right-0 top-0 flex items-center gap-2 select-none">
+              <button
+                type="button"
+                onClick={decreaseFont}
+                disabled={fontScalePercent === 0}
+                title="Reduzir fonte dos cards (mínimo)"
+                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 0
+                    ? 'opacity-25 cursor-not-allowed text-slate-400'
+                    : 'text-white hover:text-amber-300'
+                }`}
+              >
+                <span className="text-xs font-bold leading-none pointer-events-none">A</span>
+              </button>
+              <button
+                type="button"
+                onClick={increaseFont}
+                disabled={fontScalePercent === 24}
+                title="Aumentar fonte dos cards (limite +24%)"
+                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 24
+                    ? 'opacity-25 cursor-not-allowed text-slate-400'
+                    : 'text-white hover:text-amber-300'
+                }`}
+              >
+                <span className="text-lg font-black leading-none pointer-events-none">A</span>
+              </button>
+            </div>
             <span
               className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-1 shadow-sm ${
                 live
@@ -653,22 +683,54 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
           <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
 
-          {/* Direita: Contador 0/6 */}
-          <div
-            className={`text-xs sm:text-sm font-bold tabular-nums flex items-baseline shrink-0 ${
-              isReadyToConfirm ? 'text-emerald-300' : 'text-[#e6d3a8]'
-            }`}
-          >
-            <motion.span
-              key={selectedIds.length}
-              initial={{ scale: 1.5, opacity: 0.4 }}
-              animate={{ scale: 1, opacity: 1 }}
-              transition={{ type: 'spring', damping: 12, stiffness: 300 }}
-              className="inline-block font-black"
+          {/* Direita: Contador 0/6 e Botões A(menor)  A(maior) separados e sem borda */}
+          <div className="flex items-center gap-2 shrink-0">
+            <div
+              className={`text-xs sm:text-sm font-bold tabular-nums flex items-baseline shrink-0 ${
+                isReadyToConfirm ? 'text-emerald-300' : 'text-[#e6d3a8]'
+              }`}
             >
-              {selectedIds.length}
-            </motion.span>
-            <span className="opacity-80">/{maxVotes}</span>
+              <motion.span
+                key={selectedIds.length}
+                initial={{ scale: 1.5, opacity: 0.4 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', damping: 12, stiffness: 300 }}
+                className="inline-block font-black"
+              >
+                {selectedIds.length}
+              </motion.span>
+              <span className="opacity-80">/{maxVotes}</span>
+            </div>
+
+            {/* A(menor) e A(maior) separados, sem borda, com espaço de 2 caracteres */}
+            <div className="flex items-center gap-2 select-none shrink-0 ml-1">
+              <button
+                type="button"
+                onClick={decreaseFont}
+                disabled={fontScalePercent === 0}
+                title="Reduzir fonte dos cards (mínimo)"
+                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 0
+                    ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
+                    : 'text-[#f4ead2] hover:text-amber-300'
+                }`}
+              >
+                <span className="text-xs font-bold leading-none pointer-events-none">A</span>
+              </button>
+              <button
+                type="button"
+                onClick={increaseFont}
+                disabled={fontScalePercent === 24}
+                title="Aumentar fonte dos cards (limite +24%)"
+                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 24
+                    ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
+                    : 'text-[#f4ead2] hover:text-amber-300'
+                }`}
+              >
+                <span className="text-lg font-black leading-none pointer-events-none">A</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -713,8 +775,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   whileTap={{ scale: 0.96 }}
                   onClick={() => handleToggleCandidate(option.id)}
                   style={{
-                    minHeight:
-                      fontSizeLevel === 'xlarge' ? '56px' : fontSizeLevel === 'large' ? '48px' : '42px',
+                    minHeight: `${Math.round(42 * fontMultiplier)}px`,
                   }}
                   className={`py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border-2 transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm relative overflow-hidden active:scale-95 ${
                     isSelected
@@ -725,9 +786,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   {/* Informações do Candidato (Sem letra à esquerda) */}
                   <div className="flex-1 min-w-0 pr-1">
                     <h4
-                      className={`font-black text-xs sm:text-[13px] leading-tight uppercase truncate ${
+                      className={`font-black leading-tight uppercase truncate ${
                         isSelected ? 'text-white' : 'text-slate-100'
                       }`}
+                      style={{
+                        fontSize: `${(13 * fontMultiplier).toFixed(1)}px`,
+                      }}
                     >
                       {option.name}
                     </h4>
