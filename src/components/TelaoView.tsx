@@ -117,6 +117,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   // Configurações personalizáveis de layout dos cards no Telão
   const layoutColumns = session.telaoLayout?.columns ?? 2;
   const qrPosition = session.telaoLayout?.qrPosition ?? 'middle';
+  const qrSize = session.telaoLayout?.qrSize ?? 100;
+  const qrScaleFactor = Math.max(0.5, Math.min(1.5, qrSize / 100));
+  const qrPanelWidth = Math.round(378 * qrScaleFactor);
+  const qrSvgSize = Math.round(330 * qrScaleFactor);
   const qrAlignClass =
     qrPosition === 'top'
       ? 'self-start'
@@ -124,7 +128,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       ? 'self-end'
       : 'self-center';
   const cardHeight = session.telaoLayout?.cardHeight ?? 38;
-  const cardGap = session.telaoLayout?.cardGap ?? 8;
+  const cardGap = session.telaoLayout?.cardGapV2 ?? 2;
   const winnerColor = session.telaoLayout?.winnerColor || '#10b981';
   const suplenteColor = session.telaoLayout?.suplenteColor || '#3b82f6';
   const suplente2Color = session.telaoLayout?.suplente2Color || '#64748b';
@@ -221,14 +225,14 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       {/* ÁREA CENTRAL: QR CODE CENTRALIZADO EM RELAÇÃO À SEÇÃO DE CARDS (items-center) */}
       <div className="flex-1 w-full">
         <div className="flex flex-col md:flex-row items-center w-full">
-          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (+35% MAIOR, ALINHADO AO CENTRO DA SEÇÃO DE CARDS, VELOCIDADE 2400ms) */}
+          {/* COLUNA DA ESQUERDA: PAINEL DO QR CODE E SENHA (TAMANHO REGULÁVEL POR SLIDE EM CONFIGURAÇÕES) */}
           <div
             style={{
-              width: showQrCode ? '378px' : '0px',
+              width: showQrCode ? `${qrPanelWidth}px` : '0px',
               marginRight: showQrCode ? '16px' : '0px',
               opacity: showQrCode ? 1 : 0,
               transition:
-                'width 2400ms cubic-bezier(0.25, 0.1, 0.25, 1), margin-right 2400ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 2400ms ease-in-out',
+                'width 350ms cubic-bezier(0.25, 0.1, 0.25, 1), margin-right 350ms cubic-bezier(0.25, 0.1, 0.25, 1), opacity 350ms ease-in-out',
               pointerEvents: showQrCode ? 'auto' : 'none',
               willChange: 'width, margin-right, opacity',
             }}
@@ -236,25 +240,25 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
           >
             <div
               style={{
-                width: '378px',
-                transform: showQrCode ? 'translateX(0px)' : 'translateX(-378px)',
-                transition: 'transform 2400ms cubic-bezier(0.25, 0.1, 0.25, 1)',
-                willChange: 'transform',
+                width: `${qrPanelWidth}px`,
+                transform: showQrCode ? 'translateX(0px)' : `translateX(-${qrPanelWidth}px)`,
+                transition: 'width 350ms cubic-bezier(0.25, 0.1, 0.25, 1), transform 350ms cubic-bezier(0.25, 0.1, 0.25, 1)',
+                willChange: 'width, transform',
               }}
-              className="w-[378px] shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl px-3 py-3.5 shadow-2xl flex flex-col items-center text-center"
+              className="shrink-0 bg-[#001f47]/95 border-2 border-amber-500/40 rounded-2xl px-3 py-3 shadow-2xl flex flex-col items-center text-center"
             >
-              <h3 className="font-black text-white text-lg sm:text-xl font-serif tracking-wider uppercase mb-2.5">
+              <h3 className="font-black text-white text-base sm:text-lg font-serif tracking-wider uppercase mb-2">
                 LEIA O QR CODE
               </h3>
 
-              {/* QR Code 35% Maior Quase Encostando nas Bordas Dir e Esq */}
-              <div className="w-full p-3 bg-white rounded-2xl shadow-xl mb-3 border-2 border-[#d4af37] flex items-center justify-center">
+              {/* QR Code redimensionável pelo slider de Configurações */}
+              <div className="w-full p-2.5 bg-white rounded-2xl shadow-xl mb-2.5 border-2 border-[#d4af37] flex items-center justify-center">
                 <QRCodeSVG
                   value={voterUrl || `https://vota-iasd-central.web.app/?view=voter&pin=${session.pin}`}
-                  size={330}
+                  size={qrSvgSize}
                   level="M"
                   includeMargin={false}
-                  style={{ width: '100%', height: 'auto', maxWidth: '334px' }}
+                  style={{ width: '100%', height: 'auto', maxWidth: `${qrSvgSize}px` }}
                 />
               </div>
 
@@ -263,7 +267,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
                   SENHA DE ACESSO
                 </span>
-                <span className="text-2xl font-mono font-black text-[#d4af37] tracking-widest">
+                <span className="text-xl sm:text-2xl font-mono font-black text-[#d4af37] tracking-widest">
                   {session.pin}
                 </span>
               </div>
@@ -738,7 +742,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                   return (
                     <LayoutGroup>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: `${Math.max(cardGap, 6)}px` }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>
                       {/* 1. SEÇÃO DE TITULARES */}
                       <div className={`grid ${gridColsClass}`} style={{ gap: `${cardGap}px` }}>
                         <AnimatePresence>
@@ -748,11 +752,11 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                       {/* 2. SEÇÃO DE SUPLENTES */}
                       {suplentesCount > 0 && (
-                        <div className="w-full pt-1">
+                        <div className="w-full pt-0.5">
                           {segundoSuplentesCount > 0 ? (
                             <div
                               className={`grid ${gridColsClass} items-start`}
-                              style={{ gap: `${Math.max(cardGap, 8)}px` }}
+                              style={{ gap: `${cardGap}px` }}
                             >
                               {/* COLUNA 1: 1º SUPLENTE */}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: `${cardGap}px` }}>

@@ -950,8 +950,9 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                 const layout = session.telaoLayout || {};
                 const cols = layout.columns ?? 2;
                 const qrPos = layout.qrPosition ?? 'middle';
+                const qrSize = layout.qrSize ?? 100;
                 const height = layout.cardHeight ?? 38;
-                const gap = layout.cardGap ?? 8;
+                const gap = layout.cardGapV2 ?? 2;
                 const winnerColor = layout.winnerColor || '#10b981';
                 const suplenteColor = layout.suplenteColor || '#3b82f6';
                 const suplente2Color = layout.suplente2Color || '#64748b';
@@ -963,8 +964,9 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     telaoLayout: {
                       columns: cols,
                       qrPosition: qrPos,
+                      qrSize,
                       cardHeight: height,
-                      cardGap: gap,
+                      cardGapV2: gap,
                       winnerColor,
                       suplenteColor,
                       suplente2Color,
@@ -989,8 +991,8 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       </span>
                     </div>
 
-                    {/* LINHA 1 COMPACTA: COLUNAS (1 OU 2), POSIÇÃO DO QR CODE (TOPO, MEIO, BOTTOM), ALTURA E ESPAÇO */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                    {/* LINHA 1 COMPACTA: COLUNAS (1 OU 2), POSIÇÃO DO QR CODE (TOPO, MEIO, BOTTOM), TAMANHO QR CODE, ALTURA E ESPAÇO */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2">
                       {/* 1. QUANTIDADE DE COLUNAS */}
                       <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
                         <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
@@ -1037,7 +1039,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                       {/* 2. POSIÇÃO DO QR CODE NA TELA PÚBLICO (TOPO, MEIO OU BOTTOM - APENAS ÍCONES) */}
                       <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
                         <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
-                          Posição QR Code:
+                          Posição QR:
                         </span>
 
                         <div className="grid grid-cols-3 gap-1.5 flex-1 max-w-[165px]">
@@ -1095,7 +1097,47 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         </div>
                       </div>
 
-                      {/* 3. ALTURA DOS CARDS */}
+                      {/* 3. TAMANHO DO QR CODE (SLIDER PARA AUMENTAR OU DIMINUIR) */}
+                      <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+                        <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
+                          Tam. QR:
+                        </span>
+
+                        <div className="flex items-center gap-1.5 flex-1">
+                          <button
+                            type="button"
+                            onClick={() => updateLayout({ qrSize: Math.max(50, qrSize - 5) })}
+                            className="w-6 h-6 rounded bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 shrink-0"
+                            title="Diminuir QR Code"
+                          >
+                            -
+                          </button>
+                          <input
+                            type="range"
+                            min={50}
+                            max={150}
+                            step={5}
+                            value={qrSize}
+                            onChange={(e) => updateLayout({ qrSize: Number(e.target.value) })}
+                            className="flex-1 h-1.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
+                            title="Deslize para aumentar ou diminuir o tamanho do QR Code no Telão"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateLayout({ qrSize: Math.min(150, qrSize + 5) })}
+                            className="w-6 h-6 rounded bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 shrink-0"
+                            title="Aumentar QR Code"
+                          >
+                            +
+                          </button>
+                        </div>
+
+                        <span className="px-1.5 py-0.5 rounded bg-[#001f47] border border-amber-400/60 text-amber-300 font-mono font-black text-[10px] shrink-0">
+                          {qrSize}%
+                        </span>
+                      </div>
+
+                      {/* 4. ALTURA DOS CARDS */}
                       <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
                         <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
                           Altura:
@@ -1131,7 +1173,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         </span>
                       </div>
 
-                      {/* 3. ESPAÇO ENTRE OS CARDS */}
+                      {/* 5. ESPAÇO ENTRE OS CARDS (REDUZIDO EM 80%: PADRÃO 2PX) */}
                       <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
                         <span className="text-[10.5px] font-black text-white uppercase tracking-wide shrink-0">
                           Espaço:
@@ -1140,22 +1182,23 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         <div className="flex items-center gap-1.5 flex-1">
                           <button
                             type="button"
-                            onClick={() => updateLayout({ cardGap: Math.max(2, gap - 2) })}
+                            onClick={() => updateLayout({ cardGapV2: Math.max(0, gap - 1) })}
                             className="w-6 h-6 rounded bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 shrink-0"
                           >
                             -
                           </button>
                           <input
                             type="range"
-                            min={2}
-                            max={28}
+                            min={0}
+                            max={24}
+                            step={1}
                             value={gap}
-                            onChange={(e) => updateLayout({ cardGap: Number(e.target.value) })}
+                            onChange={(e) => updateLayout({ cardGapV2: Number(e.target.value) })}
                             className="flex-1 h-1.5 bg-blue-950 rounded-lg appearance-none cursor-pointer accent-amber-400 border border-blue-800"
                           />
                           <button
                             type="button"
-                            onClick={() => updateLayout({ cardGap: Math.min(28, gap + 2) })}
+                            onClick={() => updateLayout({ cardGapV2: Math.min(24, gap + 1) })}
                             className="w-6 h-6 rounded bg-[#001f47] hover:bg-blue-900 border border-blue-600 text-amber-300 font-black text-xs flex items-center justify-center cursor-pointer active:scale-90 shrink-0"
                           >
                             +
