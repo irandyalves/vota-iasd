@@ -26,6 +26,7 @@ import {
   Users,
   Activity,
   Award,
+  AlertCircle,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
@@ -54,6 +55,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
   const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
+  const [tieWarningModal, setTieWarningModal] = useState<string | null>(null);
+  const [tieWarningTrigger, setTieWarningTrigger] = useState<number>(0);
   const [isScreen2Open, setIsScreen2Open] = useState<boolean>(false);
 
   useEffect(() => {
@@ -61,10 +64,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     return unsub;
   }, []);
 
-  const handleToggleTieCandidate = (id: string) => {
-    setSelectedTieCandidateIds((prev) =>
-      prev.includes(id) ? prev.filter((cId) => cId !== id) : [...prev, id]
-    );
+  // Auto-dismiss do modalzinho laranja após 3.5 segundos
+  useEffect(() => {
+    if (!tieWarningModal) return;
+    const t = setTimeout(() => setTieWarningModal(null), 3500);
+    return () => clearTimeout(t);
+  }, [tieWarningModal, tieWarningTrigger]);
+
+  const handleToggleTieCandidate = (id: string, maxAllowed: number) => {
+    if (selectedTieCandidateIds.includes(id)) {
+      setSelectedTieCandidateIds((prev) => prev.filter((cId) => cId !== id));
+      setTieWarningModal(null);
+    } else {
+      if (selectedTieCandidateIds.length >= maxAllowed) {
+        setTieWarningTrigger(Date.now());
+        setTieWarningModal(`VOCÊ JÁ ESCOLHEU ${maxAllowed} ${maxAllowed === 1 ? 'NOME' : 'NOMES'}`);
+        return;
+      }
+      setSelectedTieCandidateIds((prev) => [...prev, id]);
+    }
   };
   const detectedTies = session.status === 'CLOSED' ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
@@ -1009,6 +1027,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100">
+      {/* AVISO QUICANDO: VOCÊ JÁ ESCOLHEU XX NOMES (MODALZINHO LARANJA COM ALTA VISIBILIDADE) */}
+      <AnimatePresence>
+        {tieWarningModal && (
+          <motion.div
+            key={`tie-warning-${tieWarningTrigger}`}
+            onClick={() => setTieWarningModal(null)}
+            initial={{ y: -50, opacity: 0, scale: 0.88 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -40, opacity: 0, scale: 0.88 }}
+            transition={{
+              type: 'spring',
+              stiffness: 550,
+              damping: 18,
+              mass: 0.85,
+            }}
+            className="fixed top-5 inset-x-4 max-w-sm mx-auto p-3.5 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 border-2 border-amber-200 text-white flex items-center justify-center gap-2.5 shadow-[0_16px_36px_rgba(249,115,22,0.7),0_6px_14px_rgba(0,0,0,0.6)] cursor-pointer select-none z-[9999]"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow self-center" />
+            <div className="flex flex-col items-center text-center gap-0.5">
+              <span className="font-black text-xs sm:text-sm tracking-wide uppercase drop-shadow">
+                {tieWarningModal}
+              </span>
+              <span className="text-[10.5px] text-amber-100 font-medium tracking-normal normal-case">
+                Para escolher outro candidato, desmarque um nome primeiro.
+              </span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* MODAL DE EMPATES (BORDA VERMELHA FINA, ESTRELA E "EMPATE" BEM CLARO) */}
       <AnimatePresence>
         {isTieModalOpen && hasTies && (
@@ -1017,9 +1065,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
-            onClick={() => setIsTieModalOpen(false)}
+            onClick={() => {
+              setIsTieModalOpen(false);
+              setTieWarningModal(null);
+              setSelectedTieCandidateIds([]);
+            }}
             onKeyDown={(e) => {
-              if (e.key === 'Escape') setIsTieModalOpen(false);
+              if (e.key === 'Escape') {
+                setIsTieModalOpen(false);
+                setTieWarningModal(null);
+                setSelectedTieCandidateIds([]);
+              }
             }}
             tabIndex={-1}
             className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
@@ -1035,7 +1091,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               {/* Botão Fechar (X) */}
               <button
                 type="button"
-                onClick={() => setIsTieModalOpen(false)}
+                onClick={() => {
+                  setIsTieModalOpen(false);
+                  setTieWarningModal(null);
+                  setSelectedTieCandidateIds([]);
+                }}
                 className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
                 title="Fechar"
               >
@@ -1051,34 +1111,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
               {/* Lista de Grupos de Empate */}
               <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
-                {detectedTies.map((tie, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3.5 rounded-xl bg-[#03152d]/90 border border-rose-500/50 space-y-3 shadow-inner"
-                  >
-                    <div className="flex items-center justify-between gap-2 border-b border-rose-500/20 pb-2">
-                      <div>
-                        <h4 className="font-black text-xs sm:text-sm text-rose-300 uppercase tracking-wide">
-                          {tie.label}
-                        </h4>
-                        <p className="text-[11px] text-slate-300">
-                          <strong className="text-white">{tie.vacanciesInDispute}</strong> {tie.vacanciesInDispute === 1 ? 'vaga em disputa' : 'vagas em disputa'} • <strong className="text-white">{tie.votesCount}</strong> {tie.votesCount === 1 ? 'voto cada' : 'votos cada'}
-                        </p>
+                {detectedTies.map((tie, idx) => {
+                  const maxAllowed = tie.vacanciesInDispute + 1;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-3.5 rounded-xl bg-[#03152d]/90 border border-rose-500/50 space-y-3 shadow-inner"
+                    >
+                      <div className="flex items-center justify-between gap-2 border-b border-rose-500/20 pb-2">
+                        <div>
+                          <h4 className="font-black text-sm sm:text-base text-amber-300 tracking-wide">
+                            {tie.vacanciesInDispute === 1
+                              ? 'É 1 vaga, escolha 2 nomes'
+                              : `São ${tie.vacanciesInDispute} vagas, escolha ${tie.vacanciesInDispute + 1} nomes`}
+                          </h4>
+                          <p className="text-[11px] text-slate-300">
+                            {tie.label} • <strong className="text-white">{tie.votesCount}</strong> {tie.votesCount === 1 ? 'voto cada' : 'votos cada'}
+                          </p>
+                        </div>
                       </div>
-                      <span className="px-2 py-0.5 rounded text-[9.5px] font-black uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-500/50">
-                        {tie.tiedCandidates.length} Candidatos
-                      </span>
-                    </div>
 
-                    {/* Cards dos Candidatos Empatados (Clicáveis para o admin selecionar quem desempata) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {tie.tiedCandidates.map((c) => {
-                        const isSelected = selectedTieCandidateIds.includes(c.id);
+                      {/* Cards dos Candidatos Empatados (Clicáveis para o admin selecionar quem desempata) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {tie.tiedCandidates.map((c) => {
+                          const isSelected = selectedTieCandidateIds.includes(c.id);
 
-                        return (
-                          <div
-                            key={c.id}
-                            onClick={() => handleToggleTieCandidate(c.id)}
+                          return (
+                            <div
+                              key={c.id}
+                              onClick={() => handleToggleTieCandidate(c.id, maxAllowed)}
                             className={`p-2.5 rounded-xl border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
                               isSelected
                                 ? 'bg-emerald-950/60 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.35)] ring-2 ring-emerald-400/40 text-white'
@@ -1131,8 +1192,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       })}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
+            </div>
 
               {/* Rodapé do Modal: BOTÃO 3D URNA "CONFIRMA" VERDE COM BRAILLE (PRINT) CENTRALIZADO NO RODAPÉ */}
               <div className="mt-4 pt-3 border-t border-slate-700/60 flex flex-col items-center justify-center w-full">

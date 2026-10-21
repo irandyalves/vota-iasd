@@ -826,42 +826,43 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         </div>
       </div>
 
-      {/* Mensagem de Erro ou Validação: CAI E QUICA (LARANJA, TEXTO EM BOLD, NÚMERO EM VERDE ESCURO) */}
-      <div className="sticky top-0 z-40 h-0 overflow-visible">
-        <AnimatePresence mode="wait">
-          {errorMessage && (
-            <motion.div
-              key={`aviso-quica-${errorTrigger}-${errorMessage}`}
-              onClick={() => setErrorMessage('')}
-              initial={{ y: -75, opacity: 0, scale: 0.9 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: -60, opacity: 0, scale: 0.9 }}
-              transition={{
-                type: 'spring',
-                stiffness: 550,
-                damping: 14,
-                mass: 0.85,
-              }}
-              className="absolute left-1 right-1 top-1 p-3 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 border-2 border-amber-200 text-white flex items-center justify-center gap-2 shadow-[0_14px_30px_rgba(249,115,22,0.55),0_4px_10px_rgba(0,0,0,0.5)] cursor-pointer select-none z-50"
-            >
-              <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow" />
-              <div className="flex items-center gap-1.5 flex-wrap justify-center text-xs sm:text-sm font-black uppercase tracking-wider text-white drop-shadow">
-                {errorMessage === 'LIMIT_EXCEEDED' ? (
-                  <>
-                    <span>VOCÊ SÓ PODE ESCOLHE</span>
-                    <span className="text-[#064e3b] font-black text-sm sm:text-base bg-emerald-200/95 px-2 py-0.5 rounded-md border border-emerald-800/40 shadow-inner">
-                      {maxVotes}
-                    </span>
-                    <span>{maxVotes === 1 ? 'NOME' : 'NOMES'}</span>
-                  </>
-                ) : (
-                  <span>{errorMessage}</span>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {/* MODALZINHO LARANJA: FIXO NA TELA VISÍVEL DO CELULAR (SEMPRE VISÍVEL MESMO ROLADO ATÉ O FIM) */}
+      <AnimatePresence mode="wait">
+        {errorMessage && (
+          <motion.div
+            key={`aviso-quica-${errorTrigger}-${errorMessage}`}
+            onClick={() => setErrorMessage('')}
+            initial={{ y: -50, opacity: 0, scale: 0.88 }}
+            animate={{ y: 0, opacity: 1, scale: 1 }}
+            exit={{ y: -40, opacity: 0, scale: 0.88 }}
+            transition={{
+              type: 'spring',
+              stiffness: 550,
+              damping: 18,
+              mass: 0.85,
+            }}
+            className="fixed top-5 inset-x-4 max-w-sm mx-auto p-3.5 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 border-2 border-amber-200 text-white flex items-center justify-center gap-2.5 shadow-[0_16px_36px_rgba(249,115,22,0.65),0_6px_14px_rgba(0,0,0,0.6)] cursor-pointer select-none z-[9999]"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow self-center" />
+            <div className="flex-1">
+              {errorMessage === 'LIMIT_EXCEEDED' ? (
+                <div className="flex flex-col items-center text-center gap-0.5">
+                  <span className="font-black text-xs sm:text-sm tracking-wide uppercase drop-shadow">
+                    VOCÊ JÁ ESCOLHEU {maxVotes} {maxVotes === 1 ? 'NOME' : 'NOMES'}
+                  </span>
+                  <span className="text-[10.5px] text-amber-100 font-medium tracking-normal normal-case">
+                    Para escolher outro candidato, desmarque um nome primeiro.
+                  </span>
+                </div>
+              ) : (
+                <span className="text-xs sm:text-sm font-black uppercase text-center block drop-shadow">
+                  {errorMessage}
+                </span>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Lista de Cards Compactos (Touch Acessível - 2 colunas no mobile ou 1 centralizada se poucos) */}
       {(() => {
