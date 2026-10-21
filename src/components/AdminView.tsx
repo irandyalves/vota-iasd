@@ -1521,8 +1521,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
 
               {/* SEÇÃO DA DIREITA: SEM BORDINHA EXTERNA, BOTÕES COM ALTURA REDUZIDA EM 35%, E SEM BOLD EM MOSTRAR TELÃO E QR.CODE TELÃO */}
-              <div className="flex flex-col gap-2.5 shrink-0 w-full lg:w-48 justify-center">
-                {/* 1. Botão MOSTRAR NO TELÃO (SEM BOLD, -35% ALTURA) */}
+              <div className="flex flex-col gap-5 shrink-0 w-full lg:w-48 justify-center">
+                {/* 1. Botão NOMES NO TELÃO (SEM COR; ATIVO = SÓ A BORDINHA AZUL) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1536,20 +1536,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         : 'Exibindo Votação/Resultados no Telão!'
                     );
                   }}
-                  className={`h-[46px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
+                  className={`h-[46px] px-3 py-1.5 bg-transparent border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs text-white ${
                     session.telaoMode === 'names'
-                      ? 'bg-amber-500/50 hover:bg-amber-500/70 border-amber-300 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.4)]'
-                      : 'bg-blue-600/50 hover:bg-blue-600/70 border-blue-400 text-blue-100 shadow-[0_0_12px_rgba(96,165,250,0.3)] hover:shadow-[0_0_16px_rgba(96,165,250,0.5)]'
+                      ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.45)]'
+                      : 'border-slate-600/70 hover:border-slate-400'
                   }`}
                   title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
                 >
-                  <Tv className="w-3 h-3 shrink-0" />
-                  <span>
-                    {session.telaoMode === 'names' ? 'NOMES NO TELÃO (ATIVO)' : 'MOSTRAR NO TELÃO'}
-                  </span>
+                  <Tv className="w-3.5 h-3.5 shrink-0" />
+                  <span>Nomes no telão</span>
                 </button>
 
-                {/* 2. Botão EXIBIR QR.CODE NO TELÃO (SEM BOLD, -35% ALTURA) */}
+                {/* 2. Botão QR CODE NO TELÃO (SEM COR; ATIVO = SÓ A BORDINHA AZUL) */}
                 <button
                   type="button"
                   onClick={() => {
@@ -1559,14 +1557,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     });
                   }}
                   title="Mostrar ou ocultar o QR Code no Telão"
-                  className={`h-[46px] px-2.5 py-1.5 border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-1.5 uppercase tracking-wider font-normal text-[9.5px] ${
+                  className={`h-[46px] px-3 py-1.5 bg-transparent border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs text-white ${
                     session.showQrOnTelao !== false
-                      ? 'bg-amber-500/25 hover:bg-amber-400/35 border-amber-400 text-amber-200 shadow-[0_0_12px_rgba(251,191,36,0.3)]'
-                      : 'bg-[#1e293b]/80 hover:bg-amber-500/20 border-amber-400/80 text-amber-300'
+                      ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.45)]'
+                      : 'border-slate-600/70 hover:border-slate-400'
                   }`}
                 >
-                  <QrCode className="w-3 h-3 shrink-0" />
-                  <span>EXIBIR QR.CODE NO TELÃO</span>
+                  <QrCode className="w-3.5 h-3.5 shrink-0" />
+                  <span>QR CODE no telão</span>
                 </button>
               </div>
             </div>
