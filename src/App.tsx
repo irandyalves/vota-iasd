@@ -5,7 +5,6 @@ import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
 import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, getLocalSession } from './services/votingService';
-import { openTelaoOnSecondMonitor, isSecondaryScreenOpen } from './utils/screen';
 
 const CURRENT_BUILD_VERSION = import.meta.env.VITE_BUILD_VERSION || '';
 
@@ -76,13 +75,6 @@ export function App() {
         effectiveView = 'voter';
       }
       setCurrentView(effectiveView);
-
-      // Se for Admin, só abre o Telão se ainda não houver nenhum telão aberto
-      if (effectiveView === 'admin') {
-        if (!isSecondaryScreenOpen()) {
-          openTelaoOnSecondMonitor();
-        }
-      }
     }
   }, []);
 

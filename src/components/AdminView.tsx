@@ -24,7 +24,6 @@ import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
-import { openTelaoOnSecondMonitor } from '../utils/screen';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -2135,7 +2134,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   onClick={() => {
                     const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
                     saveSession({ ...session, telaoMode: nextMode });
-                    openTelaoOnSecondMonitor();
                     showNotification(
                       'success',
                       nextMode === 'names'

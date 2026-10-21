@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Lock, Unlock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
-import { toggleSecondaryScreen, subscribeSecondaryScreen, openTelaoOnSecondMonitor } from '../utils/screen';
+import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 import type { VotingSession } from '../types';
 import { subscribeToConnectedVoters } from '../services/votingService';
 
@@ -121,7 +121,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleCenterVotingButtonClick = () => {
     if (!session || !onSaveSession) return;
-    openTelaoOnSecondMonitor();
 
     if (isVotingActive) {
       // Se já está em votação (ou com caption APURAÇÃO), clicar encerra e abre a APURAÇÃO no Telão

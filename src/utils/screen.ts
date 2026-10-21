@@ -13,8 +13,7 @@ let cachedExtraMonitors: MonitorRect[] | null = null;
 
 // Monitores extras padrão (caso o navegador ainda não tenha liberado getScreenDetails de forma síncrona)
 const FALLBACK_EXTRA_MONITORS: MonitorRect[] = [
-  { left: 1920, top: 0, width: 2560, height: 1440 },
-  { left: 776, top: -1080, width: 1280, height: 720 },
+  { left: 1920, top: 0, width: 1920, height: 1080 },
 ];
 
 // Pré-carrega em background os detalhes de todos os monitores conectados sem travar chamadas síncronas
@@ -77,7 +76,7 @@ export function isSecondaryScreenOpen(): boolean {
   if (secondaryWindows.size > 0) return true;
   if (typeof window !== 'undefined') {
     const ping = Number(localStorage.getItem('vota_iasd_telao_ping') || 0);
-    if (Date.now() - ping < 4500) {
+    if (Date.now() - ping < 6000) {
       return true;
     }
   }
@@ -104,7 +103,7 @@ export function closeSecondaryScreen(): void {
   notifyListeners();
 }
 
-function openWindowOnMonitor(url: string, monitor: MonitorRect, index: number): Window | null {
+function openWindowOnMonitor(url: string, monitor: MonitorRect, index: number = 0): Window | null {
   const existing = secondaryWindows.get(index);
   if (existing && !existing.closed) {
     try {
@@ -131,7 +130,7 @@ function openWindowOnMonitor(url: string, monitor: MonitorRect, index: number): 
   ].join(',');
 
   try {
-    const popup = window.open(url, `VotaIASD_TelaoProjetor_${index}`, windowFeatures);
+    const popup = window.open(url, 'VotaIASD_TelaoProjetor', windowFeatures);
     if (!popup || popup.closed || typeof popup.closed === 'undefined') {
       return null;
     }
@@ -143,7 +142,7 @@ function openWindowOnMonitor(url: string, monitor: MonitorRect, index: number): 
     secondaryWindows.set(index, popup);
     return popup;
   } catch (e) {
-    console.error(`Falha ao abrir Telão no monitor extra ${index + 1}:`, e);
+    console.error(`Falha ao abrir Telão no monitor:`, e);
     return null;
   }
 }
@@ -166,8 +165,7 @@ function ensureWindowWatcher() {
 }
 
 /**
- * Abre o Telão IMEDIATAMENTE (de forma síncrona para nunca perder o gesto do clique e nunca travar)
- * em TODOS os monitores extras disponíveis!
+ * Abre o Telão no monitor secundário (se já estiver aberto, foca na janela e nunca duplica)
  */
 export async function openTelaoOnSecondMonitor(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
@@ -184,43 +182,19 @@ export async function openTelaoOnSecondMonitor(): Promise<boolean> {
   }
 
   const url = `${window.location.origin}${window.location.pathname}?view=telao&fullscreen=true`;
-  const monitorsToOpen =
+  const primaryExtra =
     cachedExtraMonitors && cachedExtraMonitors.length > 0
-      ? cachedExtraMonitors
-      : FALLBACK_EXTRA_MONITORS;
+      ? cachedExtraMonitors[0]
+      : FALLBACK_EXTRA_MONITORS[0];
 
-  let anyOpened = false;
-
-  // 1. Disparo SÍNCRONO imediato em todos os monitores extras (evita bloqueio de popup e travamento)
-  monitorsToOpen.forEach((mon, idx) => {
-    const win = openWindowOnMonitor(url, mon, idx);
-    if (win) {
-      anyOpened = true;
-    }
-  });
-
-  if (anyOpened) {
+  const win = openWindowOnMonitor(url, primaryExtra, 0);
+  if (win) {
     notifyListeners();
     ensureWindowWatcher();
+    return true;
   }
 
-  // 2. Atualiza em background via Window Management API caso existam outros monitores detectados pelo navegador
-  refreshScreenDetailsInBackground().then((detectedExtras) => {
-    if (detectedExtras && detectedExtras.length > 0) {
-      detectedExtras.forEach((mon, idx) => {
-        const win = openWindowOnMonitor(url, mon, idx);
-        if (win) {
-          anyOpened = true;
-        }
-      });
-      if (anyOpened) {
-        notifyListeners();
-        ensureWindowWatcher();
-      }
-    }
-  });
-
-  return anyOpened;
+  return false;
 }
 
 export async function toggleSecondaryScreen(): Promise<boolean> {
