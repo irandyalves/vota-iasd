@@ -2535,18 +2535,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             {/* LINHA VERTICAL FINAL (MARCANDO O LIMITE 100%) */}
                             <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center" title="Limite 100%" />
 
-                            {/* COLUNA: VOTOS (Coluna % retirada e colocada antes da cabeça brilhosa) */}
-                            <div className="min-w-[62px] text-center shrink-0 ml-1">
+                            {/* COLUNA: VOTOS (Sem badge, só o número 80% maior, sem borda, amarelo e bold) */}
+                            <div className="min-w-[52px] text-center shrink-0 ml-1 flex items-center justify-center">
                               <span
-                                className={`px-2 py-0.5 rounded font-mono font-semibold text-xs block text-center ${
-                                  votes > 0
-                                    ? isTitular
-                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                      : 'bg-white/[0.08] text-slate-200 border border-white/[0.1]'
-                                    : 'bg-white/[0.04] text-slate-500'
+                                className={`font-mono font-black text-[22px] select-none leading-none ${
+                                  votes > 0 ? 'text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]' : 'text-slate-600'
                                 }`}
                               >
-                                {votes} {votes === 1 ? 'voto' : 'votos'}
+                                {votes}
                               </span>
                             </div>
                           </motion.div>

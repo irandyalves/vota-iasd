@@ -808,12 +808,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         {/* LINHA VERTICAL FINAL (MARCANDO O LIMITE 100%) */}
                         <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center z-10" title="Limite 100%" />
 
-                        {/* 5. CONTADOR NUMÉRICO DE VOTOS (Coluna % retirada e colocada antes da cabeça brilhosa) */}
-                        <div className="text-right z-10 shrink-0 flex items-center gap-1.5 font-mono ml-1.5">
-                          <span className="text-[10px] sm:text-[11px] font-bold text-slate-300/80 uppercase">
-                            votos
-                          </span>
-                          <span className="text-sm sm:text-base font-black text-white min-w-[2ch]">
+                        {/* 5. CONTADOR NUMÉRICO DE VOTOS (Sem badge, só o número 80% maior, sem borda, amarelo e bold) */}
+                        <div className="text-right z-10 shrink-0 flex items-center justify-end min-w-[42px] font-mono ml-1.5">
+                          <span className="text-[22px] font-black text-amber-300 select-none leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
                             {Math.floor(option.votesCount || 0)}
                           </span>
                         </div>
