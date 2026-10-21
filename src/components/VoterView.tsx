@@ -287,15 +287,15 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
           className="bg-[#001f47] border border-blue-800 rounded-2xl p-3 sm:p-4 shadow-2xl space-y-2.5"
         >
           {/* Cabeçalho de Resultados (compacto) */}
-          <div className="text-center pb-2 border-b border-blue-900/80 relative min-h-[58px] flex flex-col justify-center overflow-hidden">
+          <div className="text-center pb-1.5 pt-0.5 border-b border-blue-900/80 relative min-h-[44px] flex flex-col justify-center overflow-hidden">
             {/* A(menor) e A(maior) separados e sem borda com espaço de 2 caracteres (z-30 sempre clicáveis) */}
-            <div className="absolute right-0 top-0 z-30 flex items-center gap-2 select-none">
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center gap-2 select-none">
               <button
                 type="button"
                 onClick={decreaseFont}
                 disabled={fontScalePercent === 0}
                 title="Reduzir fonte dos cards (mínimo)"
-                className={`min-w-[34px] min-h-[34px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
                   fontScalePercent === 0
                     ? 'opacity-25 cursor-not-allowed text-slate-400'
                     : 'text-white hover:text-amber-300'
@@ -308,7 +308,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                 onClick={increaseFont}
                 disabled={fontScalePercent === 24}
                 title="Aumentar fonte dos cards (limite +24%)"
-                className={`min-w-[34px] min-h-[34px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
                   fontScalePercent === 24
                     ? 'opacity-25 cursor-not-allowed text-slate-400'
                     : 'text-white hover:text-amber-300'
@@ -318,33 +318,42 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
               </button>
             </div>
 
-            <span
-              className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-1 shadow-sm mx-auto ${
-                live
-                  ? 'bg-blue-950 text-sky-300 border-sky-500/60'
-                  : 'bg-emerald-950 text-emerald-300 border-emerald-500/60'
-              }`}
-            >
-              {live ? (
+            {/* CABEÇALHO APÓS VOTAÇÃO: . bolinha RESULT. PARCIAL | MULHERES (negrito fonte branca) | VOTO (ICONE CHECK) SEM FUNDO, TUDO SEM BORDAS E FUNDO */}
+            <div className="flex items-center justify-center gap-1.5 sm:gap-2 flex-wrap text-center select-none pr-14 pl-1 py-0.5">
+              {/* 1. . bolinha RESULT. PARCIAL (sem fundo, sem bordas) */}
+              <div className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-sky-300 shrink-0">
+                {live ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse drop-shadow-[0_0_6px_rgba(244,63,94,0.9)]" />
+                    <span>{liveTie ? 'DESEMPATE PARCIAL' : 'RESULT. PARCIAL'}</span>
+                  </>
+                ) : (
+                  <>
+                    <Trophy className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                    <span>RESULTADO OFICIAL</span>
+                  </>
+                )}
+              </div>
+
+              {/* SEPARADOR VERTICAL */}
+              <span className="text-white/30 font-light text-xs shrink-0 select-none">|</span>
+
+              {/* 2. MULHERES (negrito fonte branca) */}
+              <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-wide shrink-0">
+                {session.title}
+              </h2>
+
+              {/* SEPARADOR VERTICAL + 3. VOTO (ICONE CHECK) SEM FUNDO */}
+              {live && (
                 <>
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                  {liveTie ? 'Desempate • Parcial em Tempo Real' : 'Parcial em Tempo Real'}
-                </>
-              ) : (
-                <>
-                  <Trophy className="w-3 h-3 text-amber-400" />
-                  Resultado Oficial da Votação
+                  <span className="text-white/30 font-light text-xs shrink-0 select-none">|</span>
+                  <div className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-400 font-black uppercase tracking-wider shrink-0">
+                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.75] text-emerald-400" />
+                    <span>VOTO</span>
+                  </div>
                 </>
               )}
-            </span>
-            <h2 className="text-sm font-black text-white uppercase tracking-tight leading-tight px-16">
-              {session.title}
-            </h2>
-            {live && (
-              <p className="text-[10px] text-emerald-400 font-bold mt-0.5 inline-flex items-center gap-0.5 mx-auto">
-                <CheckCircle2 className="w-3 h-3" /> Seu voto foi computado
-              </p>
-            )}
+            </div>
 
             {/* SE HOUVER EMPATE: MODALZINHO DESCE SUAVE EM 1.5s COBRINDO O CABEÇALHO */}
             {hasTies && (
