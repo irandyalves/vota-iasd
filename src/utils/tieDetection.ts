@@ -24,6 +24,10 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
   if (session.resolverEmpates === false) {
     return [];
   }
+  // Se o desempate já foi resolvido ou está em andamento, não acusa mais empate na apuração
+  if (session.tieBreak?.resolved || session.status === 'TIE_BREAK') {
+    return [];
+  }
   const ties: TieInfo[] = [];
   const options = [...session.options].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
 

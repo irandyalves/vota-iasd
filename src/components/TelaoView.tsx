@@ -80,11 +80,21 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [glowingIds, setGlowingIds] = useState<Record<string, boolean>>({});
   const knownOptionIdsRef = useRef<Set<string>>(new Set((session.options || []).map((o) => o.id)));
+  const prevEventIdRef = useRef<string | undefined>(session.activeEventId);
 
-  // Detecta novos nomes que entram no Telão e ativa brilho intenso por 1.5s
+  // Detecta novos nomes que entram no Telão e ativa brilho intenso por 1.5s (sem piscar na troca de evento)
   useEffect(() => {
     const currentOptions = session.options || [];
     const currentIds = currentOptions.map((o) => o.id);
+
+    // Se houve troca de evento, sincroniza os IDs conhecidos sem disparar o brilho geral
+    if (prevEventIdRef.current !== session.activeEventId) {
+      prevEventIdRef.current = session.activeEventId;
+      knownOptionIdsRef.current = new Set(currentIds);
+      setGlowingIds({});
+      return;
+    }
+
     const now = Date.now();
     const newlyAdded = currentOptions
       .filter((o) => !knownOptionIdsRef.current.has(o.id) || (o.createdAt && now - o.createdAt < 1500))
@@ -110,7 +120,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       }, 1500);
       return () => clearTimeout(timer);
     }
-  }, [session.options]);
+  }, [session.options, session.activeEventId]);
 
   // Identifica se estamos em rodada de desempate
   const isTieBreak = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
@@ -240,9 +250,17 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
     }
   }, [session.pin]);
 
-  // Disparo de confetes se o status mudar para CLOSED (Resultado Final)
+  const prevStatusRef = useRef<string>(session.status);
+  const prevEventConfettiRef = useRef<string | undefined>(session.activeEventId);
+
+  // Disparo de confetes se o status mudar para CLOSED (Resultado Final apenas no momento do encerramento)
   useEffect(() => {
-    if (session.status === 'CLOSED') {
+    const isSameEvent = prevEventConfettiRef.current === session.activeEventId;
+    const justClosed = prevStatusRef.current !== 'CLOSED' && session.status === 'CLOSED';
+    prevStatusRef.current = session.status;
+    prevEventConfettiRef.current = session.activeEventId;
+
+    if (isSameEvent && justClosed) {
       confetti({
         particleCount: 120,
         spread: 80,
@@ -269,7 +287,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [session.status]);
+  }, [session.status, session.activeEventId]);
 
   return (
     <div className="min-h-screen bg-[#07132a] text-white p-2 sm:p-3 lg:p-3.5 flex flex-col justify-between select-none">
@@ -339,7 +357,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
           {/* COLUNA DA DIREITA: LISTA DE CANDIDATOS / CORRIDA DE BARRAS OU VOTO SECRETO */}
           <div className="flex-1 min-w-0 w-full">
-            {session.telaoMode === 'names' ? (
+            {session.telaoMode === 'names' || session.status === 'WAITING' ? (
               /* MODO: NOMES PARA ESCOLHA (PRINT 2 REDIMENSIONADO PARA O TELÃO) */
               <div className="bg-[#001f47]/90 border border-blue-700/70 rounded-2xl p-4 sm:p-5 shadow-2xl">
                 <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-blue-800/80">

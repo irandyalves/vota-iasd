@@ -33,6 +33,20 @@ export interface VotingEventItem {
   habilitarSuplente1?: boolean;
   habilitarSuplente2?: boolean;
   resolverEmpates?: boolean;
+  // Estado completo preservado por votação/evento:
+  status?: SessionStatus;
+  tieBreak?: {
+    active: boolean;
+    resolved?: boolean;
+    title: string;
+    vacancies: number;
+    maxVotesPerVoter: number;
+    options: VotingOption[];
+  } | null;
+  mainVotersCount?: number;
+  tieBreakVotersCount?: number;
+  votingIteration?: number;
+  telaoMode?: 'names' | 'voting';
 }
 
 export interface VotingSession {
@@ -60,11 +74,12 @@ export interface VotingSession {
   // Dados da rodada de desempate (se houver)
   tieBreak?: {
     active: boolean;
+    resolved?: boolean;
     title: string;
     vacancies: number;
     maxVotesPerVoter: number;
     options: VotingOption[];
-  };
+  } | null;
   totalVotersConnected?: number;
   resolverEmpates?: boolean;
   mainVotersCount?: number;

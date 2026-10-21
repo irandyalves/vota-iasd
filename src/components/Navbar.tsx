@@ -111,11 +111,72 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Enquanto estiver girando (votação em andamento) e já houver voto(s) registrado(s), muda o caption para APURAÇÃO
   const showApuracaoCaption = isVotingActive && totalVotesCast > 0;
 
+  const handleCancelVoting = () => {
+    if (!session || !onSaveSession) return;
+    const freshOptions = [...session.options].map((o) => ({
+      ...o,
+      votesCount: 0,
+    }));
+    const nextIteration = (session.votingIteration || 1) + 1;
+    onSaveSession({
+      ...session,
+      status: 'WAITING',
+      options: freshOptions,
+      tieBreak: null,
+      telaoMode: 'names',
+      votingIteration: nextIteration,
+      mainVotersCount: 0,
+      tieBreakVotersCount: 0,
+    });
+  };
+
   const handleCenterVotingButtonClick = () => {
     if (!session || !onSaveSession) return;
 
     if (isVotingActive) {
-      // Se já está em votação (ou com caption APURAÇÃO), clicar encerra e abre a APURAÇÃO no Telão
+      // Se estamos em rodada de desempate, encerra e consolida os vencedores do desempate
+      if (session.status === 'TIE_BREAK') {
+        const tieOptions = session.tieBreak?.options || [];
+        const sortedTie = [...tieOptions].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
+        const vacancies = session.tieBreak?.vacancies || 1;
+        const winnerIds: string[] = [];
+
+        if (sortedTie.length > vacancies) {
+          const cutoff = sortedTie[vacancies - 1]?.votesCount || 0;
+          const next = sortedTie[vacancies]?.votesCount || 0;
+          if (cutoff > next) {
+            sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+          }
+        } else if (sortedTie.length > 0) {
+          sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+        }
+
+        const updatedOptions = session.options.map((opt) => {
+          const tieOptIndex = sortedTie.findIndex((t) => t.id === opt.id);
+          if (tieOptIndex !== -1) {
+            const tieVotes = sortedTie[tieOptIndex].votesCount || 0;
+            const isWinner = winnerIds.includes(opt.id);
+            const bonus = (tieVotes * 0.01) + (isWinner ? 0.005 : 0) + ((sortedTie.length - tieOptIndex) * 0.0001);
+            return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + bonus };
+          }
+          return opt;
+        });
+
+        onSaveSession({
+          ...session,
+          options: updatedOptions,
+          status: 'CLOSED',
+          telaoMode: 'voting',
+          tieBreak: {
+            ...(session.tieBreak as any),
+            active: false,
+            resolved: true,
+          },
+        });
+        return;
+      }
+
+      // Se já está em votação normal (ou com caption APURAÇÃO), clicar encerra e abre a APURAÇÃO no Telão
       onSaveSession({
         ...session,
         status: 'CLOSED',
@@ -248,6 +309,33 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* CENTRO: BOTÃO DA URNA (3D COM RELEVO E BRAILLE). EM APURAÇÃO FICA BRANCO, COM A RODA SUAVE (PULSAR + GIRO) À ESQUERDA DO BOTÃO */}
         <div className="flex items-center justify-center justify-self-center gap-3">
+          {isVotingActive && (
+            <button
+              type="button"
+              onClick={handleCancelVoting}
+              title="Cancelar votação ativa e zerar todos os votos"
+              style={{
+                backgroundColor: '#b91c1c',
+                borderColor: '#ef4444',
+                boxShadow: '0 4px 0 #7f1d1d, 2px 4px 0 #450a0a',
+              }}
+              className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+            >
+              <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-white leading-none">
+                CANCELAR VOTAÇÃO
+              </span>
+              {/* Braille 50% menor */}
+              <div className="flex items-center gap-1 mt-1 pointer-events-none">
+                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                <span className="w-1.5" />
+                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+              </div>
+            </button>
+          )}
+
           {isVotingActive && (
             /* Roda à esquerda do botão: giro lento + pulsar suave */
             <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 pointer-events-none" aria-hidden="true">

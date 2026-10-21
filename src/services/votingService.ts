@@ -112,7 +112,7 @@ function setLocalSession(session: VotingSession) {
 export async function saveSession(session: VotingSession): Promise<void> {
   session.updatedAt = Date.now();
 
-  // Sincroniza automaticamente o evento ativo dentro de session.events
+  // Sincroniza automaticamente o evento ativo dentro de session.events com todo o seu estado
   if (Array.isArray(session.events) && session.events.length > 0 && session.activeEventId) {
     session.events = session.events.map((evt) =>
       evt.id === session.activeEventId
@@ -126,6 +126,13 @@ export async function saveSession(session: VotingSession): Promise<void> {
             segundoSuplentesCount: session.segundoSuplentesCount,
             habilitarSuplente1: session.habilitarSuplente1,
             habilitarSuplente2: session.habilitarSuplente2,
+            resolverEmpates: session.resolverEmpates,
+            status: session.status,
+            tieBreak: session.tieBreak || null,
+            mainVotersCount: session.mainVotersCount || 0,
+            tieBreakVotersCount: session.tieBreakVotersCount || 0,
+            votingIteration: session.votingIteration || 1,
+            telaoMode: session.telaoMode || 'names',
           }
         : evt
     );
@@ -369,6 +376,7 @@ export async function submitBallot(
               telaoMode: 'voting',
               'tieBreak.options': updatedTieOptions,
               'tieBreak.active': false,
+              'tieBreak.resolved': true,
               tieBreakVotersCount: newTieVotersCount,
               updatedAt: Date.now(),
             });
@@ -435,6 +443,7 @@ export async function submitBallot(
               currentSession.status = 'CLOSED';
               currentSession.telaoMode = 'voting';
               currentSession.tieBreak.active = false;
+              (currentSession.tieBreak as any).resolved = true;
             }
           }
           setLocalSession(currentSession);

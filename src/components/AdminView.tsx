@@ -248,6 +248,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             habilitarSuplente1: session.habilitarSuplente1 ?? true,
             habilitarSuplente2: session.habilitarSuplente2 ?? false,
             resolverEmpates: session.resolverEmpates !== false,
+            status: session.status,
+            tieBreak: session.tieBreak || null,
+            mainVotersCount: session.mainVotersCount || 0,
+            tieBreakVotersCount: session.tieBreakVotersCount || 0,
+            votingIteration: session.votingIteration || 1,
+            telaoMode: session.telaoMode || 'names',
           },
         ];
   const currentActiveEventId = session.activeEventId || eventsList[0].id;
@@ -305,7 +311,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       return;
     }
 
-    // Salva o estado do evento atual antes de trocar e carrega o evento clicado
+    // Salva o estado completo do evento atual antes de trocar e carrega o evento clicado
     const updatedEvents = eventsList.map((item) =>
       item.id === currentActiveEventId
         ? {
@@ -319,28 +325,52 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             habilitarSuplente1: session.habilitarSuplente1,
             habilitarSuplente2: session.habilitarSuplente2,
             resolverEmpates: session.resolverEmpates,
+            status: session.status,
+            tieBreak: session.tieBreak || null,
+            mainVotersCount: session.mainVotersCount || 0,
+            tieBreakVotersCount: session.tieBreakVotersCount || 0,
+            votingIteration: session.votingIteration || 1,
+            telaoMode: session.telaoMode || 'names',
           }
         : item
     );
 
+    const targetEvt = updatedEvents.find((item) => item.id === evt.id) || evt;
+    const targetStatus = targetEvt.status || 'WAITING';
+    const targetTieBreak = targetEvt.tieBreak !== undefined ? targetEvt.tieBreak : null;
+    const targetMainVoters = targetEvt.mainVotersCount ?? 0;
+    const targetTieBreakVoters = targetEvt.tieBreakVotersCount ?? 0;
+    const targetTelaoMode = targetEvt.telaoMode || (targetStatus === 'CLOSED' ? 'voting' : 'names');
+    const targetOptions = (targetEvt.options || []).map((o) => ({
+      ...o,
+      votesCount: o.votesCount ?? 0,
+    }));
+    const nextIteration = targetEvt.votingIteration || (session.votingIteration || 1) + 1;
+
     saveSession({
       ...session,
-      activeEventId: evt.id,
-      title: evt.name,
-      options: evt.options || [],
-      vacancies: evt.vacancies || 1,
-      maxVotesPerVoter: evt.maxVotesPerVoter || evt.vacancies || 1,
-      suplentesCount: evt.suplentesCount ?? 0,
-      segundoSuplentesCount: evt.segundoSuplentesCount ?? 0,
-      habilitarSuplente1: evt.habilitarSuplente1,
-      habilitarSuplente2: evt.habilitarSuplente2,
-      resolverEmpates: evt.resolverEmpates !== undefined ? evt.resolverEmpates : (session.resolverEmpates !== false),
+      activeEventId: targetEvt.id,
+      title: targetEvt.name,
+      options: targetOptions,
+      status: targetStatus,
+      tieBreak: targetTieBreak,
+      mainVotersCount: targetMainVoters,
+      tieBreakVotersCount: targetTieBreakVoters,
+      telaoMode: targetTelaoMode,
+      votingIteration: nextIteration,
+      vacancies: targetEvt.vacancies || 1,
+      maxVotesPerVoter: targetEvt.maxVotesPerVoter || targetEvt.vacancies || 1,
+      suplentesCount: targetEvt.suplentesCount ?? 0,
+      segundoSuplentesCount: targetEvt.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: targetEvt.habilitarSuplente1,
+      habilitarSuplente2: targetEvt.habilitarSuplente2,
+      resolverEmpates: targetEvt.resolverEmpates !== undefined ? targetEvt.resolverEmpates : (session.resolverEmpates !== false),
       events: updatedEvents,
     });
 
     setActiveTab('candidates');
     setIsBottomSectionOpen(true);
-    showNotification('success', `Evento "${evt.name}" aberto!`);
+    showNotification('success', `Evento "${targetEvt.name}" selecionado!`);
   };
 
   // Salvar configurações da votação (cria nova ou edita existente)
@@ -392,18 +422,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       showNotification('success', `Configurações da votação "${cleaned}" salvas com sucesso!`);
     } else {
       const newEvtId = 'evt_' + Date.now();
-      const newEvt: VotingEventItem = {
-        id: newEvtId,
-        name: cleaned,
-        options: [],
-        vacancies,
-        maxVotesPerVoter: vacancies,
-        suplentesCount: s1Count,
-        segundoSuplentesCount: s2Count,
-        habilitarSuplente1: eventFormSuplente1Enabled,
-        habilitarSuplente2: eventFormSuplente2Enabled,
-        resolverEmpates,
-      };
 
       const syncedCurrentEvents = eventsList.map((item) =>
         item.id === currentActiveEventId
@@ -418,9 +436,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               habilitarSuplente1: session.habilitarSuplente1,
               habilitarSuplente2: session.habilitarSuplente2,
               resolverEmpates: session.resolverEmpates,
+              status: session.status,
+              tieBreak: session.tieBreak || null,
+              mainVotersCount: session.mainVotersCount || 0,
+              tieBreakVotersCount: session.tieBreakVotersCount || 0,
+              votingIteration: session.votingIteration || 1,
+              telaoMode: session.telaoMode || 'names',
             }
           : item
       );
+
+      const newIteration = (session.votingIteration || 1) + 1;
+      const newEvt: VotingEventItem = {
+        id: newEvtId,
+        name: cleaned,
+        options: [],
+        vacancies,
+        maxVotesPerVoter: vacancies,
+        suplentesCount: s1Count,
+        segundoSuplentesCount: s2Count,
+        habilitarSuplente1: eventFormSuplente1Enabled,
+        habilitarSuplente2: eventFormSuplente2Enabled,
+        resolverEmpates,
+        status: 'WAITING',
+        tieBreak: null,
+        mainVotersCount: 0,
+        tieBreakVotersCount: 0,
+        votingIteration: newIteration,
+        telaoMode: 'names',
+      };
 
       saveSession({
         ...session,
@@ -428,6 +472,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         title: cleaned,
         options: [],
         status: 'WAITING',
+        tieBreak: null,
+        mainVotersCount: 0,
+        tieBreakVotersCount: 0,
+        telaoMode: 'names',
+        votingIteration: newIteration,
         vacancies,
         maxVotesPerVoter: vacancies,
         habilitarSuplente1: eventFormSuplente1Enabled,
@@ -462,12 +511,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       onConfirm: () => {
         const remaining = eventsList.filter((x) => x.id !== evtId);
         const nextActive = remaining[0];
+        const nextStatus = nextActive.status || 'WAITING';
+        const nextTieBreak = nextActive.tieBreak !== undefined ? nextActive.tieBreak : null;
+        const nextMainVoters = nextActive.mainVotersCount ?? 0;
+        const nextTieBreakVoters = nextActive.tieBreakVotersCount ?? 0;
+        const nextTelaoMode = nextActive.telaoMode || (nextStatus === 'CLOSED' ? 'voting' : 'names');
 
         saveSession({
           ...session,
           activeEventId: nextActive.id,
           title: nextActive.name,
           options: nextActive.options || [],
+          status: nextStatus,
+          tieBreak: nextTieBreak,
+          mainVotersCount: nextMainVoters,
+          tieBreakVotersCount: nextTieBreakVoters,
+          telaoMode: nextTelaoMode,
+          votingIteration: nextActive.votingIteration || (session.votingIteration || 1) + 1,
           vacancies: nextActive.vacancies || 1,
           maxVotesPerVoter: nextActive.maxVotesPerVoter || nextActive.vacancies || 1,
           suplentesCount: nextActive.suplentesCount ?? 0,
@@ -725,14 +785,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }, 1500);
   };
 
+  const prevAdminEventIdRef = useRef<string | undefined>(session.activeEventId);
+
   useEffect(() => {
     const currentIds = (session.options || []).map((o) => o.id);
+    if (prevAdminEventIdRef.current !== session.activeEventId) {
+      prevAdminEventIdRef.current = session.activeEventId;
+      knownOptionIdsRef.current = new Set(currentIds);
+      return;
+    }
     const newlyAdded = currentIds.filter((id) => !knownOptionIdsRef.current.has(id));
     knownOptionIdsRef.current = new Set(currentIds);
     if (newlyAdded.length > 0) {
       triggerGlow(newlyAdded);
     }
-  }, [session.options]);
+  }, [session.options, session.activeEventId]);
 
   const importFileRef = useRef<HTMLInputElement>(null);
   const fileUploadReplaceRef = useRef<HTMLInputElement>(null);
@@ -770,14 +837,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         });
         showNotification('success', `Lista substituída por ${result.count} itens de "${result.fileName}" (em ordem A-Z)!`);
       } else {
-        const sortedAppend = [...session.options, ...stampedOptions].sort((a, b) =>
+        const existingNames = new Set((session.options || []).map((o) => o.name.trim().toUpperCase()));
+        const uniqueStamped = stampedOptions.filter((o) => !existingNames.has(o.name.trim().toUpperCase()));
+        const sortedAppend = [...session.options, ...uniqueStamped].sort((a, b) =>
           a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
         );
         saveSession({
           ...session,
           options: sortedAppend,
         });
-        showNotification('success', `Adicionados ${result.count} novos itens de "${result.fileName}" (em ordem A-Z)!`);
+        showNotification('success', `Adicionados ${uniqueStamped.length} novos itens de "${result.fileName}" (em ordem A-Z)!`);
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao processar arquivo.';
@@ -943,8 +1012,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
     if (names.length === 0) return;
 
+    const existingNames = new Set((session.options || []).map((o) => o.name.trim().toUpperCase()));
+    const uniqueNames = names.filter((n) => !existingNames.has(n));
+    if (uniqueNames.length === 0) {
+      setNewName('');
+      showNotification('error', 'O(s) nome(s) digitado(s) já está(ão) cadastrado(s) neste evento.');
+      return;
+    }
+
     const now = Date.now();
-    const newOptions: VotingOption[] = names.map((name, idx) => ({
+    const newOptions: VotingOption[] = uniqueNames.map((name, idx) => ({
       id: 'opt_' + now + '_' + idx,
       name,
       votesCount: 0,
@@ -965,7 +1042,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setNewName('');
     showNotification(
       'success',
-      names.length === 1 ? `"${names[0]}" adicionado!` : `${names.length} nomes adicionados!`
+      uniqueNames.length === 1 ? `"${uniqueNames[0]}" adicionado!` : `${uniqueNames.length} nomes adicionados!`
     );
   };
 
@@ -2287,7 +2364,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 ) : (
                   <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
                     {rankedCandidates.map((candidate, idx) => {
-                      const votes = candidate.votesCount || 0;
+                      const votes = Math.floor(candidate.votesCount || 0);
                       const percent = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
                       const barWidth = maxVotesRecorded > 0 ? Math.max(3, Math.round((votes / maxVotesRecorded) * 100)) : 0;
                       const isTitular = idx < vacancies;
