@@ -39,6 +39,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
+  const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
+
+  const handleToggleTieCandidate = (id: string) => {
+    setSelectedTieCandidateIds((prev) =>
+      prev.includes(id) ? prev.filter((cId) => cId !== id) : [...prev, id]
+    );
+  };
   const detectedTies = session.status === 'CLOSED' ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
 
@@ -67,10 +74,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   }, [session.status, session]);
 
   const handleStartTieBreak = (tie: TieInfo) => {
-    const tieOptions: VotingOption[] = tie.tiedCandidates.map((c) => ({
+    // Critério próprio do admin: se clicou em candidatos (ex: CARLA e SIONEIDE), desempata entre eles
+    const candidates =
+      selectedTieCandidateIds.length >= 2
+        ? tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id))
+        : tie.tiedCandidates;
+
+    const tieOptions: VotingOption[] = candidates.map((c) => ({
       ...c,
       votesCount: 0,
     }));
+
+    const vacancies = Math.max(1, Math.min(tie.vacanciesInDispute, tieOptions.length - 1));
+
     saveSession({
       ...session,
       status: 'TIE_BREAK',
@@ -79,31 +95,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       tieBreak: {
         active: true,
         title: `Desempate - ${tie.label}`,
-        vacancies: tie.vacanciesInDispute,
-        maxVotesPerVoter: Math.min(tie.vacanciesInDispute, tieOptions.length),
+        vacancies: vacancies,
+        maxVotesPerVoter: Math.min(vacancies, tieOptions.length),
         options: tieOptions,
       },
     });
     setIsTieModalOpen(false);
-    showNotification('success', `Rodada de desempate iniciada para ${tie.label}!`);
+    setSelectedTieCandidateIds([]);
+    showNotification('success', `Votação de desempate iniciada com ${tieOptions.length} candidatos!`);
   };
 
-  const handleManualResolveWinner = (winnerId: string) => {
-    const updatedOptions = session.options.map((opt) => {
-      if (opt.id === winnerId) {
-        return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
-      }
-      return opt;
-    });
-    saveSession({
-      ...session,
-      options: updatedOptions,
-      tieBreak: undefined,
-    });
-    setIsTieModalOpen(false);
-    showNotification('success', 'Desempate resolvido por critério regimental/manual!');
-  };
-
+  
   const [confirmModal, setConfirmModal] = useState<{
     title: string;
     highlight?: string;
@@ -660,25 +662,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 <X className="w-4 h-4" />
               </button>
 
-              {/* Header do Modal */}
-              <div className="flex items-center gap-3 mb-4 pb-3 border-b border-rose-500/30">
-                <div className="w-11 h-11 rounded-xl bg-rose-500/20 border border-rose-400/80 shadow-[0_0_15px_rgba(244,63,94,0.3)] flex items-center justify-center shrink-0">
-                  <Star className="w-5 h-5 text-rose-400 fill-rose-400" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
-                      Empate Detectado na Apuração
-                    </h3>
-                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600/30 text-rose-300 border border-rose-500/60 inline-flex items-center gap-1">
-                      <Star className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
-                      EMPATE
-                    </span>
-                  </div>
-                  <p className="text-xs text-rose-200/80 mt-0.5">
-                    A votação foi encerrada com candidatos empatados na linha de corte:
-                  </p>
-                </div>
+              {/* Header do Modal (CENTRALIZADO) */}
+              <div className="text-center mb-4 pb-3 border-b border-rose-500/30">
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white">
+                  VOTAÇÃO PARA DESEMPATAR
+                </h3>
               </div>
 
               {/* Lista de Grupos de Empate */}
@@ -702,75 +690,79 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       </span>
                     </div>
 
-                    {/* Cards dos Candidatos Empatados (Borda vermelha fina, estrela e EMPATE bem claro) */}
+                    {/* Cards dos Candidatos Empatados (Clicáveis para o admin selecionar quem desempata) */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {tie.tiedCandidates.map((c) => (
-                        <div
-                          key={c.id}
-                          className="p-2.5 rounded-xl bg-[#07132a] border border-rose-500/80 flex items-center justify-between gap-2 shadow-sm"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            {c.photoUrl ? (
-                              <img
-                                src={c.photoUrl}
-                                alt={c.name}
-                                className="w-8 h-8 rounded-lg object-cover border border-rose-400/50 shrink-0"
-                              />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/40 flex items-center justify-center shrink-0">
-                                <Star className="w-4 h-4 text-rose-400 fill-rose-400" />
+                      {tie.tiedCandidates.map((c) => {
+                        const isSelected = selectedTieCandidateIds.includes(c.id);
+
+                        return (
+                          <div
+                            key={c.id}
+                            onClick={() => handleToggleTieCandidate(c.id)}
+                            className={`p-2.5 rounded-xl border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
+                              isSelected
+                                ? 'bg-emerald-950/60 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.35)] ring-2 ring-emerald-400/40 text-white'
+                                : 'bg-[#07132a] border border-rose-500/80 hover:border-rose-400 text-white'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {c.photoUrl ? (
+                                <img
+                                  src={c.photoUrl}
+                                  alt={c.name}
+                                  className="w-8 h-8 rounded-lg object-cover border border-rose-400/50 shrink-0"
+                                />
+                              ) : (
+                                <div
+                                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
+                                    isSelected
+                                      ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
+                                      : 'bg-rose-500/15 border-rose-500/40 text-rose-400'
+                                  }`}
+                                >
+                                  <Star className={`w-4 h-4 ${isSelected ? 'fill-emerald-400 text-emerald-400' : 'fill-rose-400 text-rose-400'}`} />
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <h5 className="font-black text-xs sm:text-sm text-white uppercase truncate">
+                                  {c.name}
+                                </h5>
+                                <span className={`inline-flex items-center gap-1 text-[8.5px] font-black uppercase ${
+                                  isSelected ? 'text-emerald-300' : 'text-rose-300'
+                                }`}>
+                                  <Star className="w-2 h-2 fill-current" />
+                                  EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
+                                </span>
                               </div>
-                            )}
-                            <div className="min-w-0">
-                              <h5 className="font-black text-xs text-white uppercase truncate">
-                                {c.name}
-                              </h5>
-                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black text-rose-300 uppercase">
-                                <Star className="w-2 h-2 fill-rose-400 text-rose-400" />
-                                EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
-                              </span>
+                            </div>
+
+                            {/* Indicador de Seleção Circular */}
+                            <div
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                isSelected
+                                  ? 'border-emerald-400 bg-emerald-400 text-blue-950 scale-105 shadow-sm'
+                                  : 'border-slate-600 bg-slate-900/60'
+                              }`}
+                            >
+                              {isSelected && <CheckCircle className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
                           </div>
-
-                          {/* Botão de Decisão Manual por Regimento */}
-                          <button
-                            type="button"
-                            onClick={() => handleManualResolveWinner(c.id)}
-                            title="Declarar este candidato eleito por critério regimental (idade, tempo de batismo ou mesa)"
-                            className="px-2 py-1 bg-blue-900/50 hover:bg-emerald-600/60 border border-blue-600 hover:border-emerald-400 text-blue-200 hover:text-white rounded-lg text-[9.5px] font-black uppercase tracking-wider shrink-0 transition cursor-pointer active:scale-95"
-                          >
-                            Eleger
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Botão para Iniciar Rodada de Desempate nos Celulares */}
-                    <div className="pt-1 flex items-center justify-end">
-                      <button
-                        type="button"
-                        onClick={() => handleStartTieBreak(tie)}
-                        className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 border border-rose-400 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(244,63,94,0.4)] transition cursor-pointer active:scale-95"
-                      >
-                        <Star className="w-3.5 h-3.5 fill-white" />
-                        <span>Iniciar Votação de Desempate no Celular</span>
-                      </button>
+                        );
+                      })}
                     </div>
                   </div>
                 ))}
               </div>
 
-              {/* Rodapé do Modal */}
-              <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between gap-3">
-                <span className="text-[11px] text-slate-400 italic">
-                  Você também pode fechar para manter a apuração ou decidir mais tarde.
-                </span>
+              {/* Rodapé do Modal: BOTÃO INICIAR VOTAÇÃO VERDE E CENTRALIZADO NO RODAPÉ */}
+              <div className="mt-4 pt-3 border-t border-slate-700/60 flex justify-center items-center w-full">
                 <button
                   type="button"
-                  onClick={() => setIsTieModalOpen(false)}
-                  className="px-4 py-2 rounded-xl bg-[#07132a] hover:bg-blue-950 border border-blue-700/80 text-slate-200 hover:text-white font-black text-xs uppercase tracking-wider transition cursor-pointer active:scale-95"
+                  onClick={() => handleStartTieBreak(detectedTies[0])}
+                  className="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 border-2 border-emerald-300/80 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.5)] transition-all cursor-pointer active:scale-95"
                 >
-                  Fechar
+                  <Star className="w-4 h-4 fill-white text-white" />
+                  <span>INICIAR VOTAÇÃO</span>
                 </button>
               </div>
             </motion.div>
