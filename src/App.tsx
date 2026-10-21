@@ -124,7 +124,7 @@ export function App() {
       )}
 
       {/* Conteúdo da Tela Selecionada - 100% Fluido e Responsivo */}
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full flex flex-col min-h-0">
         {currentView === 'voter' && <VoterView session={session} />}
         {currentView === 'telao' && <TelaoView session={session} />}
         {currentView === 'admin' && <AdminView session={session} />}
@@ -132,7 +132,7 @@ export function App() {
 
       {/* Rodapé discreto da igreja (exibido apenas no Admin) */}
       {currentView === 'admin' && (
-        <footer className="py-4 text-center text-xs text-blue-300/40 border-t border-blue-900/40 w-full">
+        <footer className="py-2.5 text-center text-xs text-blue-300/40 border-t border-blue-900/40 w-full shrink-0">
           <p>Sistema VOTA IASD • Desenvolvido para Votações Transparentes e Seguras</p>
         </footer>
       )}

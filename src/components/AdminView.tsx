@@ -1026,7 +1026,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   };
 
   return (
-    <div className="w-full px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100">
+    <div className="w-full flex-1 flex flex-col px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100 min-h-0">
       {/* AVISO QUICANDO: VOCÊ JÁ ESCOLHEU XX NOMES (MODALZINHO LARANJA COM ALTA VISIBILIDADE) */}
       <AnimatePresence>
         {tieWarningModal && (
@@ -2152,7 +2152,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
       {/* ABA: NOMES / CANDIDATOS (ABRE AO CLICAR NO BOTÃO DO EVENTO NO CABEÇALHO) */}
       {activeTab === 'candidates' && isBottomSectionOpen && (
-        <div className="space-y-3.5">
+        <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
           {/* Inputs ocultos para importação de arquivos */}
           <input
             ref={fileUploadAppendRef}
@@ -2171,7 +2171,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
           {/* SE A VOTAÇÃO ESTIVER EM ANDAMENTO E O ADMIN QUISER O DASHBOARD: MOSTRA O DASHBOARD DE EVOLUÇÃO */}
           {isVotingActive && adminVotingView === 'dashboard' ? (
-            <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 sm:p-5 shadow-xl space-y-4">
+            <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 sm:p-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0">
               {/* Header do Dashboard */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
@@ -2272,8 +2272,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
 
               {/* Ranking Dinâmico com Barras de Progresso */}
-              <div className="space-y-2 pt-1">
-                <div className="flex items-center justify-between text-xs text-slate-400 px-1 pb-1">
+              <div className="space-y-2 pt-1 flex-1 flex flex-col min-h-0">
+                <div className="flex items-center justify-between text-xs text-slate-400 px-1 pb-1 shrink-0">
                   <span>Classificação em tempo real</span>
                   <span>{activeOptions.length} candidatos na disputa</span>
                 </div>
@@ -2285,7 +2285,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <p className="text-[11px] text-slate-500">Conforme os eleitores votarem no celular, o ranking e as barras atualizarão automaticamente aqui.</p>
                   </div>
                 ) : (
-                  <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+                  <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
                     {rankedCandidates.map((candidate, idx) => {
                       const votes = candidate.votesCount || 0;
                       const percent = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
