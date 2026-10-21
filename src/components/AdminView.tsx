@@ -2370,20 +2370,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <p className="text-[11px] text-slate-500">Conforme os eleitores votarem no celular, o ranking e as barras atualizarão automaticamente aqui.</p>
                   </div>
                 ) : (
-                  <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
-                    {/* Cabeçalho de Colunas Alinhadas */}
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 bg-white/[0.03] rounded-md border border-white/[0.05] gap-2">
+                  <div className="space-y-[3px] flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
+                    {/* Cabeçalho de Colunas Alinhadas (sem a coluna % separada) */}
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 bg-white/[0.03] rounded-md border border-white/[0.05] gap-2 mb-0.5">
                       <div className="flex items-center gap-2 shrink-0">
                         <span className="w-6 text-center shrink-0">#</span>
                         <span className="w-[20ch] min-w-[20ch] max-w-[20ch] shrink-0 text-left">Nome (20 carac.)</span>
                         <span className="w-[85px] min-w-[85px] max-w-[85px] shrink-0 text-left">Titular</span>
                       </div>
                       <div className="flex-1 flex items-center justify-between mx-1.5 text-slate-400">
-                        <span>Progressão</span>
+                        <span>Progressão (%)</span>
                         <span className="text-[10px] text-slate-400 font-mono">100% |</span>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="w-[42px] text-right">%</span>
+                      <div className="flex items-center shrink-0">
                         <span className="min-w-[62px] text-center">Votos</span>
                       </div>
                     </div>
@@ -2414,7 +2413,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       return (
                         <React.Fragment key={candidate.id}>
                           {isFirstAfterTitulares && (
-                            <div className="flex items-center gap-2 py-1 my-1">
+                            <div className="flex items-center gap-2 py-0.5 my-0.5">
                               <div className="flex-1 h-px bg-emerald-500/30" />
                               <span className="text-[10px] font-medium text-emerald-400/80 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
                                 ▲ Linha de corte dos Titulares ({vacancies} vagas)
@@ -2482,10 +2481,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               )}
                             </div>
 
-                            {/* COLUNA 4: ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DA PERCENTAGEM) */}
+                            {/* COLUNA 4: ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DOS VOTOS) */}
                             <div className="flex-1 relative h-6 sm:h-7 mx-1.5 min-w-[80px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner">
                               {/* Barra de Progresso com Efeito Vidro nas Cores de Config (Verde nos Vencedores) */}
-                              {votes > 0 && (
+                              {votes > 0 ? (
                                 <div
                                   className="absolute left-0 top-0 bottom-0 pointer-events-none rounded-l overflow-visible z-10 transition-all duration-500"
                                   style={{
@@ -2500,25 +2499,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   {/* Brilho especular superior do vidro */}
                                   <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
 
-                                  {/* Traço vertical dourado mais largo reluzente na ponta (sem bola) */}
-                                  <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
-                                    <div className="absolute -inset-y-1 w-4 -right-1 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[4px]" />
-                                    <div className="relative w-[6px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_10px_#fbbf24,0_0_18px_rgba(245,158,11,1),0_0_3px_#ffffff] rounded-r-xs" />
+                                  {/* % antes da cabeça brilhosa + Faixinha laranja (20% mais estreita: 4.8px) */}
+                                  <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20 pr-0.5">
+                                    <span className="text-[10px] sm:text-[11px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] mr-1.5 select-none leading-none">
+                                      {percent}%
+                                    </span>
+                                    <div className="absolute -inset-y-1 w-3 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[3px]" />
+                                    <div className="relative w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
                                   </div>
                                 </div>
+                              ) : (
+                                <span className="text-[10px] font-mono font-medium text-slate-500 pl-2">
+                                  0%
+                                </span>
                               )}
                             </div>
 
-                            {/* LINHA VERTICAL FINAL (MARCANDO O 100% ANTES DA PERCENTAGEM) */}
+                            {/* LINHA VERTICAL FINAL (MARCANDO O LIMITE 100%) */}
                             <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center" title="Limite 100%" />
 
-                            {/* COLUNA 5: PERCENTAGEM */}
-                            <div className="w-[42px] min-w-[42px] text-right font-mono text-xs sm:text-sm font-bold text-slate-300 shrink-0">
-                              {percent}%
-                            </div>
-
-                            {/* COLUNA 6: VOTOS */}
-                            <div className="min-w-[62px] text-center shrink-0">
+                            {/* COLUNA: VOTOS (Coluna % retirada e colocada antes da cabeça brilhosa) */}
+                            <div className="min-w-[62px] text-center shrink-0 ml-1">
                               <span
                                 className={`px-2 py-0.5 rounded font-mono font-semibold text-xs block text-center ${
                                   votes > 0

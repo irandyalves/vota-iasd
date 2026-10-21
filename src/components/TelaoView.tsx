@@ -764,9 +764,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           )}
                         </div>
 
-                        {/* 4. ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DA PERCENTAGEM) */}
+                        {/* 4. ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DOS VOTOS) */}
                         <div className="flex-1 relative h-6 sm:h-7 mx-1.5 min-w-[60px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner z-10">
-                          {(option.votesCount || 0) > 0 && (
+                          {(option.votesCount || 0) > 0 ? (
                             <motion.div
                               initial={{ width: 0 }}
                               animate={{ width: `${Math.max(percentage, 2)}%` }}
@@ -785,28 +785,32 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               {/* Brilho especular superior do vidro */}
                               <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
 
-                              {/* Traço vertical dourado mais largo reluzente na ponta (sem bola) */}
-                              <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
-                                <div className="absolute -inset-y-1 w-4 -right-1 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[4px]" />
-                                <div className="relative w-[6px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_10px_#fbbf24,0_0_18px_rgba(245,158,11,1),0_0_3px_#ffffff] rounded-r-xs" />
+                              {/* % antes da cabeça brilhosa + Faixinha laranja (20% mais estreita: 4.8px) */}
+                              <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20 pr-0.5">
+                                <span className="text-[10px] sm:text-[11px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] mr-1.5 select-none leading-none">
+                                  {percentage}%
+                                </span>
+                                <div className="absolute -inset-y-1 w-3.5 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[3px]" />
+                                <div className="relative w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
                               </div>
                             </motion.div>
+                          ) : (
+                            <span className="text-[10px] font-mono font-medium text-slate-500 pl-2">
+                              0%
+                            </span>
                           )}
                         </div>
 
-                        {/* LINHA VERTICAL FINAL (MARCANDO O 100% ANTES DA PERCENTAGEM) */}
+                        {/* LINHA VERTICAL FINAL (MARCANDO O LIMITE 100%) */}
                         <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center z-10" title="Limite 100%" />
 
-                        {/* 5. CONTADOR NUMÉRICO E PERCENTAGEM */}
-                        <div className="text-right z-10 shrink-0 flex items-center gap-1.5 font-mono ml-auto">
+                        {/* 5. CONTADOR NUMÉRICO DE VOTOS (Coluna % retirada e colocada antes da cabeça brilhosa) */}
+                        <div className="text-right z-10 shrink-0 flex items-center gap-1.5 font-mono ml-1.5">
                           <span className="text-[10px] sm:text-[11px] font-bold text-slate-300/80 uppercase">
                             votos
                           </span>
                           <span className="text-sm sm:text-base font-black text-white min-w-[2ch]">
                             {Math.floor(option.votesCount || 0)}
-                          </span>
-                          <span className="w-[5ch] min-w-[5ch] max-w-[5ch] text-right text-xs sm:text-sm font-black text-amber-300 ml-1 shrink-0">
-                            {percentage}%
                           </span>
                         </div>
                       </motion.div>
