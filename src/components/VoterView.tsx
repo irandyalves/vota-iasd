@@ -7,7 +7,7 @@ import {
   AlertCircle,
   Flame,
   Trophy,
-  AlertTriangle,
+  Star,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { submitBallot, hasVoted, verifyBallotOnServer, clearVotedFlag } from '../services/votingService';
@@ -230,21 +230,21 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
           {/* Banner de Empate (somente no resultado oficial) */}
           {hasTies && (
-            <div className="p-2 rounded-xl bg-amber-950/90 border-2 border-amber-400 text-amber-200 shadow-xl space-y-1">
+            <div className="p-2 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 shadow-xl space-y-1">
               <div className="flex items-center gap-1.5">
-                <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+                <Star className="w-4 h-4 text-rose-400 fill-rose-400 shrink-0" />
                 <h4 className="font-extrabold text-[10px] uppercase tracking-wide text-white">
                   Empate Detectado na Apuração!
                 </h4>
               </div>
-              <div className="text-[9px] text-amber-200/90 space-y-0.5 font-mono">
+              <div className="text-[9px] text-rose-200/90 space-y-0.5 font-mono">
                 {detectedTies.map((t, idx) => (
                   <div key={idx}>
                     • <strong>{t.label}</strong> ({t.votesCount} {t.votesCount === 1 ? 'voto' : 'votos'}): {t.tiedCandidates.map((c) => c.name).join(', ')}
                   </div>
                 ))}
               </div>
-              <p className="text-[9px] text-amber-300 font-bold italic">
+              <p className="text-[9px] text-rose-300 font-bold italic">
                 Aguarde o líder iniciar a rodada de desempate neste aparelho.
               </p>
             </div>
@@ -280,7 +280,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   style={{ gridTemplateColumns: '20ch minmax(0,1fr) auto 5ch' }}
                   className={`${hasCategorySeparator ? 'mt-3' : ''} py-1 px-2 rounded-lg border relative overflow-hidden grid items-center text-[10px] min-h-[26px] ${
                     tiedGroup
-                      ? 'bg-[#351e06] border-amber-400 ring-1 ring-amber-400/50'
+                      ? 'bg-[#18080c]/90 border border-rose-500/80 text-white'
                       : isElected
                       ? 'bg-[#052e1c] border-emerald-500/80 text-white'
                       : isSuplente
@@ -297,7 +297,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                     transition={{ duration: 0.6, ease: 'easeOut' }}
                     className={`absolute top-0 bottom-0 left-0 opacity-20 pointer-events-none ${
                       tiedGroup
-                        ? 'bg-amber-400'
+                        ? 'bg-rose-600'
                         : isElected
                         ? 'bg-emerald-400'
                         : isSuplente
@@ -313,7 +313,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   <div
                     className={`w-[18px] h-[18px] rounded text-[9px] font-black flex items-center justify-center shrink-0 z-10 ${
                       tiedGroup
-                        ? 'bg-amber-400 text-blue-950'
+                        ? 'bg-rose-600 text-white border border-rose-400'
                         : isElected
                         ? 'bg-emerald-500 text-blue-950'
                         : isSuplente
@@ -329,7 +329,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                     <h4
                       className={`font-bold text-[10px] truncate uppercase leading-tight min-w-0 ${
                         tiedGroup
-                          ? 'text-amber-200 font-black'
+                          ? 'text-white font-black'
                           : isElected
                           ? 'text-white'
                           : isSuplente
@@ -346,8 +346,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   {/* COLUNA 2: Badge (coluna própria) */}
                   <div className="z-10 min-w-0 flex items-center pl-1">
                     {tiedGroup ? (
-                      <span className="text-[7px] px-1 rounded-full font-black bg-amber-400 text-blue-950 uppercase shrink-0">
-                        Empate
+                      <span className="text-[7.5px] px-1.5 py-0.2 rounded font-black bg-rose-600/80 border border-rose-400 text-white uppercase shrink-0 inline-flex items-center gap-0.5 shadow">
+                        <Star className="w-2 h-2 fill-current" /> EMPATE
                       </span>
                     ) : isElected ? (
                       <span className="text-[7px] px-1 rounded-full font-bold bg-emerald-950 text-emerald-300 border border-emerald-600/50 shrink-0">

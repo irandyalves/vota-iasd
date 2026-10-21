@@ -18,7 +18,9 @@ import {
   FolderPlus,
   ChevronsRight,
   X,
+  Star,
 } from 'lucide-react';
+import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
@@ -36,6 +38,72 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [eventNameInput, setEventNameInput] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
+  const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
+  const detectedTies = session.status === 'CLOSED' ? detectVotingTies(session) : [];
+  const hasTies = detectedTies.length > 0;
+
+  // Escuta o evento emitido pelo botão branco ("APURAÇÃO") da Navbar
+  useEffect(() => {
+    const handleOpenTieModal = () => {
+      const ties = detectVotingTies(session);
+      if (ties.length > 0) {
+        setIsTieModalOpen(true);
+      }
+    };
+    window.addEventListener('open-tie-modal', handleOpenTieModal);
+    return () => window.removeEventListener('open-tie-modal', handleOpenTieModal);
+  }, [session]);
+
+  // Se a votação encerrar e houver empate, abre o modal automaticamente
+  const prevStatusRef = useRef(session.status);
+  useEffect(() => {
+    if (prevStatusRef.current !== 'CLOSED' && session.status === 'CLOSED') {
+      const ties = detectVotingTies(session);
+      if (ties.length > 0) {
+        setIsTieModalOpen(true);
+      }
+    }
+    prevStatusRef.current = session.status;
+  }, [session.status, session]);
+
+  const handleStartTieBreak = (tie: TieInfo) => {
+    const tieOptions: VotingOption[] = tie.tiedCandidates.map((c) => ({
+      ...c,
+      votesCount: 0,
+    }));
+    saveSession({
+      ...session,
+      status: 'TIE_BREAK',
+      telaoMode: 'voting',
+      votingIteration: (session.votingIteration || 1) + 1,
+      tieBreak: {
+        active: true,
+        title: `Desempate - ${tie.label}`,
+        vacancies: tie.vacanciesInDispute,
+        maxVotesPerVoter: Math.min(tie.vacanciesInDispute, tieOptions.length),
+        options: tieOptions,
+      },
+    });
+    setIsTieModalOpen(false);
+    showNotification('success', `Rodada de desempate iniciada para ${tie.label}!`);
+  };
+
+  const handleManualResolveWinner = (winnerId: string) => {
+    const updatedOptions = session.options.map((opt) => {
+      if (opt.id === winnerId) {
+        return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+      }
+      return opt;
+    });
+    saveSession({
+      ...session,
+      options: updatedOptions,
+      tieBreak: undefined,
+    });
+    setIsTieModalOpen(false);
+    showNotification('success', 'Desempate resolvido por critério regimental/manual!');
+  };
+
   const [confirmModal, setConfirmModal] = useState<{
     title: string;
     highlight?: string;
@@ -559,6 +627,157 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   return (
     <div className="w-full px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100">
+      {/* MODAL DE EMPATES (BORDA VERMELHA FINA, ESTRELA E "EMPATE" BEM CLARO) */}
+      <AnimatePresence>
+        {isTieModalOpen && hasTies && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsTieModalOpen(false)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setIsTieModalOpen(false);
+            }}
+            tabIndex={-1}
+            className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 10 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-xl bg-gradient-to-b from-[#002657] to-[#07132a] border border-rose-500/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_35px_rgba(244,63,94,0.35),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden my-auto"
+            >
+              {/* Botão Fechar (X) */}
+              <button
+                type="button"
+                onClick={() => setIsTieModalOpen(false)}
+                className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Header do Modal */}
+              <div className="flex items-center gap-3 mb-4 pb-3 border-b border-rose-500/30">
+                <div className="w-11 h-11 rounded-xl bg-rose-500/20 border border-rose-400/80 shadow-[0_0_15px_rgba(244,63,94,0.3)] flex items-center justify-center shrink-0">
+                  <Star className="w-5 h-5 text-rose-400 fill-rose-400" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white">
+                      Empate Detectado na Apuração
+                    </h3>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600/30 text-rose-300 border border-rose-500/60 inline-flex items-center gap-1">
+                      <Star className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
+                      EMPATE
+                    </span>
+                  </div>
+                  <p className="text-xs text-rose-200/80 mt-0.5">
+                    A votação foi encerrada com candidatos empatados na linha de corte:
+                  </p>
+                </div>
+              </div>
+
+              {/* Lista de Grupos de Empate */}
+              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+                {detectedTies.map((tie, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3.5 rounded-xl bg-[#03152d]/90 border border-rose-500/50 space-y-3 shadow-inner"
+                  >
+                    <div className="flex items-center justify-between gap-2 border-b border-rose-500/20 pb-2">
+                      <div>
+                        <h4 className="font-black text-xs sm:text-sm text-rose-300 uppercase tracking-wide">
+                          {tie.label}
+                        </h4>
+                        <p className="text-[11px] text-slate-300">
+                          <strong className="text-white">{tie.vacanciesInDispute}</strong> {tie.vacanciesInDispute === 1 ? 'vaga em disputa' : 'vagas em disputa'} • <strong className="text-white">{tie.votesCount}</strong> {tie.votesCount === 1 ? 'voto cada' : 'votos cada'}
+                        </p>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[9.5px] font-black uppercase tracking-wider bg-rose-950 text-rose-300 border border-rose-500/50">
+                        {tie.tiedCandidates.length} Candidatos
+                      </span>
+                    </div>
+
+                    {/* Cards dos Candidatos Empatados (Borda vermelha fina, estrela e EMPATE bem claro) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {tie.tiedCandidates.map((c) => (
+                        <div
+                          key={c.id}
+                          className="p-2.5 rounded-xl bg-[#07132a] border border-rose-500/80 flex items-center justify-between gap-2 shadow-sm"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            {c.photoUrl ? (
+                              <img
+                                src={c.photoUrl}
+                                alt={c.name}
+                                className="w-8 h-8 rounded-lg object-cover border border-rose-400/50 shrink-0"
+                              />
+                            ) : (
+                              <div className="w-8 h-8 rounded-lg bg-rose-500/15 border border-rose-500/40 flex items-center justify-center shrink-0">
+                                <Star className="w-4 h-4 text-rose-400 fill-rose-400" />
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <h5 className="font-black text-xs text-white uppercase truncate">
+                                {c.name}
+                              </h5>
+                              <span className="inline-flex items-center gap-1 text-[8.5px] font-black text-rose-300 uppercase">
+                                <Star className="w-2 h-2 fill-rose-400 text-rose-400" />
+                                EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Botão de Decisão Manual por Regimento */}
+                          <button
+                            type="button"
+                            onClick={() => handleManualResolveWinner(c.id)}
+                            title="Declarar este candidato eleito por critério regimental (idade, tempo de batismo ou mesa)"
+                            className="px-2 py-1 bg-blue-900/50 hover:bg-emerald-600/60 border border-blue-600 hover:border-emerald-400 text-blue-200 hover:text-white rounded-lg text-[9.5px] font-black uppercase tracking-wider shrink-0 transition cursor-pointer active:scale-95"
+                          >
+                            Eleger
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Botão para Iniciar Rodada de Desempate nos Celulares */}
+                    <div className="pt-1 flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleStartTieBreak(tie)}
+                        className="w-full sm:w-auto px-4 py-2 bg-gradient-to-r from-rose-600 to-rose-700 hover:from-rose-500 hover:to-rose-600 border border-rose-400 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_15px_rgba(244,63,94,0.4)] transition cursor-pointer active:scale-95"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-white" />
+                        <span>Iniciar Votação de Desempate no Celular</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Rodapé do Modal */}
+              <div className="mt-4 pt-3 border-t border-slate-700/60 flex items-center justify-between gap-3">
+                <span className="text-[11px] text-slate-400 italic">
+                  Você também pode fechar para manter a apuração ou decidir mais tarde.
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsTieModalOpen(false)}
+                  className="px-4 py-2 rounded-xl bg-[#07132a] hover:bg-blue-950 border border-blue-700/80 text-slate-200 hover:text-white font-black text-xs uppercase tracking-wider transition cursor-pointer active:scale-95"
+                >
+                  Fechar
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* MODAL BONITO DE CONFIRMAÇÃO (SUBSTITUI O CONFIRM NATIVO DO NAVEGADOR) */}
       <AnimatePresence>
         {confirmModal && (
@@ -924,6 +1143,44 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </div>
         </div>
       </div>
+
+      {/* BANNER DE AVISO DE EMPATE (BORDA VERMELHA FINA, ESTRELA E "EMPATE" CLARO) */}
+      {hasTies && (
+        <div className="mb-3 p-3 rounded-xl bg-rose-950/40 border border-rose-500/80 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-sm">
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
+              <Star className="w-5 h-5 text-rose-400 fill-rose-400" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-black text-xs sm:text-sm text-white uppercase tracking-wide">
+                  Empate Detectado na Apuração
+                </h4>
+                <span className="px-2 py-0.5 rounded text-[9.5px] font-black uppercase tracking-wider bg-rose-600/40 text-rose-300 border border-rose-500/60 inline-flex items-center gap-1">
+                  <Star className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
+                  EMPATE
+                </span>
+              </div>
+              <p className="text-[11px] text-rose-200/90 font-medium mt-0.5">
+                {detectedTies
+                  .map(
+                    (t) =>
+                      `${t.label} (${t.votesCount} ${t.votesCount === 1 ? 'voto' : 'votos'}): ${t.tiedCandidates.map((c) => c.name).join(', ')}`
+                  )
+                  .join(' • ')}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsTieModalOpen(true)}
+            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)] shrink-0"
+          >
+            <Star className="w-3.5 h-3.5 fill-white" />
+            <span>Resolver Empate</span>
+          </button>
+        </div>
+      )}
 
       {/* PAINEL REVELADO PELA ENGRENAGEM: DESLIZA SUAVEMENTE EMPURRANDO AS SEÇÕES ABAIXO, RECOLHE COM ESC / CLIQUE FORA / ENGRENAGEM */}
       <AnimatePresence initial={false}>

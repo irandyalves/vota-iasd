@@ -7,7 +7,7 @@ import {
   Maximize,
   Minimize,
   Users,
-  AlertTriangle,
+  Star,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
@@ -496,16 +496,20 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   </div>
                 </div>
 
-                {/* ALERTA DE EMPATE NO TELÃO AO ENCERRAR VOTAÇÃO */}
+                {/* ALERTA DE EMPATE NO TELÃO AO ENCERRAR VOTAÇÃO (BORDA VERMELHA FINA, ESTRELA E "EMPATE" CLARO) */}
                 {hasTies && (
-                  <div className="mb-3 p-2.5 sm:p-3 rounded-xl bg-amber-950/90 border-2 border-amber-400 text-amber-200 shadow-2xl flex items-center justify-between gap-3 animate-pulse">
+                  <div className="mb-3 p-2.5 sm:p-3 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 shadow-2xl flex items-center justify-between gap-3 animate-pulse">
                     <div className="flex items-center gap-2.5">
-                      <AlertTriangle className="w-5 h-5 sm:w-6 sm:h-6 text-amber-400 shrink-0 animate-bounce" />
+                      <Star className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400 fill-rose-400 shrink-0" />
                       <div>
-                        <h4 className="font-black text-xs sm:text-sm lg:text-base text-white uppercase tracking-wide">
+                        <h4 className="font-black text-xs sm:text-sm lg:text-base text-white uppercase tracking-wide flex items-center gap-2">
                           EMPATE DETECTADO: {detectedTies.map((t) => t.label).join(' • ')}
+                          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600/40 text-rose-300 border border-rose-500/60 inline-flex items-center gap-1">
+                            <Star className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
+                            EMPATE
+                          </span>
                         </h4>
-                        <p className="text-[11px] sm:text-xs text-amber-200/90 font-medium">
+                        <p className="text-[11px] sm:text-xs text-rose-200/90 font-medium">
                           {detectedTies
                             .map(
                               (t) =>
@@ -515,7 +519,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         </p>
                       </div>
                     </div>
-                    <span className="px-2.5 py-1 bg-amber-400 text-blue-950 font-black text-[10px] sm:text-xs uppercase tracking-wider rounded-lg shrink-0 shadow">
+                    <span className="px-2.5 py-1 bg-rose-600 border border-rose-400 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider rounded-lg shrink-0 shadow">
                       Aguardando Desempate
                     </span>
                   </div>
@@ -568,7 +572,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         }}
                         className={`border transition-colors duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 shadow-sm ${
                           tiedGroup
-                            ? 'bg-[#3b2105]/95 border-2 border-amber-400 text-amber-100 shadow-md ring-2 ring-amber-400/50'
+                            ? 'bg-[#18080c]/90 border border-rose-500/80 text-white shadow-md'
                             : isElected
                             ? 'text-white'
                             : isSuplente1
@@ -585,7 +589,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           transition={{ duration: 0.6, ease: 'easeOut' }}
                           style={tiedGroup ? undefined : categoryStyles.barStyle}
                           className={`absolute top-0 bottom-0 left-0 opacity-35 pointer-events-none rounded-lg ${
-                            tiedGroup ? 'bg-gradient-to-r from-amber-600 to-amber-400' : ''
+                            tiedGroup ? 'bg-gradient-to-r from-rose-800 to-rose-600' : ''
                           }`}
                         />
 
@@ -598,7 +602,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           }
                           className={`flex items-center justify-center font-black shrink-0 shadow-sm ${
                             tiedGroup
-                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-amber-400 text-blue-950 ring-2 ring-amber-300'
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-rose-600 text-white border border-rose-400'
                               : isElected
                               ? rank === 1
                                 ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
@@ -634,7 +638,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             <h4
                               className={`leading-tight truncate uppercase tracking-wide ${
                                 tiedGroup
-                                  ? 'font-black text-xs sm:text-sm text-amber-200'
+                                  ? 'font-black text-xs sm:text-sm text-white'
                                   : isElected
                                   ? 'font-black text-xs sm:text-sm text-white'
                                   : isSuplente1
@@ -648,9 +652,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             </h4>
 
                             {tiedGroup ? (
-                              <span className="inline-flex items-center gap-1 text-[8.5px] px-1.5 py-0.2 rounded-full font-black bg-amber-400 text-blue-950 animate-pulse uppercase shadow">
-                                <AlertTriangle className="w-2.5 h-2.5" />
-                                Empate ({tiedGroup.label})
+                              <span className="inline-flex items-center gap-1 text-[8.5px] px-2 py-0.5 rounded-full font-black bg-rose-600/80 border border-rose-400 text-white uppercase shadow">
+                                <Star className="w-2.5 h-2.5 fill-current" />
+                                EMPATE
                               </span>
                             ) : (
                               <>

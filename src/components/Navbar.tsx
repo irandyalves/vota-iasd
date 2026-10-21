@@ -104,6 +104,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         status: 'CLOSED',
         telaoMode: 'voting',
       });
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-tie-modal'));
+      }
     } else {
       // Inicia NOVA VOTAÇÃO zerando os votos e ordenando A-Z
       const freshOptions = [...session.options]
