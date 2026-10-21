@@ -21,6 +21,11 @@ import {
   Star,
   MonitorOff,
   ExternalLink,
+  BarChart3,
+  TrendingUp,
+  Users,
+  Activity,
+  Award,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
@@ -37,6 +42,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isBottomSectionOpen, setIsBottomSectionOpen] = useState<boolean>(true);
   const [isGearOpen, setIsGearOpen] = useState<boolean>(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState<boolean>(false);
+  const [adminVotingView, setAdminVotingView] = useState<'dashboard' | 'names'>('dashboard');
   const [eventFormName, setEventFormName] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
   const [eventFormVacancies, setEventFormVacancies] = useState<number>(session.vacancies || 1);
   const [eventFormSuplente1Enabled, setEventFormSuplente1Enabled] = useState<boolean>(session.habilitarSuplente1 !== false);
@@ -62,6 +68,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   };
   const detectedTies = session.status === 'CLOSED' ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
+
+  const isVotingActive = session.status === 'VOTING' || session.status === 'TIE_BREAK';
+  const activeOptions =
+    session.status === 'TIE_BREAK' && session.tieBreak?.active
+      ? session.tieBreak.options || []
+      : session.options || [];
+
+  const rankedCandidates = [...activeOptions].sort((a, b) => {
+    const diff = (b.votesCount || 0) - (a.votesCount || 0);
+    if (diff !== 0) return diff;
+    return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+  });
+
+  const totalVotesCast = activeOptions.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+  const maxVotesRecorded = Math.max(...activeOptions.map((o) => o.votesCount || 0), 1);
+  const vacancies = session.vacancies || 1;
+  const s1Count = session.habilitarSuplente1 !== false ? (session.suplentesCount ?? 1) : 0;
+  const s2Count = session.habilitarSuplente2 === true ? (session.segundoSuplentesCount ?? 1) : 0;
+  const totalVacancies = vacancies + s1Count + s2Count;
+  const cutoffVotes = rankedCandidates[vacancies - 1]?.votesCount || 0;
 
   // Escuta o evento emitido pelo botão branco ("APURAÇÃO") da Navbar
   useEffect(() => {
@@ -1408,8 +1434,70 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             })}
           </div>
 
-          {/* CANTO DIREITO: ENGRENAGEM */}
-          <div className="flex items-center shrink-0">
+          {/* CANTO DIREITO: TELÃO (NOMES & QR) + ENGRENAGEM */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            {/* 1. Botão Ícone: Exibir NOMES no Telão */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
+                  saveSession({ ...session, telaoMode: nextMode });
+                  showNotification(
+                    'success',
+                    nextMode === 'names'
+                      ? 'Exibindo Nomes para Escolha no Telão!'
+                      : 'Exibindo Votação/Resultados no Telão!'
+                  );
+                }}
+                className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center ${
+                  session.telaoMode === 'names'
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)]'
+                    : 'bg-[#0b0d13] hover:bg-[#141721] border-white/[0.1] text-slate-400 hover:text-slate-200 hover:border-white/[0.2] shadow-sm'
+                }`}
+                title="Exibir NOMES no Telão"
+                aria-label="Exibir NOMES no Telão"
+              >
+                <Tv className="w-4 h-4" />
+              </button>
+
+              {/* Hint ao passar o mouse */}
+              <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
+                Exibir NOMES no Telão
+              </div>
+            </div>
+
+            {/* 2. Botão Ícone: Exibir o QR CODE no telão */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  saveSession({
+                    ...session,
+                    showQrOnTelao: session.showQrOnTelao === false ? true : false,
+                  });
+                }}
+                className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center ${
+                  session.showQrOnTelao !== false
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)]'
+                    : 'bg-[#0b0d13] hover:bg-[#141721] border-white/[0.1] text-slate-400 hover:text-slate-200 hover:border-white/[0.2] shadow-sm'
+                }`}
+                title="Exibir o QR CODE no telão"
+                aria-label="Exibir o QR CODE no telão"
+              >
+                <QrCode className="w-4 h-4" />
+              </button>
+
+              {/* Hint ao passar o mouse */}
+              <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
+                Exibir o QR CODE no telão
+              </div>
+            </div>
+
+            {/* Divisor sutil */}
+            <div className="h-5 w-px bg-white/[0.1] mx-0.5" />
+
+            {/* 3. Engrenagem */}
             <button
               ref={gearButtonRef}
               type="button"
@@ -2022,254 +2110,430 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             onChange={(e) => handleFileImport(e, 'replace')}
           />
 
-          {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ - LAYOUT ESTÚDIO MODERNO E SUAVE */}
-          <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
-            <div className="flex flex-col lg:flex-row gap-4 items-stretch">
-              {/* COLUNA DA ESQUERDA: CABEÇALHO + IMPORTAR DADOS + TEXTAREA */}
-              <div className="flex-1 flex flex-col justify-between gap-3 min-w-0">
-                {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
-                <div className="flex flex-wrap items-center gap-3 sm:gap-4">
-                  <div className="flex items-center gap-2 shrink-0">
-                    <label className="font-medium text-slate-200 text-sm tracking-normal">
-                      Digite ou fale os nomes
-                    </label>
-                    {isListening && (
-                      <span className="text-[10px] font-medium text-rose-300 bg-rose-950/80 px-2 py-0.5 rounded-full border border-rose-500/40 animate-pulse flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
-                        Ouvindo...
-                      </span>
-                    )}
+          {/* SE A VOTAÇÃO ESTIVER EM ANDAMENTO E O ADMIN QUISER O DASHBOARD: MOSTRA O DASHBOARD DE EVOLUÇÃO */}
+          {isVotingActive && adminVotingView === 'dashboard' ? (
+            <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 sm:p-5 shadow-xl space-y-4">
+              {/* Header do Dashboard */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Activity className="w-4 h-4 animate-pulse" />
                   </div>
-
-                  {/* SEÇÃO IMPORTAR */}
-                  <div
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                      e.preventDefault();
-                      const file = e.dataTransfer.files?.[0];
-                      if (file) {
-                        const syntheticEvent = { target: { files: [file] } } as any;
-                        handleFileImport(syntheticEvent, 'append');
-                      }
-                    }}
-                    className="flex flex-wrap items-center gap-2 py-1"
-                  >
-                    {/* Listbox Importar */}
-                    <div className="relative" data-import-listbox="true">
-                      <button
-                        type="button"
-                        onClick={() => setIsImportMenuOpen((prev) => !prev)}
-                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 rounded-lg text-xs font-medium text-slate-300 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer shadow-sm"
-                        title="Clique para escolher o formato de arquivo para importar"
-                      >
-                        <span>Importar</span>
-                        <svg
-                          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                            isImportMenuOpen ? 'rotate-180' : ''
-                          }`}
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                            clipRule="evenodd"
-                          />
-                        </svg>
-                      </button>
-
-                      <AnimatePresence>
-                        {isImportMenuOpen && (
-                          <motion.div
-                            initial={{ opacity: 0, y: -4, scale: 0.96 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                            transition={{ duration: 0.15 }}
-                            className="absolute left-0 top-full mt-1.5 w-40 bg-[#141721] border border-white/[0.1] rounded-xl shadow-2xl py-1 z-50 overflow-hidden"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsImportMenuOpen(false);
-                                if (fileUploadAppendRef.current) {
-                                  fileUploadAppendRef.current.accept = '.xls,.xlsx';
-                                  fileUploadAppendRef.current.click();
-                                }
-                              }}
-                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
-                            >
-                              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-                              <span>Excel (.xlsx)</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsImportMenuOpen(false);
-                                if (fileUploadAppendRef.current) {
-                                  fileUploadAppendRef.current.accept = '.csv';
-                                  fileUploadAppendRef.current.click();
-                                }
-                              }}
-                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
-                            >
-                              <FileText className="w-3.5 h-3.5 shrink-0 text-blue-400" />
-                              <span>CSV</span>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsImportMenuOpen(false);
-                                if (fileUploadAppendRef.current) {
-                                  fileUploadAppendRef.current.accept = '.txt';
-                                  fileUploadAppendRef.current.click();
-                                }
-                              }}
-                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
-                            >
-                              <FileText className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                              <span>TXT</span>
-                            </button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-medium text-slate-100 text-sm sm:text-base tracking-tight">
+                        Evolução da Votação em Tempo Real
+                      </h3>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+                        Ao vivo
+                      </span>
                     </div>
-
-                    {/* Arrastar e Soltar */}
-                    <div
-                      onClick={() => {
-                        if (fileUploadAppendRef.current) {
-                          fileUploadAppendRef.current.accept = '.txt,.csv,.xls,.xlsx';
-                          fileUploadAppendRef.current.click();
-                        }
-                      }}
-                      className="px-2.5 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-dashed border-white/[0.12] hover:border-emerald-500/40 rounded-lg text-xs text-slate-400 hover:text-slate-200 font-normal transition cursor-pointer flex items-center gap-1.5"
-                      title="Arraste qualquer arquivo e solte aqui"
-                    >
-                      <Upload className="w-3 h-3 text-slate-400" />
-                      <span>ou arraste o arquivo aqui</span>
-                    </div>
+                    <p className="text-xs text-slate-400">
+                      {session.title || 'Votação em Andamento'} • {vacancies} {vacancies === 1 ? 'Titular' : 'Titulares'}
+                      {s1Count > 0 && ` • ${s1Count} 1º Supl.`}
+                      {s2Count > 0 && ` • ${s2Count} 2º Supl.`}
+                    </p>
                   </div>
                 </div>
 
-                {/* Textarea com Microfone e Botão Adicionar */}
-                <div className="flex-1 relative flex flex-col">
-                  <textarea
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && !e.shiftKey) {
-                        e.preventDefault();
-                        if (isListening) stopListening();
-                        handleAddCandidateName(newName);
-                      }
-                    }}
-                    placeholder="Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)..."
-                    className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
-                  />
-
-                  {/* Microfone no canto superior direito */}
+                {/* Alternar entre Dashboard e Nomes Cadastrados */}
+                <div className="flex items-center gap-1 bg-[#0b0d13] p-1 rounded-lg border border-white/[0.08]">
                   <button
                     type="button"
-                    onClick={toggleListening}
-                    title={isListening ? 'Parar digitação por voz' : 'Iniciar digitação por voz'}
-                    className={`absolute right-3 top-3 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
-                      isListening
-                        ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
-                        : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                    }`}
+                    onClick={() => setAdminVotingView('dashboard')}
+                    className="px-3 py-1 rounded text-xs font-medium transition cursor-pointer flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
                   >
-                    {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    <BarChart3 className="w-3.5 h-3.5" />
+                    <span>Evolução</span>
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setAdminVotingView('names')}
+                    className="px-3 py-1 rounded text-xs font-medium transition cursor-pointer flex items-center gap-1.5 text-slate-400 hover:text-slate-200"
+                  >
+                    <span>Gerenciar nomes</span>
+                  </button>
+                </div>
+              </div>
 
-                  {/* Botão Adicionar no canto inferior direito quando houver texto */}
-                  {newName.trim().length > 0 && (
-                    <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
+              {/* 4 Cards de KPI / Telemetria */}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
+                {/* Votantes */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-slate-400 block truncate">Votantes confirmados</span>
+                    <span className="text-base sm:text-lg font-semibold text-slate-100 font-mono">
+                      {session.mainVotersCount || 0}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Total de Votos */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-slate-400 block truncate">Votos computados</span>
+                    <span className="text-base sm:text-lg font-semibold text-emerald-300 font-mono">
+                      {totalVotesCast}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Líder Atual */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
+                    <Award className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-slate-400 block truncate">Líder provisório</span>
+                    <span className="text-xs sm:text-sm font-semibold text-amber-300 block truncate capitalize">
+                      {rankedCandidates[0]?.votesCount ? rankedCandidates[0].name : 'Aguardando votos'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Linha de Corte Titular */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                    <TrendingUp className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <span className="text-[11px] text-slate-400 block truncate">Corte Titulares</span>
+                    <span className="text-base sm:text-lg font-semibold text-purple-300 font-mono">
+                      {cutoffVotes} <span className="text-xs font-normal text-slate-400">votos</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ranking Dinâmico com Barras de Progresso */}
+              <div className="space-y-2 pt-1">
+                <div className="flex items-center justify-between text-xs text-slate-400 px-1 pb-1">
+                  <span>Classificação em tempo real</span>
+                  <span>{activeOptions.length} candidatos na disputa</span>
+                </div>
+
+                {totalVotesCast === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/50 flex flex-col items-center justify-center gap-2">
+                    <Activity className="w-6 h-6 text-slate-500 animate-pulse" />
+                    <p className="font-medium text-slate-300">Votação aberta! Aguardando os primeiros votos...</p>
+                    <p className="text-[11px] text-slate-500">Conforme os eleitores votarem no celular, o ranking e as barras atualizarão automaticamente aqui.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 max-h-[380px] overflow-y-auto pr-1">
+                    {rankedCandidates.map((candidate, idx) => {
+                      const votes = candidate.votesCount || 0;
+                      const percent = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
+                      const barWidth = maxVotesRecorded > 0 ? Math.max(3, Math.round((votes / maxVotesRecorded) * 100)) : 0;
+                      const isTitular = idx < vacancies;
+                      const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
+                      const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
+                      const isFirstAfterTitulares = idx === vacancies && s1Count > 0;
+
+                      return (
+                        <React.Fragment key={candidate.id}>
+                          {isFirstAfterTitulares && (
+                            <div className="flex items-center gap-2 py-1 my-1">
+                              <div className="flex-1 h-px bg-emerald-500/30" />
+                              <span className="text-[10px] font-medium text-emerald-400/80 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                ▲ Linha de corte dos Titulares ({vacancies} vagas)
+                              </span>
+                              <div className="flex-1 h-px bg-emerald-500/30" />
+                            </div>
+                          )}
+
+                          <div
+                            className={`relative overflow-hidden rounded-lg p-2.5 border transition-all duration-300 ${
+                              isTitular
+                                ? 'bg-[#0b0d13] border-emerald-500/30 hover:border-emerald-500/50'
+                                : isSuplente1
+                                ? 'bg-[#0b0d13] border-blue-500/30 hover:border-blue-500/50'
+                                : isSuplente2
+                                ? 'bg-[#0b0d13] border-slate-500/30 hover:border-slate-500/50'
+                                : 'bg-[#0b0d13]/70 border-white/[0.06] hover:border-white/[0.12]'
+                            }`}
+                          >
+                            {/* Barra de progresso ao fundo */}
+                            <div
+                              className={`absolute left-0 top-0 bottom-0 pointer-events-none transition-all duration-500 opacity-20 ${
+                                isTitular
+                                  ? 'bg-emerald-500'
+                                  : isSuplente1
+                                  ? 'bg-blue-500'
+                                  : isSuplente2
+                                  ? 'bg-slate-500'
+                                  : 'bg-slate-700'
+                              }`}
+                              style={{ width: `${barWidth}%` }}
+                            />
+
+                            <div className="relative z-10 flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <span className="w-6 text-center font-mono font-medium text-xs text-slate-400 shrink-0">
+                                  #{idx + 1}
+                                </span>
+                                <span className="font-medium text-xs sm:text-sm text-slate-100 truncate capitalize">
+                                  {candidate.name}
+                                </span>
+                                {isTitular && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
+                                    Titular
+                                  </span>
+                                )}
+                                {isSuplente1 && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0">
+                                    1º Suplente
+                                  </span>
+                                )}
+                                {isSuplente2 && (
+                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-500/20 text-slate-300 border border-slate-500/30 shrink-0">
+                                    2º Suplente
+                                  </span>
+                                )}
+                              </div>
+
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-[11px] text-slate-400 font-mono">
+                                  {percent}%
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded font-mono font-semibold text-xs min-w-[54px] text-center ${
+                                    votes > 0
+                                      ? isTitular
+                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                        : 'bg-white/[0.08] text-slate-200 border border-white/[0.1]'
+                                      : 'bg-white/[0.04] text-slate-500'
+                                  }`}
+                                >
+                                  {votes} {votes === 1 ? 'voto' : 'votos'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </React.Fragment>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ - LAYOUT ESTÚDIO MODERNO E SUAVE */}
+              <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
+                <div className="flex flex-col justify-between gap-3 min-w-0">
+                  {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
+                  <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <label className="font-medium text-slate-200 text-sm tracking-normal">
+                        Digite ou fale os nomes
+                      </label>
+                      {isListening && (
+                        <span className="text-[10px] font-medium text-rose-300 bg-rose-950/80 px-2 py-0.5 rounded-full border border-rose-500/40 animate-pulse flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+                          Ouvindo...
+                        </span>
+                      )}
+                    </div>
+
+                    {isVotingActive && (
                       <button
                         type="button"
+                        onClick={() => setAdminVotingView('dashboard')}
+                        className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium cursor-pointer transition flex items-center gap-1.5"
+                      >
+                        <BarChart3 className="w-3.5 h-3.5" />
+                        <span>Ver Evolução da Votação</span>
+                      </button>
+                    )}
+
+                    {/* SEÇÃO IMPORTAR */}
+                    <div
+                      onDragOver={(e) => e.preventDefault()}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const file = e.dataTransfer.files?.[0];
+                        if (file) {
+                          const syntheticEvent = { target: { files: [file] } } as any;
+                          handleFileImport(syntheticEvent, 'append');
+                        }
+                      }}
+                      className="flex flex-wrap items-center gap-2 py-1"
+                    >
+                      {/* Listbox Importar */}
+                      <div className="relative" data-import-listbox="true">
+                        <button
+                          type="button"
+                          onClick={() => setIsImportMenuOpen((prev) => !prev)}
+                          className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 rounded-lg text-xs font-medium text-slate-300 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer shadow-sm"
+                          title="Clique para escolher o formato de arquivo para importar"
+                        >
+                          <span>Importar</span>
+                          <svg
+                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                              isImportMenuOpen ? 'rotate-180' : ''
+                            }`}
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </button>
+
+                        <AnimatePresence>
+                          {isImportMenuOpen && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                              transition={{ duration: 0.15 }}
+                              className="absolute left-0 top-full mt-1.5 w-40 bg-[#141721] border border-white/[0.1] rounded-xl shadow-2xl py-1 z-50 overflow-hidden"
+                            >
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsImportMenuOpen(false);
+                                  if (fileUploadAppendRef.current) {
+                                    fileUploadAppendRef.current.accept = '.xls,.xlsx';
+                                    fileUploadAppendRef.current.click();
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
+                              >
+                                <FileSpreadsheet className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                                <span>Excel (.xlsx)</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsImportMenuOpen(false);
+                                  if (fileUploadAppendRef.current) {
+                                    fileUploadAppendRef.current.accept = '.csv';
+                                    fileUploadAppendRef.current.click();
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                                <span>CSV</span>
+                              </button>
+
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setIsImportMenuOpen(false);
+                                  if (fileUploadAppendRef.current) {
+                                    fileUploadAppendRef.current.accept = '.txt';
+                                    fileUploadAppendRef.current.click();
+                                  }
+                                }}
+                                className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
+                              >
+                                <FileText className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                                <span>TXT</span>
+                              </button>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Arrastar e Soltar */}
+                      <div
                         onClick={() => {
+                          if (fileUploadAppendRef.current) {
+                            fileUploadAppendRef.current.accept = '.txt,.csv,.xls,.xlsx';
+                            fileUploadAppendRef.current.click();
+                          }
+                        }}
+                        className="px-2.5 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-dashed border-white/[0.12] hover:border-emerald-500/40 rounded-lg text-xs text-slate-400 hover:text-slate-200 font-normal transition cursor-pointer flex items-center gap-1.5"
+                        title="Arraste qualquer arquivo e solte aqui"
+                      >
+                        <Upload className="w-3 h-3 text-slate-400" />
+                        <span>ou arraste o arquivo aqui</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Textarea com Microfone e Botão Adicionar */}
+                  <div className="flex-1 relative flex flex-col">
+                    <textarea
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
                           if (isListening) stopListening();
                           handleAddCandidateName(newName);
-                        }}
-                        className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium cursor-pointer transition active:scale-95 shadow-sm flex items-center gap-1"
-                        title="Adicionar nomes digitados/falados à lista"
+                        }
+                      }}
+                      placeholder="Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)..."
+                      className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
+                    />
+
+                    {/* Microfone no canto superior direito */}
+                    <button
+                      type="button"
+                      onClick={toggleListening}
+                      title={isListening ? 'Parar digitação por voz' : 'Iniciar digitação por voz'}
+                      className={`absolute right-3 top-3 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                        isListening
+                          ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
+                          : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                      }`}
+                    >
+                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                    </button>
+
+                    {/* Botão Adicionar no canto inferior direito quando houver texto */}
+                    {newName.trim().length > 0 && (
+                      <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (isListening) stopListening();
+                            handleAddCandidateName(newName);
+                          }}
+                          className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium cursor-pointer transition active:scale-95 shadow-sm flex items-center gap-1"
+                          title="Adicionar nomes digitados/falados à lista"
+                        >
+                          <span>Adicionar</span>
+                          <span className="text-[10px] text-emerald-400/70">(Enter)</span>
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {isListening && (
+                    <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-xs">
+                      <span className="text-emerald-300 flex items-center gap-2 font-normal">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                        <span>{speechTranscript ? `Ouvindo: "${speechTranscript}"` : 'Fale os nomes agora...'}</span>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={stopListening}
+                        className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium text-[11px] transition cursor-pointer"
                       >
-                        <span>Adicionar</span>
-                        <span className="text-[10px] text-emerald-400/70">(Enter)</span>
+                        Pausar fala
                       </button>
                     </div>
                   )}
                 </div>
-
-                {isListening && (
-                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-xs">
-                    <span className="text-emerald-300 flex items-center gap-2 font-normal">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                      <span>{speechTranscript ? `Ouvindo: "${speechTranscript}"` : 'Fale os nomes agora...'}</span>
-                    </span>
-                    <button
-                      type="button"
-                      onClick={stopListening}
-                      className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium text-[11px] transition cursor-pointer"
-                    >
-                      Pausar fala
-                    </button>
-                  </div>
-                )}
               </div>
 
-              {/* SEÇÃO DA DIREITA: BOTÕES DE TELÃO E QR CODE */}
-              <div className="flex flex-col gap-3 shrink-0 w-full lg:w-48 justify-center">
-                {/* 1. Botão Nomes no Telão */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextMode = session.telaoMode === 'names' ? 'voting' : 'names';
-                    saveSession({ ...session, telaoMode: nextMode });
-                    showNotification(
-                      'success',
-                      nextMode === 'names'
-                        ? 'Exibindo Nomes para Escolha no Telão!'
-                        : 'Exibindo Votação/Resultados no Telão!'
-                    );
-                  }}
-                  className={`h-[44px] px-3 py-1.5 rounded-lg border transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs ${
-                    session.telaoMode === 'names'
-                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 shadow-sm'
-                      : 'bg-[#0b0d13] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.16]'
-                  }`}
-                  title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
-                >
-                  <Tv className="w-3.5 h-3.5 shrink-0" />
-                  <span>Nomes no telão</span>
-                </button>
-
-                {/* 2. Botão QR Code no Telão */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    saveSession({
-                      ...session,
-                      showQrOnTelao: session.showQrOnTelao === false ? true : false,
-                    });
-                  }}
-                  title="Mostrar ou ocultar o QR Code no Telão"
-                  className={`h-[44px] px-3 py-1.5 rounded-lg border transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs ${
-                    session.showQrOnTelao !== false
-                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 shadow-sm'
-                      : 'bg-[#0b0d13] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.16]'
-                  }`}
-                >
-                  <QrCode className="w-3.5 h-3.5 shrink-0" />
-                  <span>QR Code no telão</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* 3. NOMES CADASTRADOS - CARDS ESTÚDIO DISCRETOS */}
-          <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
+              {/* 2. NOMES CADASTRADOS - CARDS ESTÚDIO DISCRETOS */}
+              <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
                 <span>Nomes para escolha ({session.options.length})</span>
@@ -2431,9 +2695,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
             )}
           </div>
-
-        </div>
+        </>
       )}
+    </div>
+  )}
 
       {/* ABA 3: CONFIGURAÇÕES E MIGRAÇÃO (REDUZIDO EM 30%) */}
       {activeTab === 'settings' && (
