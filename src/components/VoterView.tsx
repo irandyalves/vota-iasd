@@ -693,11 +693,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
           </span>
 
           <h2 className="text-2xl font-bold text-white mb-3 font-serif">
-            Aguardando liberação do líder...
+            A votação já irá começar
           </h2>
 
           <p className="text-sm text-blue-200/90 mb-6 leading-relaxed">
-            Você está conectado. Assim que o líder clicar em <strong>"INICIAR VOTAÇÃO"</strong>, as opções aparecerão automaticamente nesta tela.
+            Em instantes o coordenador irá iniciar a votação.
           </p>
         </motion.div>
       </div>
