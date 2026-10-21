@@ -1,8 +1,7 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Lock, Unlock } from 'lucide-react';
+import { RefreshCw, Camera, Lock, Unlock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
-import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 import type { VotingSession } from '../types';
 import { subscribeToConnectedVoters } from '../services/votingService';
 
@@ -31,7 +30,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 }) => {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [localPin, setLocalPin] = useState(pin);
-  const [isScreen2Open, setIsScreen2Open] = useState(false);
   const [connectedVoters, setConnectedVoters] = useState<string[]>([]);
 
   // Escuta os votantes que conectaram pelo QR Code ou endereço
@@ -62,12 +60,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     setLocalPin(pin);
   }, [pin]);
-
-  // Monitora se o Telão na 2ª tela está aberto ou fechado
-  useEffect(() => {
-    const unsub = subscribeSecondaryScreen(setIsScreen2Open);
-    return unsub;
-  }, []);
 
   // Salva o PIN digitado pelo usuário
   const handleSavePin = () => {
@@ -357,32 +349,8 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        {/* DIREITA: Botão 2ª Tela + Listbox "VISÃO DE:" (Admin, Celular, Público) */}
+        {/* DIREITA: Listbox "VISÃO DE:" (Admin, Celular, Público) */}
         <div className="flex items-center gap-2.5 justify-self-end">
-          {isScreen2Open ? (
-            <button
-              data-toggle-screen-btn="true"
-              onClick={() => toggleSecondaryScreen()}
-              title="Fechar / Ocultar a janela do Telão no 2º monitor"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white border border-rose-500/50 rounded-lg text-xs font-black shadow-md transition cursor-pointer active:scale-95"
-            >
-              <MonitorOff className="w-3.5 h-3.5 text-rose-400" />
-              <span className="hidden sm:inline">Ocultar 2ª Tela</span>
-              <X className="w-3.5 h-3.5 opacity-80" />
-            </button>
-          ) : (
-            <button
-              data-toggle-screen-btn="true"
-              onClick={() => toggleSecondaryScreen()}
-              title="Abrir o Telão em Tela Cheia no 2º monitor ou projetor da igreja"
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-lg text-xs font-black shadow-md transition cursor-pointer active:scale-95"
-            >
-              <Tv className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Projetar 2ª Tela</span>
-              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
-            </button>
-          )}
-
           <div className="flex items-center gap-1.5 bg-[#07132a] px-2.5 py-1.5 rounded-xl border border-blue-800/80 shadow-inner">
             <label
               htmlFor="navbar-view-select"

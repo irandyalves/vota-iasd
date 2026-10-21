@@ -19,11 +19,14 @@ import {
   ChevronsRight,
   X,
   Star,
+  MonitorOff,
+  ExternalLink,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
 import { saveSession } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
+import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -45,6 +48,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
   const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
+  const [isScreen2Open, setIsScreen2Open] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsub = subscribeSecondaryScreen(setIsScreen2Open);
+    return unsub;
+  }, []);
 
   const handleToggleTieCandidate = (id: string) => {
     setSelectedTieCandidateIds((prev) =>
@@ -1472,17 +1481,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
                 return (
                   <div className="bg-[#001838] rounded-xl p-3 shadow-lg space-y-2.5">
-                    {/* Cabeçalho Compacto */}
-                    <div className="flex items-center justify-between pb-1">
+                    {/* Cabeçalho Compacto com Botão Projetar/Ocultar 2ª Tela */}
+                    <div className="flex items-center justify-between pb-1 flex-wrap gap-2">
                       <div className="flex items-center gap-1.5">
                         <Sliders className="w-3.5 h-3.5 text-emerald-400/80" />
                         <h3 className="font-normal text-emerald-300/90 text-xs sm:text-sm tracking-wide">
                           Layout e cores dos cards no painel (telão)
                         </h3>
                       </div>
-                      <span className="text-[10px] text-slate-400">
-                        ESC ou clique fora para recolher
-                      </span>
+                      <div className="flex items-center gap-2.5">
+                        {isScreen2Open ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleSecondaryScreen()}
+                            title="Fechar / Ocultar a janela do Telão no 2º monitor"
+                            className="flex items-center gap-1.5 px-3 py-1 bg-rose-950/80 hover:bg-rose-900 text-rose-300 hover:text-white rounded-lg text-xs font-medium shadow transition cursor-pointer active:scale-95"
+                          >
+                            <MonitorOff className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Ocultar 2ª Tela</span>
+                            <X className="w-3.5 h-3.5 opacity-80" />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => toggleSecondaryScreen()}
+                            title="Abrir o Telão em Tela Cheia no 2º monitor ou projetor da igreja"
+                            className="flex items-center gap-1.5 px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 rounded-lg text-xs font-bold shadow transition cursor-pointer active:scale-95"
+                          >
+                            <Tv className="w-3.5 h-3.5" />
+                            <span>Projetar 2ª Tela</span>
+                            <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                          </button>
+                        )}
+                        <span className="text-[10px] text-slate-400">
+                          ESC ou clique fora para recolher
+                        </span>
+                      </div>
                     </div>
 
                     {/* CONFIGURAÇÕES GERAIS DE ELEIÇÃO (PADRÕES PARA NOVAS VOTAÇÕES) */}
