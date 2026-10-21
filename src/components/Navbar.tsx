@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { RefreshCw, Camera, Lock, Unlock } from 'lucide-react';
+import { RefreshCw, Camera, Lock, Unlock, Wand2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
+import { removeEasyBackground } from '../utils/imageUtils';
 import type { VotingSession } from '../types';
 import { subscribeToConnectedVoters } from '../services/votingService';
 
@@ -80,20 +81,44 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  // Upload de Logo personalizado
+  // Upload de Logo personalizado com remoção automática de fundo ("fundo fácil")
   const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !onUpdateLogo) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
-      const result = event.target?.result as string;
-      if (result) {
-        onUpdateLogo(result);
+    reader.onload = async (event) => {
+      const rawDataUrl = event.target?.result as string;
+      if (rawDataUrl) {
+        // GARANTIA: Se o fundo for fácil (branco, sólido, etc.), remove automaticamente!
+        const { resultUrl } = await removeEasyBackground(rawDataUrl);
+        onUpdateLogo(resultUrl);
       }
     };
     reader.readAsDataURL(file);
+    e.target.value = '';
   };
+
+  // Remoção de fundo sob demanda para a logo atualmente carregada
+  const handleManualRemoveBg = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!logoUrl || !onUpdateLogo) return;
+    const { resultUrl, removed } = await removeEasyBackground(logoUrl, { tolerance: 52 });
+    if (removed) {
+      onUpdateLogo(resultUrl);
+    }
+  };
+
+  // Garante que se houver uma logo salva com fundo fácil/sólido, remove automaticamente
+  useEffect(() => {
+    if (logoUrl && logoUrl.startsWith('data:image') && onUpdateLogo) {
+      removeEasyBackground(logoUrl).then(({ resultUrl, removed }) => {
+        if (removed && resultUrl !== logoUrl) {
+          onUpdateLogo(resultUrl);
+        }
+      });
+    }
+  }, [logoUrl]);
 
   const isVotingActive =
     session?.status === 'VOTING' || session?.status === 'TIE_BREAK';
@@ -210,8 +235,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   return (
     <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-4 min-h-[76px] flex items-center w-full">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 items-center gap-3">
-        {/* ESQUERDA: Logo + VOTA IASD + SENHA sem borda */}
-        <div className="flex items-center gap-2.5 justify-self-start">
+        {/* ESQUERDA: Logo (aumentada em 20%) + VOTA IASD + VOTANTES */}
+        <div className="flex items-center gap-3 justify-self-start">
           <input
             ref={logoInputRef}
             type="file"
@@ -219,21 +244,33 @@ export const Navbar: React.FC<NavbarProps> = ({
             className="hidden"
             onChange={handleLogoUpload}
           />
-          <button
-            type="button"
-            onClick={() => logoInputRef.current?.click()}
-            title="Clique para trocar o logo da igreja"
-            className="relative group shrink-0 cursor-pointer rounded-2xl overflow-hidden focus:outline-none"
-          >
-            <IasdLogo className="w-12 h-12" customUrl={logoUrl} />
-            <div className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-amber-300 transition-opacity">
-              <Camera className="w-3.5 h-3.5" />
-            </div>
-          </button>
+          <div className="relative group shrink-0">
+            <button
+              type="button"
+              onClick={() => logoInputRef.current?.click()}
+              title="Clique para trocar a logo (remoção automática de fundo ativada)"
+              className="relative block rounded-xl focus:outline-none transition p-0.5 hover:bg-white/10 cursor-pointer"
+            >
+              <IasdLogo className="w-[58px] h-[58px]" customUrl={logoUrl} />
+              <div className="absolute inset-0 bg-black/45 rounded-xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-amber-300 transition-opacity">
+                <Camera className="w-4 h-4 drop-shadow" />
+              </div>
+            </button>
+            {logoUrl && (
+              <button
+                type="button"
+                onClick={handleManualRemoveBg}
+                title="Remover fundo desta logo agora"
+                className="absolute -bottom-1 -right-1 bg-amber-400 hover:bg-amber-300 text-slate-900 p-1 rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer z-10"
+              >
+                <Wand2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
 
           <div className="leading-tight">
             <span
-              className="font-extrabold tracking-wider text-white text-[11px] block select-none"
+              className="font-extrabold tracking-wider text-white text-[12px] sm:text-[13px] block select-none mb-1"
               style={{
                 fontFamily:
                   '"Varela Round", "Nunito", "Quicksand", ui-rounded, "Segoe UI", system-ui, sans-serif',
@@ -242,45 +279,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               VOTA <span className="text-[#d4af37]">IASD</span>
             </span>
 
-            {/* SENHA EDITÁVEL SEM BORDA */}
-            <div className="flex items-center gap-1 mt-0.5">
-              <label
-                htmlFor="navbar-pin-input"
-                className="text-[11px] text-blue-300 font-semibold cursor-pointer w-[62px] select-none"
-              >
-                SENHA:
-              </label>
-              <input
-                id="navbar-pin-input"
-                type="text"
-                value={localPin}
-                maxLength={8}
-                onChange={(e) => setLocalPin(e.target.value.replace(/\s+/g, ''))}
-                onBlur={handleSavePin}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    (e.target as HTMLInputElement).blur();
-                  }
-                }}
-                title="Clique para editar a senha (Enter para salvar)"
-                className="w-14 px-0.5 py-0 font-mono font-black text-sm text-amber-300 bg-transparent border-none focus:ring-0 tracking-widest outline-none transition cursor-text select-all"
-              />
-              <button
-                type="button"
-                onClick={handleRegenerate}
-                title="Gerar nova senha aleatória"
-                className="p-0.5 text-blue-300 hover:text-amber-300 rounded transition cursor-pointer active:scale-95"
-              >
-                <RefreshCw className="w-3 h-3" />
-              </button>
-            </div>
-
-            {/* VOTANTES COM CADEADO DEPOIS DO NÚMERO (ALINHADO AO REFRESH DA SENHA) */}
-            <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-[11px] text-blue-300 font-semibold cursor-default w-[62px] select-none">
+            {/* VOTANTES COM CADEADO */}
+            <div className="flex items-center gap-1.5 bg-[#07132a]/80 px-2 py-0.5 rounded-md border border-blue-900/50">
+              <span className="text-[10px] text-blue-300 font-semibold cursor-default select-none">
                 VOTANTES:
               </span>
-              <span className="w-14 px-0.5 py-0 font-mono font-black text-sm text-amber-300 tracking-widest flex items-center">
+              <span className="min-w-[18px] px-0.5 py-0 font-mono font-black text-xs text-amber-300 tracking-wider flex items-center">
                 {connectedVoters.length}
               </span>
               <button
@@ -437,12 +441,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        {/* DIREITA: Listbox "VISÃO DE:" (Admin, Celular, Público) */}
-        <div className="flex items-center gap-2.5 justify-self-end">
-          <div className="flex items-center gap-1.5 bg-[#07132a] px-2.5 py-1.5 rounded-xl border border-blue-800/80 shadow-inner">
+        {/* DIREITA: "VISÃO DE:" e logo abaixo "SENHA: XXX" */}
+        <div className="flex flex-col items-end gap-1.5 justify-self-end">
+          {/* 1. VISÃO DE: */}
+          <div className="flex items-center gap-1.5 bg-[#07132a] px-2.5 py-1 rounded-lg border border-blue-800/80 shadow-inner">
             <label
               htmlFor="navbar-view-select"
-              className="text-[10px] font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap"
+              className="text-[10px] font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap select-none"
             >
               VISÃO DE:
             </label>
@@ -464,6 +469,39 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Público
               </option>
             </select>
+          </div>
+
+          {/* 2. SENHA: XXX (MOVIDO PARA DEBAIXO DO VISÃO DE) */}
+          <div className="flex items-center gap-1 bg-[#07132a]/90 px-2 py-0.5 rounded-lg border border-blue-800/60 shadow-inner">
+            <label
+              htmlFor="navbar-pin-input"
+              className="text-[10px] text-blue-300 font-bold uppercase tracking-wider cursor-pointer select-none"
+            >
+              SENHA:
+            </label>
+            <input
+              id="navbar-pin-input"
+              type="text"
+              value={localPin}
+              maxLength={8}
+              onChange={(e) => setLocalPin(e.target.value.replace(/\s+/g, ''))}
+              onBlur={handleSavePin}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
+              title="Clique para editar a senha (Enter para salvar)"
+              className="w-14 px-0.5 py-0 font-mono font-black text-xs text-amber-300 bg-transparent border-none focus:ring-0 tracking-widest outline-none transition cursor-text select-all text-center"
+            />
+            <button
+              type="button"
+              onClick={handleRegenerate}
+              title="Gerar nova senha aleatória"
+              className="p-0.5 text-blue-300 hover:text-amber-300 rounded transition cursor-pointer active:scale-95"
+            >
+              <RefreshCw className="w-2.5 h-2.5" />
+            </button>
           </div>
         </div>
       </div>
