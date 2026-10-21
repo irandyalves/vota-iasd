@@ -645,7 +645,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             : 'text-slate-300 py-0.5 px-2 rounded-md'
                         }`}
                       >
-                        {/* Barra de Progresso Animada no Fundo */}
+                        {/* Barra de Progresso Animada no Fundo: Vidro Transparente com Pontinha Dourada Brilhosa */}
                         {isElected && !tiedGroup ? (
                           <motion.div
                             initial={{ width: 0 }}
@@ -653,16 +653,17 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             transition={{ duration: 0.6, ease: 'easeOut' }}
                             className="absolute top-0 bottom-0 left-0 pointer-events-none rounded-lg overflow-visible z-0"
                           >
-                            {/* Efeito Vidro Transparente */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/[0.05] via-white/[0.12] to-white/[0.22] backdrop-blur-[2px] border-y border-white/[0.20] shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(255,255,255,0.12)] rounded-l-lg" />
+                            {/* Efeito Vidro Transparente Cristalino */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/[0.08] via-white/[0.18] to-white/[0.28] backdrop-blur-md border-t border-white/40 border-b border-white/20 shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),inset_0_-1px_1px_rgba(255,255,255,0.2)] rounded-l-lg overflow-hidden">
+                              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
+                            </div>
 
-                            {/* Traço laranja dourado brilhoso na ponta indicando onde ele está */}
+                            {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está */}
                             {(option.votesCount || 0) > 0 && (
-                              <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none">
-                                {/* Glow difuso */}
-                                <div className="absolute -inset-y-1 w-3 -right-1 bg-gradient-to-b from-amber-300 via-amber-500 to-orange-500 opacity-80 blur-[4px]" />
-                                {/* Traço vertical laranja dourado brilhoso */}
-                                <div className="relative w-[3.5px] h-full bg-gradient-to-b from-[#fff3b0] via-[#f59e0b] to-[#ea580c] shadow-[0_0_8px_#f59e0b,0_0_16px_rgba(245,158,11,0.9),0_0_24px_rgba(234,88,12,0.7),0_0_2px_#ffffff] rounded-r-xs" />
+                              <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
+                                <div className="absolute -inset-y-2 w-5 -right-2 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[6px]" />
+                                <div className="relative w-[4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_12px_#fbbf24,0_0_24px_rgba(245,158,11,1),0_0_4px_#ffffff] rounded-r-xs" />
+                                <div className="absolute right-[-4.5px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_12px_4px_#f59e0b,0_0_24px_8px_rgba(251,191,36,0.9),0_0_3px_#ffffff] ring-1.5 ring-white/90" />
                               </div>
                             )}
                           </motion.div>
