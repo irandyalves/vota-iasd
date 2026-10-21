@@ -743,86 +743,151 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }
   };
 
-  // Web Speech API - Microfone para adicionar nomes por voz
-  useEffect(() => {
+  // Web Speech API - Digitação por voz robusta em tempo real
+  const recognitionRef = useRef<any>(null);
+  const isListeningRef = useRef<boolean>(false);
+  const baseSpeechTextRef = useRef<string>('');
+
+  const stopListening = () => {
+    isListeningRef.current = false;
+    setIsListening(false);
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (_) {
+        try {
+          recognitionRef.current.abort();
+        } catch (__) {}
+      }
+      recognitionRef.current = null;
+    }
+  };
+
+  const startListening = () => {
     if (typeof window === 'undefined') return;
 
     const SpeechRecognition =
       (window as unknown as { SpeechRecognition: any }).SpeechRecognition ||
       (window as unknown as { webkitSpeechRecognition: any }).webkitSpeechRecognition;
 
-    if (!SpeechRecognition) return;
-
-    const recognition = new SpeechRecognition();
-    recognition.lang = 'pt-BR';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      setSpeechTranscript(transcript);
-      setIsListening(false);
-      handleVoiceNames(transcript);
-    };
-
-    recognition.onerror = () => {
-      setIsListening(false);
-      showNotification('error', 'Não foi possível capturar o áudio do microfone.');
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    if (isListening) {
-      try {
-        recognition.start();
-      } catch (_) {}
-    } else {
-      try {
-        recognition.stop();
-      } catch (_) {}
+    if (!SpeechRecognition) {
+      showNotification(
+        'error',
+        'Seu navegador não suporta digitação por voz. Por favor, utilize o Google Chrome ou Microsoft Edge.'
+      );
+      return;
     }
 
-    return () => {
-      try {
-        recognition.abort();
-      } catch (_) {}
-    };
-  }, [isListening]);
+    try {
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (_) {}
+      }
 
-  // Processa nomes falados no microfone
-  const handleVoiceNames = (text: string) => {
-    // Separa por "e", vírgulas ou quebras
-    const rawNames = text
-      .split(/,| e | E |\n/)
-      .map((n) => n.trim())
-      .filter((n) => n.length > 2);
+      const recognition = new SpeechRecognition();
+      recognition.lang = 'pt-BR';
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.maxAlternatives = 1;
 
-    if (rawNames.length === 0) return;
+      baseSpeechTextRef.current = newName.trim();
 
-    const now = Date.now();
-    const newOptions: VotingOption[] = rawNames.map((name, idx) => ({
-      id: 'opt_' + now + '_' + idx,
-      name: name.toUpperCase(),
-      votesCount: 0,
-      createdAt: now,
-    }));
+      recognition.onstart = () => {
+        isListeningRef.current = true;
+        setIsListening(true);
+        setSpeechTranscript('');
+        showNotification('success', 'Microfone ativo! Fale os nomes que eles serão digitados...');
+      };
 
-    triggerGlow(newOptions.map((o) => o.id));
+      recognition.onresult = (event: any) => {
+        let finalStr = '';
+        let interimStr = '';
 
-    const sortedOptions = [...session.options, ...newOptions].sort((a, b) =>
-      a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
-    );
+        for (let i = 0; i < event.results.length; i++) {
+          const item = event.results[i];
+          const transcript = item[0]?.transcript || '';
+          if (item.isFinal) {
+            finalStr += transcript + ' ';
+          } else {
+            interimStr += transcript;
+          }
+        }
 
-    const updated = {
-      ...session,
-      options: sortedOptions,
-    };
+        const currentSpeech = (finalStr + interimStr).trim();
+        setSpeechTranscript(currentSpeech);
 
-    saveSession(updated);
-    showNotification('success', `${newOptions.length} candidato(s) adicionado(s) por voz!`);
+        if (currentSpeech) {
+          const prefix = baseSpeechTextRef.current
+            ? baseSpeechTextRef.current +
+              (baseSpeechTextRef.current.endsWith(',') || baseSpeechTextRef.current.endsWith('\n')
+                ? ' '
+                : ', ')
+            : '';
+          setNewName(prefix + currentSpeech);
+        }
+      };
+
+      recognition.onerror = (event: any) => {
+        console.warn('SpeechRecognition error:', event.error);
+        if (event.error === 'no-speech') {
+          // Silêncio breve não encerra o microfone
+          return;
+        }
+        isListeningRef.current = false;
+        setIsListening(false);
+        if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+          showNotification(
+            'error',
+            'Permissão de microfone negada. Clique no ícone de cadeado na barra de endereço do navegador e permita o microfone.'
+          );
+        } else if (event.error === 'network') {
+          showNotification('error', 'Falha de conexão com o serviço de voz do navegador.');
+        } else {
+          showNotification('error', `Aviso do microfone: ${event.error || 'não reconhecido'}`);
+        }
+      };
+
+      recognition.onend = () => {
+        // Se ainda deve continuar ouvindo (ex: reinício automático do Chrome após pausa), reinicia
+        if (isListeningRef.current) {
+          try {
+            recognition.start();
+            return;
+          } catch (_) {}
+        }
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+      recognition.start();
+    } catch (err) {
+      console.error('Erro ao iniciar reconhecimento de voz:', err);
+      isListeningRef.current = false;
+      setIsListening(false);
+      showNotification('error', 'Não foi possível ligar o microfone. Verifique as permissões do navegador.');
+    }
   };
+
+  const toggleListening = () => {
+    if (isListening) {
+      stopListening();
+      showNotification('success', 'Microfone pausado. Nomes digitados no campo!');
+    } else {
+      startListening();
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      isListeningRef.current = false;
+      if (recognitionRef.current) {
+        try {
+          recognitionRef.current.abort();
+        } catch (_) {}
+      }
+    };
+  }, []);
 
   // Adicionar Candidato(s) por Texto ou Voz em Tempo Real (Maiúsculo)
   const handleAddCandidateName = (rawText: string) => {
@@ -2088,7 +2153,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   </div>
                 </div>
 
-                {/* Textarea com Microfone */}
+                {/* Textarea com Microfone e Botão Adicionar */}
                 <div className="flex-1 relative flex flex-col">
                   <textarea
                     value={newName}
@@ -2096,19 +2161,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
+                        if (isListening) stopListening();
                         handleAddCandidateName(newName);
                       }
                     }}
-                    placeholder="Digite ou cole os nomes aqui (dê Enter ou separe por vírgula ou linha)..."
-                    className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
+                    placeholder="Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)..."
+                    className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
                   />
 
-                  {/* Microfone */}
+                  {/* Microfone no canto superior direito */}
                   <button
                     type="button"
-                    onClick={() => setIsListening(!isListening)}
-                    title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                    onClick={toggleListening}
+                    title={isListening ? 'Parar digitação por voz' : 'Iniciar digitação por voz'}
+                    className={`absolute right-3 top-3 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
                       isListening
                         ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
                         : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
@@ -2116,12 +2182,40 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   >
                     {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
                   </button>
+
+                  {/* Botão Adicionar no canto inferior direito quando houver texto */}
+                  {newName.trim().length > 0 && (
+                    <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (isListening) stopListening();
+                          handleAddCandidateName(newName);
+                        }}
+                        className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium cursor-pointer transition active:scale-95 shadow-sm flex items-center gap-1"
+                        title="Adicionar nomes digitados/falados à lista"
+                      >
+                        <span>Adicionar</span>
+                        <span className="text-[10px] text-emerald-400/70">(Enter)</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
 
-                {speechTranscript && isListening && (
-                  <p className="text-xs text-emerald-300 font-mono bg-[#0b0d13] p-2 rounded-lg border border-white/[0.08]">
-                    Ouvindo: <span className="text-slate-100 font-normal">"{speechTranscript}"</span>
-                  </p>
+                {isListening && (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-xs">
+                    <span className="text-emerald-300 flex items-center gap-2 font-normal">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span>{speechTranscript ? `Ouvindo: "${speechTranscript}"` : 'Fale os nomes agora...'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={stopListening}
+                      className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium text-[11px] transition cursor-pointer"
+                    >
+                      Pausar fala
+                    </button>
+                  </div>
                 )}
               </div>
 
