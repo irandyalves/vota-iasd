@@ -11,6 +11,11 @@ service cloud.firestore {
         allow read, create: if true;
         allow update, delete: if false;
       }
+
+      // Presença de aparelhos conectados em tempo real (QR Code e link)
+      match /presence/{presenceId} {
+        allow read, write: if true;
+      }
     }
     
   }

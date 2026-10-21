@@ -486,17 +486,22 @@ export async function submitBallot(
 export function registerVoterPresence(sessionId: string): () => void {
   if (typeof window === 'undefined') return () => {};
   const voterId = getDeviceId();
+  const effectiveSessionId = sessionId || 'iasd-central-01';
 
   const pingPresence = async () => {
     // 1. Grava no Firestore se configurado
     if (isFirebaseConfigured && db) {
       try {
-        const presenceRef = doc(db, 'sessions', sessionId, 'presence', voterId);
-        await setDoc(presenceRef, {
-          voterId,
-          lastSeen: Date.now(),
-          connectedAt: Date.now(),
-        }, { merge: true });
+        const presenceRef = doc(db, 'sessions', effectiveSessionId, 'presence', voterId);
+        await setDoc(
+          presenceRef,
+          {
+            voterId,
+            lastSeen: Date.now(),
+            connectedAt: Date.now(),
+          },
+          { merge: true }
+        );
       } catch (err) {
         console.warn('Erro ao registrar presença Firestore:', err);
       }
@@ -520,8 +525,8 @@ export function registerVoterPresence(sessionId: string): () => void {
   // Ping inicial imediato
   pingPresence();
 
-  // Mantém ativo a cada 30 segundos
-  const interval = setInterval(pingPresence, 30000);
+  // Mantém ativo a cada 10 segundos
+  const interval = setInterval(pingPresence, 10000);
 
   return () => {
     clearInterval(interval);
@@ -533,30 +538,40 @@ export function subscribeToConnectedVoters(
   sessionId: string,
   onUpdate: (voters: string[]) => void
 ): () => void {
+  const effectiveSessionId = sessionId || 'iasd-central-01';
   let unsubFirestore: (() => void) | null = null;
 
   // Carrega imediatamente do localStorage
   try {
     const raw = localStorage.getItem('vota_iasd_local_voters');
-    if (raw) onUpdate(JSON.parse(raw));
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list) && list.length > 0) onUpdate(list);
+    }
   } catch (_) {}
 
   if (isFirebaseConfigured && db) {
     try {
-      const presenceCol = collection(db, 'sessions', sessionId, 'presence');
-      unsubFirestore = onSnapshot(presenceCol, (snapshot) => {
-        const ids = snapshot.docs.map((d) => d.id);
-        onUpdate(ids);
-        try {
-          localStorage.setItem('vota_iasd_local_voters', JSON.stringify(ids));
-        } catch (_) {}
-      });
+      const presenceCol = collection(db, 'sessions', effectiveSessionId, 'presence');
+      unsubFirestore = onSnapshot(
+        presenceCol,
+        (snapshot) => {
+          const ids = snapshot.docs.map((d) => d.id);
+          onUpdate(ids);
+          try {
+            localStorage.setItem('vota_iasd_local_voters', JSON.stringify(ids));
+          } catch (_) {}
+        },
+        (err) => {
+          console.warn('Erro ao assinar votantes conectados:', err);
+        }
+      );
     } catch (err) {
-      console.warn('Erro ao assinar votantes conectados:', err);
+      console.warn('Falha ao abrir listener de votantes:', err);
     }
   }
 
-  // Listener local de broadcast
+  // Listener local de broadcast entre abas
   const handleBroadcast = (e: MessageEvent) => {
     if (e.data && e.data.type === 'VOTER_CONNECTED' && Array.isArray(e.data.list)) {
       onUpdate(e.data.list);
@@ -570,10 +585,20 @@ export function subscribeToConnectedVoters(
     }
   };
 
+  const handleStorage = (e: StorageEvent) => {
+    if (e.key === 'vota_iasd_local_voters' && e.newValue) {
+      try {
+        const list = JSON.parse(e.newValue);
+        if (Array.isArray(list)) onUpdate(list);
+      } catch (_) {}
+    }
+  };
+
   if (broadcastChannel) {
     broadcastChannel.addEventListener('message', handleBroadcast);
   }
   window.addEventListener('vota_iasd_voter_connected', handleCustom);
+  window.addEventListener('storage', handleStorage);
 
   return () => {
     if (unsubFirestore) unsubFirestore();
@@ -581,5 +606,6 @@ export function subscribeToConnectedVoters(
       broadcastChannel.removeEventListener('message', handleBroadcast);
     }
     window.removeEventListener('vota_iasd_voter_connected', handleCustom);
+    window.removeEventListener('storage', handleStorage);
   };
 }

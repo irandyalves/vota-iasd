@@ -173,7 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             title="Clique para trocar o logo da igreja"
             className="relative group shrink-0 cursor-pointer rounded-2xl overflow-hidden focus:outline-none"
           >
-            <IasdLogo className="w-10 h-10" customUrl={logoUrl} />
+            <IasdLogo className="w-12 h-12" customUrl={logoUrl} />
             <div className="absolute inset-0 bg-black/60 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center text-amber-300 transition-opacity">
               <Camera className="w-3.5 h-3.5" />
             </div>
@@ -194,7 +194,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-1 mt-0.5">
               <label
                 htmlFor="navbar-pin-input"
-                className="text-[11px] text-blue-300 font-semibold cursor-pointer"
+                className="text-[11px] text-blue-300 font-semibold cursor-pointer w-[62px] select-none"
               >
                 SENHA:
               </label>
@@ -223,8 +223,14 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
-            {/* VOTANTES COM CADEADO (CLICOU, TRANCOU, NINGUÉM MAIS ACESSA) */}
-            <div className="flex items-center gap-1.5 mt-0.5">
+            {/* VOTANTES COM CADEADO DEPOIS DO NÚMERO (ALINHADO AO REFRESH DA SENHA) */}
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-[11px] text-blue-300 font-semibold cursor-default w-[62px] select-none">
+                VOTANTES:
+              </span>
+              <span className="w-14 px-0.5 py-0 font-mono font-black text-sm text-amber-300 tracking-widest flex items-center">
+                {connectedVoters.length}
+              </span>
               <button
                 type="button"
                 onClick={handleToggleLock}
@@ -233,24 +239,18 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'Votação TRANCADA (Novos acessos bloqueados. Clique para destrancar)'
                     : 'Votação ABERTA (Clique no cadeado para trancar e bloquear novos acessos)'
                 }
-                className={`p-0.5 rounded transition cursor-pointer active:scale-90 flex items-center justify-center ${
+                className={`p-0.5 rounded transition cursor-pointer active:scale-95 flex items-center justify-center ${
                   isLocked
-                    ? 'text-rose-400 hover:text-rose-300 drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]'
-                    : 'text-emerald-400 hover:text-emerald-300'
+                    ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.95)] hover:text-red-400'
+                    : 'text-emerald-400 hover:text-emerald-300 drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]'
                 }`}
               >
                 {isLocked ? (
-                  <Lock className="w-3.5 h-3.5 stroke-[2.5]" />
+                  <Lock className="w-3.5 h-3.5 stroke-[2.75]" />
                 ) : (
                   <Unlock className="w-3.5 h-3.5 stroke-[2.5]" />
                 )}
               </button>
-              <span className="text-[10.5px] text-blue-300 font-bold uppercase select-none">
-                VOTANTES
-              </span>
-              <span className="font-mono font-black text-xs text-amber-300 min-w-[16px]">
-                {connectedVoters.length}
-              </span>
             </div>
           </div>
         </div>
