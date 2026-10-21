@@ -35,7 +35,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isBottomSectionOpen, setIsBottomSectionOpen] = useState<boolean>(true);
   const [isGearOpen, setIsGearOpen] = useState<boolean>(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState<boolean>(false);
-  const [eventNameInput, setEventNameInput] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
+  const [eventFormName, setEventFormName] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
+  const [eventFormVacancies, setEventFormVacancies] = useState<number>(session.vacancies || 1);
+  const [eventFormSuplente1Enabled, setEventFormSuplente1Enabled] = useState<boolean>(session.habilitarSuplente1 !== false);
+  const [eventFormSuplente1Count, setEventFormSuplente1Count] = useState<number>(session.suplentesCount ?? 1);
+  const [eventFormSuplente2Enabled, setEventFormSuplente2Enabled] = useState<boolean>(session.habilitarSuplente2 === true);
+  const [eventFormSuplente2Count, setEventFormSuplente2Count] = useState<number>(session.segundoSuplentesCount ?? 1);
+  const [eventFormResolverEmpates, setEventFormResolverEmpates] = useState<boolean>(session.resolverEmpates !== false);
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
@@ -130,7 +136,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         } else if (isCreatingNewEvent) {
           setIsCreatingNewEvent(false);
           setEditingEventId(null);
-          setEventNameInput(session.title || '');
         } else if (isGearOpen) {
           setIsGearOpen(false);
         }
@@ -152,7 +157,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         if (!insideModal && !insideCreateBtn && !insideEditBtn) {
           setIsCreatingNewEvent(false);
           setEditingEventId(null);
-          setEventNameInput(session.title || '');
         }
       }
       if (isGearOpen) {
@@ -185,19 +189,62 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             id: session.activeEventId || 'evt_principal',
             name: session.title || 'ESCOLHA DO TESOUREIRO',
             options: session.options || [],
-            vacancies: session.vacancies || 6,
-            maxVotesPerVoter: session.maxVotesPerVoter || 6,
-            suplentesCount: session.suplentesCount ?? 2,
+            vacancies: session.vacancies || 1,
+            maxVotesPerVoter: session.maxVotesPerVoter || 1,
+            suplentesCount: session.suplentesCount ?? 1,
             segundoSuplentesCount: session.segundoSuplentesCount ?? 0,
             habilitarSuplente1: session.habilitarSuplente1 ?? true,
             habilitarSuplente2: session.habilitarSuplente2 ?? false,
+            resolverEmpates: session.resolverEmpates !== false,
           },
         ];
   const currentActiveEventId = session.activeEventId || eventsList[0].id;
 
-  useEffect(() => {
-    setEventNameInput(session.title || '');
-  }, [session.title, session.activeEventId]);
+  // Abrir modal de criação de nova votação (puxa as configurações gerais da engrenagem por padrão)
+  const openCreateEventModal = () => {
+    setEditingEventId(null);
+    setEventFormName('');
+    setEventFormVacancies(session.vacancies || 1);
+    setEventFormSuplente1Enabled(session.habilitarSuplente1 !== false);
+    setEventFormSuplente1Count(session.suplentesCount ?? 1);
+    setEventFormSuplente2Enabled(session.habilitarSuplente2 === true);
+    setEventFormSuplente2Count(session.segundoSuplentesCount ?? 1);
+    setEventFormResolverEmpates(session.resolverEmpates !== false);
+    setIsCreatingNewEvent(true);
+  };
+
+  // Abrir modal de edição de votação existente (lápis)
+  const openEditEventModal = (evt: VotingEventItem) => {
+    setEditingEventId(evt.id);
+    const isSelected = evt.id === currentActiveEventId;
+    const displayName = isSelected ? (session.title || evt.name) : evt.name;
+    setEventFormName(displayName);
+
+    const vac = isSelected ? session.vacancies : (evt.vacancies ?? session.vacancies ?? 1);
+    const s1Enabled = isSelected
+      ? (session.habilitarSuplente1 !== false)
+      : (evt.habilitarSuplente1 !== undefined ? evt.habilitarSuplente1 : (session.habilitarSuplente1 !== false));
+    const s1Count = isSelected
+      ? (session.suplentesCount ?? 1)
+      : (evt.suplentesCount ?? session.suplentesCount ?? 1);
+    const s2Enabled = isSelected
+      ? (session.habilitarSuplente2 === true)
+      : (evt.habilitarSuplente2 !== undefined ? evt.habilitarSuplente2 : (session.habilitarSuplente2 === true));
+    const s2Count = isSelected
+      ? (session.segundoSuplentesCount ?? 1)
+      : (evt.segundoSuplentesCount ?? session.segundoSuplentesCount ?? 1);
+    const empates = isSelected
+      ? (session.resolverEmpates !== false)
+      : (evt.resolverEmpates !== undefined ? evt.resolverEmpates : (session.resolverEmpates !== false));
+
+    setEventFormVacancies(vac || 1);
+    setEventFormSuplente1Enabled(s1Enabled);
+    setEventFormSuplente1Count(s1Count > 0 ? s1Count : 1);
+    setEventFormSuplente2Enabled(s2Enabled);
+    setEventFormSuplente2Count(s2Count > 0 ? s2Count : 1);
+    setEventFormResolverEmpates(empates);
+    setIsCreatingNewEvent(true);
+  };
 
   // Selecionar um evento ao clicar no botão do evento no cabeçalho -> abre a parte de baixo (Print 2)
   const handleSelectEventButton = (evt: VotingEventItem) => {
@@ -219,6 +266,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             segundoSuplentesCount: session.segundoSuplentesCount,
             habilitarSuplente1: session.habilitarSuplente1,
             habilitarSuplente2: session.habilitarSuplente2,
+            resolverEmpates: session.resolverEmpates,
           }
         : item
     );
@@ -234,6 +282,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       segundoSuplentesCount: evt.segundoSuplentesCount ?? 0,
       habilitarSuplente1: evt.habilitarSuplente1,
       habilitarSuplente2: evt.habilitarSuplente2,
+      resolverEmpates: evt.resolverEmpates !== undefined ? evt.resolverEmpates : (session.resolverEmpates !== false),
       events: updatedEvents,
     });
 
@@ -242,82 +291,106 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     showNotification('success', `Evento "${evt.name}" aberto!`);
   };
 
-  // Criar um novo evento com nome
-  const handleCreateEvent = (customName?: string) => {
-    const cleaned = (customName ?? eventNameInput).trim().toUpperCase();
-    if (!cleaned) {
-      showNotification('error', 'Digite o nome do evento (ex: Escolha do Tesoureiro).');
-      return;
-    }
-
-    const newEvtId = 'evt_' + Date.now();
-    const newEvt: VotingEventItem = {
-      id: newEvtId,
-      name: cleaned,
-      options: [],
-      vacancies: session.vacancies || 1,
-      maxVotesPerVoter: session.vacancies || 1,
-      suplentesCount: session.suplentesCount ?? 2,
-      segundoSuplentesCount: session.segundoSuplentesCount ?? 0,
-      habilitarSuplente1: session.habilitarSuplente1 ?? true,
-      habilitarSuplente2: session.habilitarSuplente2 ?? false,
-    };
-
-    const syncedCurrentEvents = eventsList.map((item) =>
-      item.id === currentActiveEventId
-        ? {
-            ...item,
-            name: session.title || item.name,
-            options: session.options,
-            vacancies: session.vacancies,
-            maxVotesPerVoter: session.maxVotesPerVoter,
-            suplentesCount: session.suplentesCount,
-            segundoSuplentesCount: session.segundoSuplentesCount,
-            habilitarSuplente1: session.habilitarSuplente1,
-            habilitarSuplente2: session.habilitarSuplente2,
-          }
-        : item
-    );
-
-    saveSession({
-      ...session,
-      activeEventId: newEvtId,
-      title: cleaned,
-      options: [],
-      status: 'WAITING',
-      events: [...syncedCurrentEvents, newEvt],
-    });
-
-    setIsCreatingNewEvent(false);
-    setActiveTab('candidates');
-    setIsBottomSectionOpen(true);
-    showNotification('success', `Evento "${cleaned}" criado! Clique nele ou adicione os nomes abaixo.`);
-  };
-
-  // Salvar nome no modalzinho (cria novo ou edita existente)
+  // Salvar configurações da votação (cria nova ou edita existente)
   const handleSaveEventModal = () => {
-    const cleaned = eventNameInput.trim().toUpperCase();
+    const cleaned = eventFormName.trim().toUpperCase();
     if (!cleaned) {
       showNotification('error', 'Digite o nome da votação/evento.');
       return;
     }
 
+    const vacancies = Math.max(1, eventFormVacancies || 1);
+    const s1Count = eventFormSuplente1Enabled ? Math.max(1, eventFormSuplente1Count || 1) : 0;
+    const s2Count = eventFormSuplente2Enabled ? Math.max(1, eventFormSuplente2Count || 1) : 0;
+    const resolverEmpates = eventFormResolverEmpates;
+
     if (editingEventId) {
-      const updatedEvents = eventsList.map((item) =>
-        item.id === editingEventId ? { ...item, name: cleaned } : item
-      );
       const isEditingActive = editingEventId === currentActiveEventId;
+      const updatedEvents = eventsList.map((item) =>
+        item.id === editingEventId
+          ? {
+              ...item,
+              name: cleaned,
+              vacancies,
+              maxVotesPerVoter: vacancies,
+              habilitarSuplente1: eventFormSuplente1Enabled,
+              suplentesCount: s1Count,
+              habilitarSuplente2: eventFormSuplente2Enabled,
+              segundoSuplentesCount: s2Count,
+              resolverEmpates,
+            }
+          : item
+      );
+
       saveSession({
         ...session,
         title: isEditingActive ? cleaned : session.title,
+        vacancies: isEditingActive ? vacancies : session.vacancies,
+        maxVotesPerVoter: isEditingActive ? vacancies : session.maxVotesPerVoter,
+        habilitarSuplente1: isEditingActive ? eventFormSuplente1Enabled : session.habilitarSuplente1,
+        suplentesCount: isEditingActive ? s1Count : session.suplentesCount,
+        habilitarSuplente2: isEditingActive ? eventFormSuplente2Enabled : session.habilitarSuplente2,
+        segundoSuplentesCount: isEditingActive ? s2Count : session.segundoSuplentesCount,
+        resolverEmpates: isEditingActive ? resolverEmpates : session.resolverEmpates,
         events: updatedEvents,
       });
+
       setIsCreatingNewEvent(false);
       setEditingEventId(null);
-      showNotification('success', `Evento atualizado para "${cleaned}"!`);
+      showNotification('success', `Configurações da votação "${cleaned}" salvas com sucesso!`);
     } else {
-      handleCreateEvent(cleaned);
+      const newEvtId = 'evt_' + Date.now();
+      const newEvt: VotingEventItem = {
+        id: newEvtId,
+        name: cleaned,
+        options: [],
+        vacancies,
+        maxVotesPerVoter: vacancies,
+        suplentesCount: s1Count,
+        segundoSuplentesCount: s2Count,
+        habilitarSuplente1: eventFormSuplente1Enabled,
+        habilitarSuplente2: eventFormSuplente2Enabled,
+        resolverEmpates,
+      };
+
+      const syncedCurrentEvents = eventsList.map((item) =>
+        item.id === currentActiveEventId
+          ? {
+              ...item,
+              name: session.title || item.name,
+              options: session.options,
+              vacancies: session.vacancies,
+              maxVotesPerVoter: session.maxVotesPerVoter,
+              suplentesCount: session.suplentesCount,
+              segundoSuplentesCount: session.segundoSuplentesCount,
+              habilitarSuplente1: session.habilitarSuplente1,
+              habilitarSuplente2: session.habilitarSuplente2,
+              resolverEmpates: session.resolverEmpates,
+            }
+          : item
+      );
+
+      saveSession({
+        ...session,
+        activeEventId: newEvtId,
+        title: cleaned,
+        options: [],
+        status: 'WAITING',
+        vacancies,
+        maxVotesPerVoter: vacancies,
+        habilitarSuplente1: eventFormSuplente1Enabled,
+        suplentesCount: s1Count,
+        habilitarSuplente2: eventFormSuplente2Enabled,
+        segundoSuplentesCount: s2Count,
+        resolverEmpates,
+        events: [...syncedCurrentEvents, newEvt],
+      });
+
+      setIsCreatingNewEvent(false);
       setEditingEventId(null);
+      setActiveTab('candidates');
+      setIsBottomSectionOpen(true);
+      showNotification('success', `Votação "${cleaned}" criada com sucesso!`);
     }
   };
 
@@ -349,6 +422,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           segundoSuplentesCount: nextActive.segundoSuplentesCount ?? 0,
           habilitarSuplente1: nextActive.habilitarSuplente1,
           habilitarSuplente2: nextActive.habilitarSuplente2,
+          resolverEmpates: nextActive.resolverEmpates !== undefined ? nextActive.resolverEmpates : (session.resolverEmpates !== false),
           events: remaining,
         });
         setConfirmModal(null);
@@ -356,6 +430,187 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       },
     });
   };
+
+  // Renderiza o modal de configuração de votação (tanto para criar quanto para editar via lápis)
+  const renderEventConfigModal = () => {
+    const isEditing = Boolean(editingEventId);
+    return (
+      <motion.div
+        ref={eventModalRef}
+        data-event-modal="true"
+        initial={{ opacity: 0, scale: 0.94, y: -6 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.94, y: -6 }}
+        transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+        style={{ transformOrigin: 'top left' }}
+        className="absolute top-full left-0 mt-2 z-50 overflow-hidden w-[350px] sm:w-[410px] max-w-[calc(100vw-24px)]"
+      >
+        <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl p-3 shadow-[0_0_24px_rgba(52,211,153,0.5),0_14px_34px_rgba(0,0,0,0.85)] space-y-2.5">
+          {/* Cabeçalho */}
+          <div className="flex items-center justify-between pb-1.5 border-b border-blue-900/80">
+            <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
+              <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
+              {isEditing ? 'Configurar Votação' : 'Nova Votação'}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreatingNewEvent(false);
+                setEditingEventId(null);
+              }}
+              className="p-0.5 text-slate-400 hover:text-white rounded transition cursor-pointer"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Nome da Votação */}
+          <div>
+            <label className="text-[10px] font-bold text-blue-200 uppercase tracking-wide block mb-1">
+              Nome da Votação:
+            </label>
+            <input
+              type="text"
+              autoFocus
+              placeholder="DIGITE O NOME (EX: ESCOLHA DO TESOUREIRO)..."
+              value={eventFormName}
+              onChange={(e) => setEventFormName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleSaveEventModal();
+                }
+              }}
+              className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 focus:border-emerald-400 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
+            />
+          </div>
+
+          {/* Vagas Titulares, 1º Suplente e 2º Suplente */}
+          <div className="grid grid-cols-3 gap-2">
+            {/* Titulares */}
+            <div className="bg-[#07132a] border border-blue-800 rounded-lg p-2 flex flex-col justify-between">
+              <span className="text-[9.5px] font-black text-white uppercase block mb-1">
+                Titulares:
+              </span>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  value={eventFormVacancies}
+                  onChange={(e) => setEventFormVacancies(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-1.5 py-1 bg-[#001f47] border border-blue-600 rounded text-center text-amber-300 font-black text-xs outline-none"
+                />
+                <span className="text-[9px] text-slate-400 font-bold uppercase">vagas</span>
+              </div>
+            </div>
+
+            {/* 1º Suplente */}
+            <div className="bg-[#07132a] border border-blue-800 rounded-lg p-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[9.5px] font-black text-white uppercase">
+                  1º Supl.:
+                </span>
+                <input
+                  type="checkbox"
+                  checked={eventFormSuplente1Enabled}
+                  onChange={(e) => setEventFormSuplente1Enabled(e.target.checked)}
+                  className="rounded cursor-pointer accent-emerald-500 w-3 h-3"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  disabled={!eventFormSuplente1Enabled}
+                  value={eventFormSuplente1Enabled ? eventFormSuplente1Count : 0}
+                  onChange={(e) => setEventFormSuplente1Count(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-1.5 py-1 bg-[#001f47] border border-blue-600 rounded text-center text-blue-300 font-black text-xs outline-none disabled:opacity-40"
+                />
+                <span className="text-[9px] text-slate-400 font-bold uppercase">vagas</span>
+              </div>
+            </div>
+
+            {/* 2º Suplente */}
+            <div className="bg-[#07132a] border border-blue-800 rounded-lg p-2 flex flex-col justify-between">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[9.5px] font-black text-white uppercase">
+                  2º Supl.:
+                </span>
+                <input
+                  type="checkbox"
+                  checked={eventFormSuplente2Enabled}
+                  onChange={(e) => setEventFormSuplente2Enabled(e.target.checked)}
+                  className="rounded cursor-pointer accent-emerald-500 w-3 h-3"
+                />
+              </div>
+              <div className="flex items-center gap-1">
+                <input
+                  type="number"
+                  min={1}
+                  max={99}
+                  disabled={!eventFormSuplente2Enabled}
+                  value={eventFormSuplente2Enabled ? eventFormSuplente2Count : 0}
+                  onChange={(e) => setEventFormSuplente2Count(Math.max(1, parseInt(e.target.value) || 1))}
+                  className="w-full px-1.5 py-1 bg-[#001f47] border border-blue-600 rounded text-center text-slate-300 font-black text-xs outline-none disabled:opacity-40"
+                />
+                <span className="text-[9px] text-slate-400 font-bold uppercase">vagas</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Se terá empate (Resolver Empates) */}
+          <div className="bg-[#07132a] border border-blue-800 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5">
+              <Star className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+              <div>
+                <span className="text-[10px] font-black text-white uppercase tracking-wide block">
+                  Resolver Empates:
+                </span>
+                <span className="text-[8.5px] text-blue-200/80 block">
+                  {eventFormResolverEmpates
+                    ? 'Ativado: rodada para desempate'
+                    : 'Desativado: eleição majoritária'}
+                </span>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={eventFormResolverEmpates}
+                onChange={(e) => setEventFormResolverEmpates(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500 shadow-inner" />
+            </label>
+          </div>
+
+          {/* Botões Salvar e Cancelar */}
+          <div className="flex items-center justify-end gap-2 pt-1 border-t border-blue-900/80">
+            <button
+              type="button"
+              onClick={() => {
+                setIsCreatingNewEvent(false);
+                setEditingEventId(null);
+              }}
+              className="px-2.5 py-1.5 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800 text-slate-300 font-bold text-[10.5px] rounded-lg uppercase tracking-wider transition cursor-pointer active:scale-95"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveEventModal}
+              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow"
+            >
+              {isEditing ? 'Salvar' : 'Criar Votação'}
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    );
+  };
+
   const [isListening, setIsListening] = useState(false);
   const [speechTranscript, setSpeechTranscript] = useState('');
   const [newName, setNewName] = useState('');
@@ -909,6 +1164,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         </div>
       )}
 
+      {/* MODAL REUTILIZÁVEL DE CONFIGURAR VOTAÇÃO / CRIAR NOVA VOTAÇÃO */}
+      {(() => null)()}
+
       {/* BARRA DE EVENTOS (+10% DE ALTURA): FAIXA LARANJA ESTENDIDA ATÉ DEBAIXO DO "+ CRIAR VOTAÇÃO" COM TRANSPARÊNCIA A PARTIR DOS 35% INICIAIS ATÉ ZERO */}
       <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 shadow-xl mb-3 flex items-stretch justify-between min-h-[71px] relative z-30">
         <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
@@ -945,9 +1203,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       setIsCreatingNewEvent(false);
                       setEditingEventId(null);
                     } else {
-                      setEditingEventId(null);
-                      setEventNameInput('');
-                      setIsCreatingNewEvent(true);
+                      openCreateEventModal();
                     }
                   }}
                   title="Criar nova votação / evento"
@@ -957,46 +1213,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <span>+ Criar Votação</span>
                 </button>
 
-                {/* MODALZINHO DE CRIAR VOTAÇÃO (EMBAIXO DO BOTÃO + CRIAR VOTAÇÃO) */}
+                {/* MODAL DE CRIAR VOTAÇÃO */}
                 <AnimatePresence>
-                  {isCreatingNewEvent && !editingEventId && (
-                    <motion.div
-                      ref={eventModalRef}
-                      data-event-modal="true"
-                      initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
-                      animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
-                      exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
-                      transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-                      style={{ transformOrigin: 'top left' }}
-                      className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
-                    >
-                      <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl px-3.5 py-3.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            autoFocus
-                            placeholder="DIGITE O NOME DO EVENTO..."
-                            value={eventNameInput}
-                            onChange={(e) => setEventNameInput(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                e.preventDefault();
-                                handleSaveEventModal();
-                              }
-                            }}
-                            className="flex-1 min-w-0 px-3 py-2 bg-[#07132a] border-0 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
-                          />
-                          <button
-                            type="button"
-                            onClick={handleSaveEventModal}
-                            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
-                          >
-                            Salvar
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
+                  {isCreatingNewEvent && !editingEventId && renderEventConfigModal()}
                 </AnimatePresence>
               </div>
             </div>
@@ -1028,7 +1247,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] text-[12px] font-mono font-black text-amber-400">
                       {count}
                     </span>
-                    {/* Único ícone clicável 1: Lápis (Editar Nome do Evento) */}
+                    {/* Único ícone clicável 1: Lápis (Editar Nome e Configurações do Evento) */}
                     <button
                       type="button"
                       data-edit-event-btn="true"
@@ -1038,12 +1257,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           setIsCreatingNewEvent(false);
                           setEditingEventId(null);
                         } else {
-                          setEditingEventId(evt.id);
-                          setEventNameInput(displayName);
-                          setIsCreatingNewEvent(true);
+                          openEditEventModal(evt);
                         }
                       }}
-                      title="Editar nome deste evento"
+                      title="Editar configurações desta votação"
                       className="p-0.5 text-slate-400 hover:text-amber-300 transition cursor-pointer active:scale-90"
                     >
                       <Pencil className="w-3 h-3" />
@@ -1063,44 +1280,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
                   {/* MODALZINHO POSICIONADO ONDE FOI CLICADO NO LÁPIS DESTE EVENTO */}
                   <AnimatePresence>
-                    {isEditingThisEvt && (
-                      <motion.div
-                        ref={eventModalRef}
-                        data-event-modal="true"
-                        initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
-                        animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
-                        exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
-                        transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-                        style={{ transformOrigin: 'top left' }}
-                        className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
-                      >
-                        <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl px-3.5 py-3.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
-                          <div className="flex items-center gap-2">
-                            <input
-                              type="text"
-                              autoFocus
-                              placeholder="DIGITE O NOME DO EVENTO..."
-                              value={eventNameInput}
-                              onChange={(e) => setEventNameInput(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleSaveEventModal();
-                                }
-                              }}
-                              className="flex-1 min-w-0 px-3 py-2 bg-[#07132a] border-0 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
-                            />
-                            <button
-                              type="button"
-                              onClick={handleSaveEventModal}
-                              className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
-                            >
-                              Salvar
-                            </button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    )}
+                    {isEditingThisEvt && renderEventConfigModal()}
                   </AnimatePresence>
                 </div>
               );
@@ -1277,35 +1457,129 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       </span>
                     </div>
 
-                    {/* OPÇÃO RESOLVER EMPATES (ELEIÇÃO MAJORITÁRIA SE DESMARCADO) */}
-                    <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5">
-                        <Star className="w-4 h-4 text-amber-400 shrink-0" />
-                        <div>
-                          <span className="text-xs font-black text-white uppercase tracking-wide block">
-                            Resolver Empates
+                    {/* CONFIGURAÇÕES GERAIS DE ELEIÇÃO (PADRÕES PARA NOVAS VOTAÇÕES) */}
+                    <div className="bg-[#07132a]/95 border border-blue-700/80 rounded-xl p-3 shadow-md space-y-2.5">
+                      <div className="flex items-center justify-between pb-1.5 border-b border-blue-900/80">
+                        <div className="flex items-center gap-1.5">
+                          <Sliders className="w-3.5 h-3.5 text-amber-400" />
+                          <h4 className="font-bold text-white text-xs uppercase tracking-wide">
+                            Configurações Gerais de Eleição (Padrões do Sistema)
+                          </h4>
+                        </div>
+                        <span className="text-[10px] text-blue-300/80">
+                          Novas votações puxam estes padrões
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                        {/* 1. TITULARES GERAL */}
+                        <div className="bg-[#001f47] border border-blue-800/80 rounded-lg p-2 flex flex-col justify-between gap-1.5">
+                          <span className="text-[10.5px] font-black text-white uppercase tracking-wide">
+                            Titulares (Geral):
                           </span>
-                          <span className="text-[10px] text-blue-200/80 block">
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              value={session.vacancies || 1}
+                              onChange={(e) => {
+                                const val = Math.max(1, parseInt(e.target.value) || 1);
+                                saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
+                              }}
+                              className="w-full px-2 py-1 bg-[#07132a] border border-blue-600 rounded text-center text-amber-300 font-black text-xs outline-none"
+                            />
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Vagas</span>
+                          </div>
+                        </div>
+
+                        {/* 2. 1º SUPLENTE GERAL */}
+                        <div className="bg-[#001f47] border border-blue-800/80 rounded-lg p-2 flex flex-col justify-between gap-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10.5px] font-black text-white uppercase tracking-wide">
+                              1º Suplente:
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={session.habilitarSuplente1 !== false}
+                              onChange={(e) => {
+                                saveSession({ ...session, habilitarSuplente1: e.target.checked });
+                              }}
+                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              disabled={session.habilitarSuplente1 === false}
+                              value={session.habilitarSuplente1 === false ? 0 : (session.suplentesCount ?? 1)}
+                              onChange={(e) => {
+                                const val = Math.max(1, parseInt(e.target.value) || 1);
+                                saveSession({ ...session, suplentesCount: val });
+                              }}
+                              className="w-full px-2 py-1 bg-[#07132a] border border-blue-600 rounded text-center text-blue-300 font-black text-xs outline-none disabled:opacity-40"
+                            />
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Vagas</span>
+                          </div>
+                        </div>
+
+                        {/* 3. 2º SUPLENTE GERAL */}
+                        <div className="bg-[#001f47] border border-blue-800/80 rounded-lg p-2 flex flex-col justify-between gap-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10.5px] font-black text-white uppercase tracking-wide">
+                              2º Suplente:
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={session.habilitarSuplente2 === true}
+                              onChange={(e) => {
+                                saveSession({ ...session, habilitarSuplente2: e.target.checked });
+                              }}
+                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
+                            />
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min={1}
+                              max={99}
+                              disabled={session.habilitarSuplente2 !== true}
+                              value={session.habilitarSuplente2 !== true ? 0 : (session.segundoSuplentesCount ?? 1)}
+                              onChange={(e) => {
+                                const val = Math.max(1, parseInt(e.target.value) || 1);
+                                saveSession({ ...session, segundoSuplentesCount: val });
+                              }}
+                              className="w-full px-2 py-1 bg-[#07132a] border border-blue-600 rounded text-center text-slate-300 font-black text-xs outline-none disabled:opacity-40"
+                            />
+                            <span className="text-[10px] text-slate-400 uppercase font-bold">Vagas</span>
+                          </div>
+                        </div>
+
+                        {/* 4. RESOLVER EMPATES GERAL */}
+                        <div className="bg-[#001f47] border border-blue-800/80 rounded-lg p-2 flex flex-col justify-between gap-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10.5px] font-black text-white uppercase tracking-wide flex items-center gap-1">
+                              <Star className="w-3 h-3 text-amber-400" />
+                              Resolver Empates:
+                            </span>
+                            <input
+                              type="checkbox"
+                              checked={session.resolverEmpates !== false}
+                              onChange={(e) => {
+                                saveSession({ ...session, resolverEmpates: e.target.checked });
+                              }}
+                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
+                            />
+                          </div>
+                          <div className="text-[9.5px] text-blue-200/80 leading-tight">
                             {session.resolverEmpates !== false
-                              ? 'Ativado: Exibe aviso e modal para desempate dos cargos'
-                              : 'Desativado: Eleição majoritária direta (sem aviso de empates)'}
-                          </span>
+                              ? 'Ativado: rodada para desempate'
+                              : 'Desativado: majoritária direta'}
+                          </div>
                         </div>
                       </div>
-                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                        <input
-                          type="checkbox"
-                          checked={session.resolverEmpates !== false}
-                          onChange={(e) => {
-                            saveSession({
-                              ...session,
-                              resolverEmpates: e.target.checked,
-                            });
-                          }}
-                          className="sr-only peer"
-                        />
-                        <div className="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2.5px] after:left-[2.5px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner" />
-                      </label>
                     </div>
 
                     {/* LINHA 1 COMPACTA: COLUNAS (1 OU 2), POSIÇÃO DO QR CODE (TOPO, MEIO, BOTTOM), TAMANHO QR CODE, ALTURA E ESPAÇO */}

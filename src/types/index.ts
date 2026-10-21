@@ -32,6 +32,7 @@ export interface VotingEventItem {
   segundoSuplentesCount?: number;
   habilitarSuplente1?: boolean;
   habilitarSuplente2?: boolean;
+  resolverEmpates?: boolean;
 }
 
 export interface VotingSession {
