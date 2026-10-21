@@ -652,77 +652,73 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           </div>
                         )}
 
-                        {/* Nome do Candidato em Destaque */}
-                        <div className="flex-1 min-w-0 z-10">
-                          <div className="flex items-center gap-1.5">
-                            <h4
-                              className={`leading-tight truncate uppercase tracking-wide ${
-                                tiedGroup
-                                  ? 'font-black text-xs sm:text-sm text-white'
-                                  : isElected
-                                  ? 'font-black text-xs sm:text-sm text-white'
-                                  : isSuplente1
-                                  ? 'font-bold text-[11px] sm:text-xs text-white'
-                                  : isSuplente2
-                                  ? 'font-bold text-[11px] sm:text-xs text-slate-100'
-                                  : 'font-semibold text-[10px] sm:text-[11px] text-slate-200'
-                              }`}
-                            >
-                              {option.name}
-                            </h4>
-
-                            {tiedGroup ? (
-                              <span className="inline-flex items-center gap-1 text-[8.5px] px-2 py-0.5 rounded-full font-black bg-rose-600/80 border border-rose-400 text-white uppercase shadow">
-                                <Star className="w-2.5 h-2.5 fill-current" />
-                                EMPATE
-                              </span>
-                            ) : (
-                              <>
-                                {isElected && (
-                                  <span
-                                    style={winnerStyles.badgeStyle}
-                                    className="inline-flex items-center gap-0.5 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold border"
-                                  >
-                                    <CheckCircle className="w-2.5 h-2.5" style={{ color: winnerStyles.textColor }} />
-                                    {isClosed ? 'Eleito Titular' : 'Titular'}
-                                  </span>
-                                )}
-                                {isSuplente1 && (
-                                  <span
-                                    style={suplente1Styles.badgeStyle}
-                                    className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold border"
-                                  >
-                                    {isClosed
-                                      ? segundoSuplentesCount > 0
-                                        ? '1º Suplente Eleito'
-                                        : 'Suplente Eleito'
-                                      : segundoSuplentesCount > 0
-                                      ? '1º Suplente'
-                                      : 'Suplente'}
-                                  </span>
-                                )}
-                                {isSuplente2 && (
-                                  <span
-                                    style={suplente2Styles.badgeStyle}
-                                    className="inline-flex items-center gap-0.5 text-[8px] px-1.5 py-0.2 rounded-full font-bold border"
-                                  >
-                                    {isClosed ? '2º Suplente Eleito' : '2º Suplente'}
-                                  </span>
-                                )}
-                              </>
-                            )}
-                          </div>
+                        {/* 1. Coluna de Nome do Candidato (Tamanho Fixo em 22 Caracteres) */}
+                        <div className="w-[22ch] min-w-[22ch] max-w-[22ch] shrink-0 z-10">
+                          <h4
+                            title={option.name}
+                            className={`leading-tight truncate uppercase tracking-wide ${
+                              tiedGroup
+                                ? 'font-black text-xs sm:text-sm text-white'
+                                : isElected
+                                ? 'font-black text-xs sm:text-sm text-white'
+                                : isSuplente1
+                                ? 'font-bold text-[11px] sm:text-xs text-white'
+                                : isSuplente2
+                                ? 'font-bold text-[11px] sm:text-xs text-slate-100'
+                                : 'font-semibold text-[10px] sm:text-[11px] text-slate-200'
+                            }`}
+                          >
+                            {option.name}
+                          </h4>
                         </div>
 
-                        {/* CONTADOR NUMÉRICO: "votos" ANTES DO NÚMERO, SEM "v", E "% EM AMARELO BOLD" */}
-                        <div className="text-right z-10 shrink-0 flex items-center gap-1.5 font-mono">
+                        {/* 2. Coluna de Cargo / Eleito (Agora apenas "Titular", "1º Suplente", etc.) */}
+                        <div className="flex-1 min-w-0 z-10 flex items-center">
+                          {tiedGroup ? (
+                            <span className="inline-flex items-center gap-1 text-[8.5px] px-2 py-0.5 rounded-full font-black bg-rose-600/80 border border-rose-400 text-white uppercase shadow whitespace-nowrap">
+                              <Star className="w-2.5 h-2.5 fill-current" />
+                              EMPATE
+                            </span>
+                          ) : (
+                            <>
+                              {isElected && (
+                                <span
+                                  style={winnerStyles.badgeStyle}
+                                  className="inline-flex items-center gap-1 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold border whitespace-nowrap shadow-xs"
+                                >
+                                  <CheckCircle className="w-2.5 h-2.5" style={{ color: winnerStyles.textColor }} />
+                                  Titular
+                                </span>
+                              )}
+                              {isSuplente1 && (
+                                <span
+                                  style={suplente1Styles.badgeStyle}
+                                  className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.2 rounded-full font-bold border whitespace-nowrap shadow-xs"
+                                >
+                                  {segundoSuplentesCount > 0 ? '1º Suplente' : 'Suplente'}
+                                </span>
+                              )}
+                              {isSuplente2 && (
+                                <span
+                                  style={suplente2Styles.badgeStyle}
+                                  className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.2 rounded-full font-bold border whitespace-nowrap shadow-xs"
+                                >
+                                  2º Suplente
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
+
+                        {/* 3. Contador Numérico: "votos" antes do número e Coluna % com Tamanho Fixo de 5 Caracteres */}
+                        <div className="text-right z-10 shrink-0 flex items-center gap-1.5 font-mono ml-auto">
                           <span className="text-[10px] sm:text-[11px] font-bold text-slate-300/80 uppercase">
                             votos
                           </span>
-                          <span className="text-sm sm:text-base font-black text-white">
+                          <span className="text-sm sm:text-base font-black text-white min-w-[2ch]">
                             {Math.floor(option.votesCount || 0)}
                           </span>
-                          <span className="text-xs sm:text-sm font-black text-amber-300 ml-1">
+                          <span className="w-[5ch] min-w-[5ch] max-w-[5ch] text-right text-xs sm:text-sm font-black text-amber-300 ml-1 shrink-0">
                             {percentage}%
                           </span>
                         </div>
