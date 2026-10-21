@@ -57,6 +57,26 @@ function getCardColorStyles(hexColor: string, isUnclassified = false) {
 }
 
 export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
+  // Heartbeat do Telão para evitar que o Admin abra janelas duplicadas
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const sendPing = () => {
+      localStorage.setItem('vota_iasd_telao_ping', Date.now().toString());
+    };
+    sendPing();
+    const interval = setInterval(sendPing, 2000);
+    const onUnload = () => {
+      localStorage.removeItem('vota_iasd_telao_ping');
+    };
+    window.addEventListener('beforeunload', onUnload);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', onUnload);
+      localStorage.removeItem('vota_iasd_telao_ping');
+    };
+  }, []);
+
+
   const [voterUrl, setVoterUrl] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [glowingIds, setGlowingIds] = useState<Record<string, boolean>>({});

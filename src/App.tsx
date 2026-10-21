@@ -77,28 +77,11 @@ export function App() {
       }
       setCurrentView(effectiveView);
 
-      // Se for Admin no Desktop/Notebook, abre automaticamente em todos os monitores extras sem perguntar
+      // Se for Admin, só abre o Telão se ainda não houver nenhum telão aberto
       if (effectiveView === 'admin') {
-        openTelaoOnSecondMonitor();
-
-        // Caso o navegador exija um primeiro gesto antes de liberar múltiplas janelas, abre automaticamente no 1º toque/clique sem exibir barra amarela
-        const autoOpenOnGesture = (e: Event) => {
-          const target = e.target instanceof Element ? e.target : null;
-          // Não interfere se o usuário estiver clicando explicitamente no botão de ocultar 2ª tela
-          if (target?.closest('[data-toggle-screen-btn="true"]')) return;
-          if (!isSecondaryScreenOpen()) {
-            openTelaoOnSecondMonitor();
-          }
-          window.removeEventListener('click', autoOpenOnGesture, true);
-          window.removeEventListener('keydown', autoOpenOnGesture, true);
-        };
-
-        window.addEventListener('click', autoOpenOnGesture, true);
-        window.addEventListener('keydown', autoOpenOnGesture, true);
-        return () => {
-          window.removeEventListener('click', autoOpenOnGesture, true);
-          window.removeEventListener('keydown', autoOpenOnGesture, true);
-        };
+        if (!isSecondaryScreenOpen()) {
+          openTelaoOnSecondMonitor();
+        }
       }
     }
   }, []);

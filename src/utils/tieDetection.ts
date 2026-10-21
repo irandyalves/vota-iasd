@@ -21,6 +21,9 @@ export function getEffectiveSuplentes(session: VotingSession) {
  * Um empate só é relevante quando ocorre no limiar (fronteira) entre eleito e não-eleito.
  */
 export function detectVotingTies(session: VotingSession): TieInfo[] {
+  if (session.resolverEmpates === false) {
+    return [];
+  }
   const ties: TieInfo[] = [];
   const options = [...session.options].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
 

@@ -755,15 +755,59 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 ))}
               </div>
 
-              {/* Rodapé do Modal: BOTÃO INICIAR VOTAÇÃO VERDE E CENTRALIZADO NO RODAPÉ */}
-              <div className="mt-4 pt-3 border-t border-slate-700/60 flex justify-center items-center w-full">
+              {/* Rodapé do Modal: BOTÃO 3D URNA "CONFIRMA" VERDE COM BRAILLE (PRINT) CENTRALIZADO NO RODAPÉ */}
+              <div className="mt-4 pt-3 border-t border-slate-700/60 flex flex-col items-center justify-center w-full">
                 <button
                   type="button"
                   onClick={() => handleStartTieBreak(detectedTies[0])}
-                  className="px-8 py-3 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 border-2 border-emerald-300/80 text-white font-black text-sm uppercase tracking-wider flex items-center justify-center gap-2 shadow-[0_0_25px_rgba(16,185,129,0.5)] transition-all cursor-pointer active:scale-95"
+                  title="Iniciar votação para desempate entre os candidatos selecionados"
+                  style={{
+                    backgroundColor: '#159636',
+                    borderColor: '#24b349',
+                    boxShadow: '0 6px 0 #09521b, 3px 6px 0 #063b13',
+                  }}
+                  className="px-10 pt-2.5 pb-3 rounded-[14px] border-[3px] transition-all duration-200 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none"
                 >
-                  <Star className="w-4 h-4 fill-white text-white" />
-                  <span>INICIAR VOTAÇÃO</span>
+                  <span className="font-black text-lg sm:text-xl tracking-wider uppercase font-sans text-[#1a1a1a] leading-none">
+                    CONFIRMA
+                  </span>
+
+                  {/* Pontos em Braille 3D idênticos à tecla física da Urna (Print) */}
+                  <div className="flex flex-col items-center gap-[2.5px] mt-2 pointer-events-none">
+                    {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2.5" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                    </div>
+                    {/* Linha 2 */}
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 opacity-0" />
+                    </div>
+                    {/* Linha 3 */}
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2.5" />
+                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 opacity-0" />
+                      <span className="w-2 h-2 opacity-0" />
+                    </div>
+                  </div>
                 </button>
               </div>
             </motion.div>
@@ -1231,6 +1275,37 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       <span className="text-[10px] text-blue-300/80">
                         ESC ou clique fora para recolher
                       </span>
+                    </div>
+
+                    {/* OPÇÃO RESOLVER EMPATES (ELEIÇÃO MAJORITÁRIA SE DESMARCADO) */}
+                    <div className="bg-[#07132a]/90 border border-blue-800/80 rounded-lg px-3 py-2 flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <Star className="w-4 h-4 text-amber-400 shrink-0" />
+                        <div>
+                          <span className="text-xs font-black text-white uppercase tracking-wide block">
+                            Resolver Empates
+                          </span>
+                          <span className="text-[10px] text-blue-200/80 block">
+                            {session.resolverEmpates !== false
+                              ? 'Ativado: Exibe aviso e modal para desempate dos cargos'
+                              : 'Desativado: Eleição majoritária direta (sem aviso de empates)'}
+                          </span>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                        <input
+                          type="checkbox"
+                          checked={session.resolverEmpates !== false}
+                          onChange={(e) => {
+                            saveSession({
+                              ...session,
+                              resolverEmpates: e.target.checked,
+                            });
+                          }}
+                          className="sr-only peer"
+                        />
+                        <div className="w-10 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2.5px] after:left-[2.5px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner" />
+                      </label>
                     </div>
 
                     {/* LINHA 1 COMPACTA: COLUNAS (1 OU 2), POSIÇÃO DO QR CODE (TOPO, MEIO, BOTTOM), TAMANHO QR CODE, ALTURA E ESPAÇO */}

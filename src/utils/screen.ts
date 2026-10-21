@@ -74,7 +74,14 @@ function notifyListeners() {
 
 export function isSecondaryScreenOpen(): boolean {
   cleanClosedWindows();
-  return secondaryWindows.size > 0;
+  if (secondaryWindows.size > 0) return true;
+  if (typeof window !== 'undefined') {
+    const ping = Number(localStorage.getItem('vota_iasd_telao_ping') || 0);
+    if (Date.now() - ping < 4500) {
+      return true;
+    }
+  }
+  return false;
 }
 
 export function subscribeSecondaryScreen(callback: (isOpen: boolean) => void): () => void {
@@ -164,6 +171,17 @@ function ensureWindowWatcher() {
  */
 export async function openTelaoOnSecondMonitor(): Promise<boolean> {
   if (typeof window === 'undefined') return false;
+
+  // Se já existe uma janela ou aba de telão aberta, NUNCA abra outra!
+  if (isSecondaryScreenOpen()) {
+    cleanClosedWindows();
+    for (const [, win] of secondaryWindows.entries()) {
+      if (win && !win.closed) {
+        try { win.focus(); } catch (_) {}
+      }
+    }
+    return true;
+  }
 
   const url = `${window.location.origin}${window.location.pathname}?view=telao&fullscreen=true`;
   const monitorsToOpen =
