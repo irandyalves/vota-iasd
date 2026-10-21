@@ -28,6 +28,13 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Aviso em formato de cortina: some sozinho após alguns segundos
+  useEffect(() => {
+    if (!errorMessage) return;
+    const t = setTimeout(() => setErrorMessage(''), 3500);
+    return () => clearTimeout(t);
+  }, [errorMessage]);
+
   // Identifica a rodada atual
   const isTieBreak = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
   const currentRound = isTieBreak ? 'TIE_BREAK' : 'MAIN';
@@ -637,20 +644,25 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         </div>
       </div>
 
-      {/* Mensagem de Erro ou Validação */}
-      <AnimatePresence>
-        {errorMessage && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-4 p-3 rounded-xl bg-rose-950/80 border border-rose-700/60 text-rose-200 text-xs font-semibold flex items-center gap-2"
-          >
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-            {errorMessage}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Mensagem de Erro ou Validação: desce como uma CORTINA sobre os nomes (não empurra a lista para baixo) */}
+      <div className="sticky top-0 z-40 h-0 overflow-visible">
+        <AnimatePresence>
+          {errorMessage && (
+            <motion.div
+              key="aviso-cortina"
+              onClick={() => setErrorMessage('')}
+              initial={{ clipPath: 'inset(0 0 100% 0)', opacity: 0.6 }}
+              animate={{ clipPath: 'inset(0 0 0% 0)', opacity: 1 }}
+              exit={{ clipPath: 'inset(0 0 100% 0)', opacity: 0.6 }}
+              transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
+              className="absolute left-0 right-0 top-0 p-3 rounded-b-xl rounded-t-md bg-rose-950/95 backdrop-blur-sm border border-rose-700/70 text-rose-100 text-xs font-semibold flex items-center gap-2 shadow-[0_12px_28px_rgba(0,0,0,0.75)] cursor-pointer"
+            >
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
+              {errorMessage}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Lista de Cards Compactos (Touch Acessível - 2 colunas no mobile ou 1 centralizada se poucos) */}
       {(() => {
