@@ -628,18 +628,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </label>
           </div>
 
-          {/* Botões Salvar e Cancelar */}
+          {/* Botão Salvar */}
           <div className="flex items-center justify-end gap-2 pt-1 border-t border-blue-900/80">
-            <button
-              type="button"
-              onClick={() => {
-                setIsCreatingNewEvent(false);
-                setEditingEventId(null);
-              }}
-              className="px-2.5 py-1.5 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800 text-slate-300 font-bold text-[10.5px] rounded-lg uppercase tracking-wider transition cursor-pointer active:scale-95"
-            >
-              Cancelar
-            </button>
             <button
               type="button"
               onClick={handleSaveEventModal}
