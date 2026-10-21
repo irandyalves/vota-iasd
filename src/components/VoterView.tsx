@@ -27,6 +27,23 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [fontSizeLevel, setFontSizeLevel] = useState<'normal' | 'large' | 'xlarge'>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('vota_font_size');
+      if (saved === 'large' || saved === 'xlarge') return saved;
+    }
+    return 'normal';
+  });
+
+  const toggleFontSize = () => {
+    setFontSizeLevel((prev) => {
+      const next = prev === 'normal' ? 'large' : prev === 'large' ? 'xlarge' : 'normal';
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('vota_font_size', next);
+      }
+      return next;
+    });
+  };
 
   // Aviso em formato de cortina: some sozinho após alguns segundos
   useEffect(() => {
@@ -198,7 +215,19 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
           className="bg-[#001f47] border border-blue-800 rounded-2xl p-3 sm:p-4 shadow-2xl space-y-2.5"
         >
           {/* Cabeçalho de Resultados (compacto) */}
-          <div className="text-center pb-2 border-b border-blue-900/80">
+          <div className="text-center pb-2 border-b border-blue-900/80 relative">
+            {/* Botão a A no canto direito para aumentar fonte */}
+            <button
+              type="button"
+              onClick={toggleFontSize}
+              title={`Ajustar tamanho da fonte (atual: ${
+                fontSizeLevel === 'xlarge' ? 'Extra Grande' : fontSizeLevel === 'large' ? 'Grande' : 'Normal'
+              })`}
+              className="absolute right-0 top-0 px-2 py-0.5 rounded-md bg-blue-950/80 border border-blue-700/80 hover:border-amber-400 text-blue-200 hover:text-white flex items-center justify-center gap-0.5 transition-all active:scale-90 cursor-pointer shadow-sm select-none"
+            >
+              <span className="text-[10px] font-bold leading-none">a</span>
+              <span className="text-xs font-black leading-none">A</span>
+            </button>
             <span
               className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-1 shadow-sm ${
                 live
@@ -683,7 +712,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   key={option.id}
                   whileTap={{ scale: 0.96 }}
                   onClick={() => handleToggleCandidate(option.id)}
-                  className={`py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border-2 transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm relative overflow-hidden active:scale-95 min-h-[42px] ${
+                  style={{
+                    minHeight:
+                      fontSizeLevel === 'xlarge' ? '56px' : fontSizeLevel === 'large' ? '48px' : '42px',
+                  }}
+                  className={`py-2 px-3 sm:py-2.5 sm:px-3.5 rounded-xl border-2 transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm relative overflow-hidden active:scale-95 ${
                     isSelected
                       ? 'bg-gradient-to-r from-blue-900/90 to-[#002f6c] border-[#d4af37] ring-2 ring-[#d4af37]/40 shadow-amber-900/20'
                       : 'bg-[#001f47]/70 hover:bg-[#001f47] border-blue-900/80 text-slate-200'
