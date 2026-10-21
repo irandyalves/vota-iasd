@@ -2319,18 +2319,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             }`}
                           >
                             {/* Barra de progresso ao fundo */}
-                            <div
-                              className={`absolute left-0 top-0 bottom-0 pointer-events-none transition-all duration-500 opacity-20 ${
-                                isTitular
-                                  ? 'bg-emerald-500'
-                                  : isSuplente1
-                                  ? 'bg-blue-500'
-                                  : isSuplente2
-                                  ? 'bg-slate-500'
-                                  : 'bg-slate-700'
-                              }`}
-                              style={{ width: `${barWidth}%` }}
-                            />
+                            {isTitular ? (
+                              <div
+                                className="absolute left-0 top-0 bottom-0 pointer-events-none transition-all duration-500 z-0 overflow-visible"
+                                style={{ width: `${barWidth}%` }}
+                              >
+                                {/* Efeito Vidro Transparente */}
+                                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.05] via-white/[0.12] to-white/[0.22] backdrop-blur-[2px] border-y border-white/[0.20] shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),inset_0_-1px_1px_rgba(255,255,255,0.12)] rounded-l-lg" />
+
+                                {/* Traço laranja dourado brilhoso na ponta indicando onde ele está */}
+                                {votes > 0 && (
+                                  <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none">
+                                    {/* Glow difuso */}
+                                    <div className="absolute -inset-y-1 w-3 -right-1 bg-gradient-to-b from-amber-300 via-amber-500 to-orange-500 opacity-80 blur-[4px]" />
+                                    {/* Traço vertical laranja dourado brilhoso */}
+                                    <div className="relative w-[3.5px] h-full bg-gradient-to-b from-[#fff3b0] via-[#f59e0b] to-[#ea580c] shadow-[0_0_8px_#f59e0b,0_0_16px_rgba(245,158,11,0.9),0_0_24px_rgba(234,88,12,0.7),0_0_2px_#ffffff] rounded-r-xs" />
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div
+                                className={`absolute left-0 top-0 bottom-0 pointer-events-none transition-all duration-500 opacity-20 ${
+                                  isSuplente1
+                                    ? 'bg-blue-500'
+                                    : isSuplente2
+                                    ? 'bg-slate-500'
+                                    : 'bg-slate-700'
+                                }`}
+                                style={{ width: `${barWidth}%` }}
+                              />
+                            )}
 
                             <div className="relative z-10 flex items-center justify-between gap-3">
                               <div className="flex items-center gap-2.5 min-w-0">
