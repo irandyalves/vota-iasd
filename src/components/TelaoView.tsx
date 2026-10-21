@@ -280,21 +280,23 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               /* MODO: NOMES PARA ESCOLHA (PRINT 2 REDIMENSIONADO PARA O TELÃO) */
               <div className="bg-[#001f47]/90 border border-blue-700/70 rounded-2xl p-4 sm:p-5 shadow-2xl">
                 <div className="flex items-center justify-between mb-4 pb-2.5 border-b border-blue-800/80">
-                  <div className="flex items-center gap-2.5">
-                    <Users className="w-5 h-5 text-amber-400" />
-                    <h3 className="font-extrabold text-base sm:text-lg lg:text-xl text-white font-sans tracking-tight">
-                      NOMES PARA ESCOLHA ({optionsToDisplay.length})
+                  {/* CABEÇALHO: ESCOLHA XX NOMES - Eleição do tesoureiro (título menor e sem caixa alta) */}
+                  <div className="flex items-baseline gap-2 min-w-0">
+                    <Users className="w-5 h-5 text-amber-400 self-center shrink-0" />
+                    <h3 className="font-extrabold text-base sm:text-lg lg:text-xl text-white font-sans tracking-tight uppercase shrink-0">
+                      ESCOLHA <span className="text-amber-400">{session.maxVotesPerVoter}</span>{' '}
+                      {session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}
                     </h3>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="px-3 py-1 rounded-lg bg-blue-900 border border-blue-600/80 text-white font-bold text-xs uppercase tracking-wide flex items-center gap-1.5 shadow">
-                      <span>ESCOLHA</span>
-                      <span className="text-amber-400 font-black">
-                        {session.maxVotesPerVoter}
+                    {session.title && (
+                      <span className="text-sm sm:text-base font-medium text-blue-200 truncate">
+                        - {(() => {
+                          const t = session.title.trim().toLocaleLowerCase('pt-BR');
+                          return t.charAt(0).toLocaleUpperCase('pt-BR') + t.slice(1);
+                        })()}
                       </span>
-                      <span>{session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}</span>
-                    </span>
-
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
                     {/* BOTÃO TELA CHEIA */}
                     <button
                       type="button"
