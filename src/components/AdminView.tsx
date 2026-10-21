@@ -232,7 +232,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     };
   }, [isGearOpen, isCreatingNewEvent, isImportMenuOpen, session.title]);
 
-  // Garante lista de eventos (inicializando com o evento atual caso ainda não exista)
+  function hexToRgba(hex: string, alpha: number): string {
+  const safeHex = /^#[0-9A-Fa-f]{6}$/.test(hex) ? hex : '#10b981';
+  const r = parseInt(safeHex.slice(1, 3), 16);
+  const g = parseInt(safeHex.slice(3, 5), 16);
+  const b = parseInt(safeHex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+// Garante lista de eventos (inicializando com o evento atual caso ainda não exista)
   const eventsList: VotingEventItem[] =
     Array.isArray(session.events) && session.events.length > 0
       ? session.events
@@ -2363,6 +2371,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   </div>
                 ) : (
                   <div className="space-y-1.5 flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
+                    {/* Cabeçalho de Colunas Alinhadas */}
+                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 bg-white/[0.03] rounded-md border border-white/[0.05] gap-2">
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="w-6 text-center shrink-0">#</span>
+                        <span className="w-[20ch] min-w-[20ch] max-w-[20ch] shrink-0 text-left">Nome (20 carac.)</span>
+                        <span className="w-[85px] min-w-[85px] max-w-[85px] shrink-0 text-left">Titular</span>
+                      </div>
+                      <div className="flex-1 flex items-center justify-between mx-1.5 text-slate-400">
+                        <span>Progressão</span>
+                        <span className="text-[10px] text-slate-400 font-mono">100% |</span>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="w-[42px] text-right">%</span>
+                        <span className="min-w-[62px] text-center">Votos</span>
+                      </div>
+                    </div>
+
                     {rankedCandidates.map((candidate, idx) => {
                       const votes = Math.floor(candidate.votesCount || 0);
                       const percent = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
@@ -2371,6 +2396,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
                       const isFirstAfterTitulares = idx === vacancies && s1Count > 0;
+
+                      // Cores configuradas em config (winnerColor = verde esmeralda por padrão)
+                      const winnerColor = session.telaoLayout?.winnerColor || '#10b981';
+                      const suplenteColor = session.telaoLayout?.suplenteColor || '#3b82f6';
+                      const suplente2Color = session.telaoLayout?.suplente2Color || '#64748b';
+                      const unclassifiedColor = session.telaoLayout?.unclassifiedColor || '#1e293b';
+
+                      const activeColor = isTitular
+                        ? winnerColor
+                        : isSuplente1
+                        ? suplenteColor
+                        : isSuplente2
+                        ? suplente2Color
+                        : unclassifiedColor;
 
                       return (
                         <React.Fragment key={candidate.id}>
@@ -2385,94 +2424,112 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           )}
 
                           <div
-                            className={`relative overflow-hidden rounded-lg p-2.5 border transition-all duration-300 ${
-                              isTitular
-                                ? 'bg-[#0b0d13] border-emerald-500/30 hover:border-emerald-500/50'
-                                : isSuplente1
-                                ? 'bg-[#0b0d13] border-blue-500/30 hover:border-blue-500/50'
-                                : isSuplente2
-                                ? 'bg-[#0b0d13] border-slate-500/30 hover:border-slate-500/50'
-                                : 'bg-[#0b0d13]/70 border-white/[0.06] hover:border-white/[0.12]'
-                            }`}
+                            style={{
+                              borderColor: hexToRgba(activeColor, isTitular ? 0.45 : isSuplente1 ? 0.35 : 0.2),
+                            }}
+                            className="relative overflow-hidden rounded-lg p-2 sm:p-2.5 bg-[#0b0d13] border transition-all duration-300 flex items-center justify-between gap-2 shadow-sm hover:border-opacity-80"
                           >
-                            {/* Barra de progresso ao fundo: Efeito Vidro Transparente com Pontinha Dourada Brilhosa */}
-                            {isTitular ? (
-                              <div
-                                className="absolute left-0 top-0 bottom-0 pointer-events-none transition-all duration-500 z-0 overflow-visible"
-                                style={{ width: `${barWidth}%` }}
-                              >
-                                {/* Efeito Vidro Transparente Cristalino */}
-                                <div className="absolute inset-0 bg-gradient-to-r from-white/[0.08] via-white/[0.18] to-white/[0.28] backdrop-blur-md border-t border-white/40 border-b border-white/20 shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),inset_0_-1px_1px_rgba(255,255,255,0.2)] rounded-l-lg overflow-hidden">
-                                  {/* Brilho especular diagonal no vidro */}
-                                  <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
-                                </div>
+                            {/* COLUNA 1: POSIÇÃO / RANK */}
+                            <span className="w-6 text-center font-mono font-bold text-xs text-slate-400 shrink-0">
+                              #{idx + 1}
+                            </span>
 
-                                {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está */}
-                                {votes > 0 && (
-                                  <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
-                                    {/* Glow difuso */}
-                                    <div className="absolute -inset-y-2 w-5 -right-2 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[6px]" />
-                                    {/* Traço vertical dourado reluzente */}
-                                    <div className="relative w-[4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_12px_#fbbf24,0_0_24px_rgba(245,158,11,1),0_0_4px_#ffffff] rounded-r-xs" />
-                                    {/* Pontinha Dourada Central Brilhosa */}
-                                    <div className="absolute right-[-4.5px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_12px_4px_#f59e0b,0_0_24px_8px_rgba(251,191,36,0.9),0_0_3px_#ffffff] ring-1.5 ring-white/90" />
-                                  </div>
-                                )}
-                              </div>
-                            ) : (
-                              <div
-                                className={`absolute left-0 top-0 bottom-0 pointer-events-none transition-all duration-500 opacity-20 ${
-                                  isSuplente1
-                                    ? 'bg-blue-500'
-                                    : isSuplente2
-                                    ? 'bg-slate-500'
-                                    : 'bg-slate-700'
-                                }`}
-                                style={{ width: `${barWidth}%` }}
-                              />
-                            )}
+                            {/* COLUNA 2: NOME COM 20 CARACTERES */}
+                            <div className="w-[20ch] min-w-[20ch] max-w-[20ch] shrink-0" title={candidate.name}>
+                              <span className="font-bold text-xs sm:text-sm text-slate-100 uppercase truncate block">
+                                {candidate.name.length > 20 ? `${candidate.name.slice(0, 20)}...` : candidate.name}
+                              </span>
+                            </div>
 
-                            <div className="relative z-10 flex items-center justify-between gap-3">
-                              <div className="flex items-center gap-2.5 min-w-0">
-                                <span className="w-6 text-center font-mono font-medium text-xs text-slate-400 shrink-0">
-                                  #{idx + 1}
-                                </span>
-                                <span className="font-medium text-xs sm:text-sm text-slate-100 truncate capitalize">
-                                  {candidate.name}
-                                </span>
-                                {isTitular && (
-                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 shrink-0">
-                                    Titular
-                                  </span>
-                                )}
-                                {isSuplente1 && (
-                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-blue-500/20 text-blue-300 border border-blue-500/30 shrink-0">
-                                    1º Suplente
-                                  </span>
-                                )}
-                                {isSuplente2 && (
-                                  <span className="px-1.5 py-0.2 rounded text-[10px] font-medium bg-slate-500/20 text-slate-300 border border-slate-500/30 shrink-0">
-                                    2º Suplente
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="flex items-center gap-3 shrink-0">
-                                <span className="text-[11px] text-slate-400 font-mono">
-                                  {percent}%
-                                </span>
+                            {/* COLUNA 3: COLUNA DEDICADA PARA TITULAR / CARGO */}
+                            <div className="w-[85px] min-w-[85px] max-w-[85px] shrink-0 flex items-center">
+                              {isTitular ? (
                                 <span
-                                  className={`px-2 py-0.5 rounded font-mono font-semibold text-xs min-w-[54px] text-center ${
-                                    votes > 0
-                                      ? isTitular
-                                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                        : 'bg-white/[0.08] text-slate-200 border border-white/[0.1]'
-                                      : 'bg-white/[0.04] text-slate-500'
-                                  }`}
+                                  style={{
+                                    backgroundColor: hexToRgba(winnerColor, 0.2),
+                                    borderColor: hexToRgba(winnerColor, 0.5),
+                                    color: winnerColor.toLowerCase() === '#10b981' ? '#6ee7b7' : '#ffffff',
+                                  }}
+                                  className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
                                 >
-                                  {votes} {votes === 1 ? 'voto' : 'votos'}
+                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: winnerColor }} />
+                                  Titular
                                 </span>
-                              </div>
+                              ) : isSuplente1 ? (
+                                <span
+                                  style={{
+                                    backgroundColor: hexToRgba(suplenteColor, 0.2),
+                                    borderColor: hexToRgba(suplenteColor, 0.5),
+                                    color: '#93c5fd',
+                                  }}
+                                  className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
+                                >
+                                  {s2Count > 0 ? '1º Supl.' : 'Suplente'}
+                                </span>
+                              ) : isSuplente2 ? (
+                                <span
+                                  style={{
+                                    backgroundColor: hexToRgba(suplente2Color, 0.2),
+                                    borderColor: hexToRgba(suplente2Color, 0.5),
+                                    color: '#cbd5e1',
+                                  }}
+                                  className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
+                                >
+                                  2º Supl.
+                                </span>
+                              ) : (
+                                <span className="text-[10px] font-mono text-slate-600 px-2">-</span>
+                              )}
+                            </div>
+
+                            {/* COLUNA 4: ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DA PERCENTAGEM) */}
+                            <div className="flex-1 relative h-6 sm:h-7 mx-1.5 min-w-[80px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner">
+                              {/* Barra de Progresso com Efeito Vidro nas Cores de Config (Verde nos Vencedores) */}
+                              {votes > 0 && (
+                                <div
+                                  className="absolute left-0 top-0 bottom-0 pointer-events-none rounded-l overflow-visible z-10 transition-all duration-500"
+                                  style={{
+                                    width: `${barWidth}%`,
+                                    background: `linear-gradient(90deg, ${hexToRgba(activeColor, 0.20)} 0%, ${hexToRgba(activeColor, 0.38)} 60%, ${hexToRgba(activeColor, 0.58)} 100%)`,
+                                    backdropFilter: 'blur(8px)',
+                                    borderTop: '1px solid rgba(255, 255, 255, 0.45)',
+                                    borderBottom: `1px solid ${hexToRgba(activeColor, 0.3)}`,
+                                    boxShadow: `inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 10px ${hexToRgba(activeColor, 0.35)}`,
+                                  }}
+                                >
+                                  {/* Brilho especular superior do vidro */}
+                                  <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
+
+                                  {/* Traço vertical dourado mais largo reluzente na ponta (sem bola) */}
+                                  <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
+                                    <div className="absolute -inset-y-1 w-4 -right-1 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[4px]" />
+                                    <div className="relative w-[6px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_10px_#fbbf24,0_0_18px_rgba(245,158,11,1),0_0_3px_#ffffff] rounded-r-xs" />
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+
+                            {/* LINHA VERTICAL FINAL (MARCANDO O 100% ANTES DA PERCENTAGEM) */}
+                            <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center" title="Limite 100%" />
+
+                            {/* COLUNA 5: PERCENTAGEM */}
+                            <div className="w-[42px] min-w-[42px] text-right font-mono text-xs sm:text-sm font-bold text-slate-300 shrink-0">
+                              {percent}%
+                            </div>
+
+                            {/* COLUNA 6: VOTOS */}
+                            <div className="min-w-[62px] text-center shrink-0">
+                              <span
+                                className={`px-2 py-0.5 rounded font-mono font-semibold text-xs block text-center ${
+                                  votes > 0
+                                    ? isTitular
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                      : 'bg-white/[0.08] text-slate-200 border border-white/[0.1]'
+                                    : 'bg-white/[0.04] text-slate-500'
+                                }`}
+                              >
+                                {votes} {votes === 1 ? 'voto' : 'votos'}
+                              </span>
                             </div>
                           </div>
                         </React.Fragment>

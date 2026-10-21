@@ -23,6 +23,9 @@ function getCardColorStyles(hexColor: string, isUnclassified = false) {
   const b = parseInt(safeHex.slice(5, 7), 16);
 
   return {
+    r,
+    g,
+    b,
     cardStyle: {
       backgroundColor: isUnclassified
         ? `rgba(${r}, ${g}, ${b}, 0.45)`
@@ -663,41 +666,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             : 'text-slate-300 py-0.5 px-2 rounded-md'
                         }`}
                       >
-                        {/* Barra de Progresso Animada no Fundo: Vidro Transparente com Pontinha Dourada Brilhosa */}
-                        {isElected && !tiedGroup ? (
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.max(percentage, 2)}%` }}
-                            transition={{ duration: 0.6, ease: 'easeOut' }}
-                            className="absolute top-0 bottom-0 left-0 pointer-events-none rounded-lg overflow-visible z-0"
-                          >
-                            {/* Efeito Vidro Transparente Cristalino */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-white/[0.08] via-white/[0.18] to-white/[0.28] backdrop-blur-md border-t border-white/40 border-b border-white/20 shadow-[inset_0_1px_2px_rgba(255,255,255,0.7),inset_0_-1px_1px_rgba(255,255,255,0.2)] rounded-l-lg overflow-hidden">
-                              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
-                            </div>
-
-                            {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está */}
-                            {(option.votesCount || 0) > 0 && (
-                              <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
-                                <div className="absolute -inset-y-2 w-5 -right-2 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[6px]" />
-                                <div className="relative w-[4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_12px_#fbbf24,0_0_24px_rgba(245,158,11,1),0_0_4px_#ffffff] rounded-r-xs" />
-                                <div className="absolute right-[-4.5px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_12px_4px_#f59e0b,0_0_24px_8px_rgba(251,191,36,0.9),0_0_3px_#ffffff] ring-1.5 ring-white/90" />
-                              </div>
-                            )}
-                          </motion.div>
-                        ) : (
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${Math.max(percentage, 2)}%` }}
-                            transition={{ duration: 0.6, ease: 'easeOut' }}
-                            style={tiedGroup ? undefined : categoryStyles.barStyle}
-                            className={`absolute top-0 bottom-0 left-0 opacity-35 pointer-events-none rounded-lg ${
-                              tiedGroup ? 'bg-gradient-to-r from-rose-800 to-rose-600' : ''
-                            }`}
-                          />
-                        )}
-
-                        {/* Posição / Rank (1º, 2º, 3º...) */}
+                        {/* 1. POSIÇÃO / RANK */}
                         <div
                           style={
                             !tiedGroup && (!isElected || rank > 3)
@@ -736,11 +705,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           </div>
                         )}
 
-                        {/* 1. Coluna de Nome do Candidato (Máximo 14 Caracteres, depois do 14 coloca ...) */}
-                        <div className="z-10 shrink-0">
+                        {/* 2. COLUNA DE NOME DO CANDIDATO (20 CARACTERES) */}
+                        <div className="w-[20ch] min-w-[20ch] max-w-[20ch] z-10 shrink-0" title={option.name}>
                           <h4
-                            title={option.name}
-                            className={`leading-tight uppercase tracking-wide whitespace-nowrap ${
+                            className={`leading-tight uppercase tracking-wide truncate ${
                               tiedGroup
                                 ? 'font-black text-xs sm:text-sm text-white'
                                 : isElected
@@ -752,14 +720,14 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 : 'font-semibold text-[10px] sm:text-[11px] text-slate-200'
                             }`}
                           >
-                            {option.name && option.name.length > 14
-                              ? `${option.name.slice(0, 14)}...`
+                            {option.name && option.name.length > 20
+                              ? `${option.name.slice(0, 20)}...`
                               : option.name}
                           </h4>
                         </div>
 
-                        {/* 2. Coluna de Cargo / Eleito (Agora apenas "Titular", "1º Suplente", etc.) */}
-                        <div className="flex-1 min-w-0 z-10 flex items-center overflow-hidden">
+                        {/* 3. COLUNA PARA TITULAR / CARGO DEDICADA */}
+                        <div className="w-[85px] min-w-[85px] max-w-[85px] z-10 shrink-0 flex items-center">
                           {tiedGroup ? (
                             <span className="inline-flex items-center gap-1 text-[8.5px] px-2 py-0.5 rounded-full font-black bg-rose-600/80 border border-rose-400 text-white uppercase shadow whitespace-nowrap">
                               <Star className="w-2.5 h-2.5 fill-current" />
@@ -770,7 +738,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               {isElected && (
                                 <span
                                   style={winnerStyles.badgeStyle}
-                                  className="inline-flex items-center gap-1 text-[8.5px] px-1.5 py-0.2 rounded-full font-bold border whitespace-nowrap shadow-xs"
+                                  className="inline-flex items-center gap-1 text-[8.5px] px-2 py-0.5 rounded-full font-bold border whitespace-nowrap shadow-xs"
                                 >
                                   <CheckCircle className="w-2.5 h-2.5" style={{ color: winnerStyles.textColor }} />
                                   Titular
@@ -779,7 +747,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               {isSuplente1 && (
                                 <span
                                   style={suplente1Styles.badgeStyle}
-                                  className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.2 rounded-full font-bold border whitespace-nowrap shadow-xs"
+                                  className="inline-flex items-center gap-1 text-[8px] px-2 py-0.5 rounded-full font-bold border whitespace-nowrap shadow-xs"
                                 >
                                   {segundoSuplentesCount > 0 ? '1º Suplente' : 'Suplente'}
                                 </span>
@@ -787,7 +755,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               {isSuplente2 && (
                                 <span
                                   style={suplente2Styles.badgeStyle}
-                                  className="inline-flex items-center gap-1 text-[8px] px-1.5 py-0.2 rounded-full font-bold border whitespace-nowrap shadow-xs"
+                                  className="inline-flex items-center gap-1 text-[8px] px-2 py-0.5 rounded-full font-bold border whitespace-nowrap shadow-xs"
                                 >
                                   2º Suplente
                                 </span>
@@ -796,7 +764,40 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           )}
                         </div>
 
-                        {/* 3. Contador Numérico: "votos" antes do número e Coluna % com Tamanho Fixo de 5 Caracteres */}
+                        {/* 4. ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DA PERCENTAGEM) */}
+                        <div className="flex-1 relative h-6 sm:h-7 mx-1.5 min-w-[60px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner z-10">
+                          {(option.votesCount || 0) > 0 && (
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${Math.max(percentage, 2)}%` }}
+                              transition={{ duration: 0.6, ease: 'easeOut' }}
+                              className="absolute top-0 bottom-0 left-0 pointer-events-none rounded-l overflow-visible z-10"
+                              style={{
+                                background: tiedGroup
+                                  ? 'linear-gradient(90deg, rgba(225, 29, 72, 0.22) 0%, rgba(225, 29, 72, 0.40) 60%, rgba(225, 29, 72, 0.60) 100%)'
+                                  : `linear-gradient(90deg, rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.22) 0%, rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.40) 60%, rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.60) 100%)`,
+                                backdropFilter: 'blur(8px)',
+                                borderTop: '1px solid rgba(255, 255, 255, 0.45)',
+                                borderBottom: `1px solid rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.3)`,
+                                boxShadow: `inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 10px rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.35)`,
+                              }}
+                            >
+                              {/* Brilho especular superior do vidro */}
+                              <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
+
+                              {/* Traço vertical dourado mais largo reluzente na ponta (sem bola) */}
+                              <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
+                                <div className="absolute -inset-y-1 w-4 -right-1 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[4px]" />
+                                <div className="relative w-[6px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_10px_#fbbf24,0_0_18px_rgba(245,158,11,1),0_0_3px_#ffffff] rounded-r-xs" />
+                              </div>
+                            </motion.div>
+                          )}
+                        </div>
+
+                        {/* LINHA VERTICAL FINAL (MARCANDO O 100% ANTES DA PERCENTAGEM) */}
+                        <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center z-10" title="Limite 100%" />
+
+                        {/* 5. CONTADOR NUMÉRICO E PERCENTAGEM */}
                         <div className="text-right z-10 shrink-0 flex items-center gap-1.5 font-mono ml-auto">
                           <span className="text-[10px] sm:text-[11px] font-bold text-slate-300/80 uppercase">
                             votos
