@@ -288,7 +288,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       {session.maxVotesPerVoter === 1 ? 'NOME' : 'NOMES'}
                     </h3>
                     {session.title && (
-                      <span className="text-sm sm:text-base font-medium text-blue-200 truncate">
+                      <span className="text-sm sm:text-base font-medium text-emerald-400 truncate">
                         - {(() => {
                           const t = session.title.trim().toLocaleLowerCase('pt-BR');
                           return t.charAt(0).toLocaleUpperCase('pt-BR') + t.slice(1);
