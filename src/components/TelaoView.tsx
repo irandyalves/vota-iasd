@@ -700,7 +700,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             votos
                           </span>
                           <span className="text-sm sm:text-base font-black text-white">
-                            {option.votesCount || 0}
+                            {Math.floor(option.votesCount || 0)}
                           </span>
                           <span className="text-xs sm:text-sm font-black text-amber-300 ml-1">
                             {percentage}%

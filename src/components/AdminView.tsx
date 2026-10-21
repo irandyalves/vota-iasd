@@ -92,6 +92,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       status: 'TIE_BREAK',
       telaoMode: 'voting',
       votingIteration: (session.votingIteration || 1) + 1,
+      tieBreakVotersCount: 0,
       tieBreak: {
         active: true,
         title: `Desempate - ${tie.label}`,

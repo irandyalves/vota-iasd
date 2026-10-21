@@ -65,6 +65,8 @@ export interface VotingSession {
     options: VotingOption[];
   };
   totalVotersConnected?: number;
+  mainVotersCount?: number;
+  tieBreakVotersCount?: number;
   createdAt?: number;
   updatedAt?: number;
 }

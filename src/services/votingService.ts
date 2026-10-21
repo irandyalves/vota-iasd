@@ -283,9 +283,10 @@ export async function submitBallot(
 
         let liveOptions = session.options;
         let liveTieBreak = session.tieBreak;
+        let liveData: VotingSession | null = null;
 
         if (sessionSnap.exists()) {
-          const liveData = sessionSnap.data() as VotingSession;
+          liveData = sessionSnap.data() as VotingSession;
           // Rodada mudou/encerrou enquanto o eleitor escolhia -> não computa em rodada errada
           const liveIteration = liveData.votingIteration || 1;
           const expectedStatus = round === 'TIE_BREAK' ? 'TIE_BREAK' : 'VOTING';
@@ -311,8 +312,10 @@ export async function submitBallot(
             }
             return opt;
           });
+          const newMainVotersCount = ((liveData as any)?.mainVotersCount || 0) + 1;
           transaction.update(sessionRef, {
             options: updatedOptions,
+            mainVotersCount: newMainVotersCount,
             updatedAt: Date.now(),
           });
         } else if (liveTieBreak) {
@@ -322,10 +325,60 @@ export async function submitBallot(
             }
             return opt;
           });
-          transaction.update(sessionRef, {
-            'tieBreak.options': updatedTieOptions,
-            updatedAt: Date.now(),
-          });
+
+          const currentTieVoters = (liveData as any)?.tieBreakVotersCount || 0;
+          const newTieVotersCount = currentTieVoters + 1;
+
+          // Quantos votantes votaram na rodada principal (ou o maior número de votos de um candidato)
+          const expectedVoters =
+            (liveData as any)?.mainVotersCount ||
+            Math.max(...liveOptions.map((o) => Math.floor(o.votesCount || 0)), 1);
+
+          const isTieBreakFinished = newTieVotersCount >= expectedVoters;
+
+          if (isTieBreakFinished) {
+            // Todos os votantes finalizaram o desempate!
+            const sortedTieOptions = [...updatedTieOptions].sort(
+              (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
+            );
+            const vacancies = liveTieBreak.vacancies || 1;
+
+            // Identifica os vencedores do desempate
+            const winnerIds: string[] = [];
+            if (sortedTieOptions.length > vacancies) {
+              const cutoffTieVotes = sortedTieOptions[vacancies - 1]?.votesCount || 0;
+              const nextTieVotes = sortedTieOptions[vacancies]?.votesCount || 0;
+              if (cutoffTieVotes > nextTieVotes) {
+                sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+              }
+            } else if (sortedTieOptions.length > 0) {
+              sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+            }
+
+            // Atribui o desempate aos vencedores nas opções principais
+            const updatedMainOptions = liveOptions.map((opt) => {
+              if (winnerIds.includes(opt.id)) {
+                return { ...opt, votesCount: (opt.votesCount || 0) + 0.01 };
+              }
+              return opt;
+            });
+
+            transaction.update(sessionRef, {
+              options: updatedMainOptions,
+              status: 'CLOSED',
+              telaoMode: 'voting',
+              'tieBreak.options': updatedTieOptions,
+              'tieBreak.active': false,
+              tieBreakVotersCount: newTieVotersCount,
+              updatedAt: Date.now(),
+            });
+          } else {
+            transaction.update(sessionRef, {
+              'tieBreak.options': updatedTieOptions,
+              tieBreakVotersCount: newTieVotersCount,
+              updatedAt: Date.now(),
+            });
+          }
         }
       });
 
@@ -341,12 +394,48 @@ export async function submitBallot(
               return opt;
             });
           } else if (currentSession.tieBreak) {
-            currentSession.tieBreak.options = currentSession.tieBreak.options.map((opt) => {
+            const updatedTieOptions = currentSession.tieBreak.options.map((opt) => {
               if (selectedOptionIds.includes(opt.id)) {
                 return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
               }
               return opt;
             });
+            currentSession.tieBreak.options = updatedTieOptions;
+
+            const newTieVotersCount = ((currentSession as any).tieBreakVotersCount || 0) + 1;
+            (currentSession as any).tieBreakVotersCount = newTieVotersCount;
+
+            const expectedVoters =
+              (currentSession as any).mainVotersCount ||
+              Math.max(...currentSession.options.map((o) => Math.floor(o.votesCount || 0)), 1);
+
+            if (newTieVotersCount >= expectedVoters) {
+              const sortedTieOptions = [...updatedTieOptions].sort(
+                (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
+              );
+              const vacancies = currentSession.tieBreak.vacancies || 1;
+              const winnerIds: string[] = [];
+              if (sortedTieOptions.length > vacancies) {
+                const cutoff = sortedTieOptions[vacancies - 1]?.votesCount || 0;
+                const next = sortedTieOptions[vacancies]?.votesCount || 0;
+                if (cutoff > next) {
+                  sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+                }
+              } else if (sortedTieOptions.length > 0) {
+                sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+              }
+
+              currentSession.options = currentSession.options.map((opt) => {
+                if (winnerIds.includes(opt.id)) {
+                  return { ...opt, votesCount: (opt.votesCount || 0) + 0.01 };
+                }
+                return opt;
+              });
+
+              currentSession.status = 'CLOSED';
+              currentSession.telaoMode = 'voting';
+              currentSession.tieBreak.active = false;
+            }
           }
           setLocalSession(currentSession);
         }

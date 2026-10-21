@@ -41,7 +41,7 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
       ties.push({
         type: 'TITULAR',
         label: 'Empate para Vaga de Titular',
-        votesCount: cutoffVotes,
+        votesCount: Math.floor(cutoffVotes),
         tiedCandidates,
         vacanciesInDispute,
       });

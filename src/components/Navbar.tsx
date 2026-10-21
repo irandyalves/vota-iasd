@@ -123,6 +123,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         tieBreak: undefined,
         telaoMode: 'voting',
         votingIteration: nextIteration,
+        mainVotersCount: 0,
+        tieBreakVotersCount: 0,
       });
     }
   };
