@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import {
   Mic,
   MicOff,
@@ -1758,7 +1758,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 const qrPos = layout.qrPosition ?? 'middle';
                 const qrSize = layout.qrSize ?? 100;
                 const height = layout.cardHeight ?? 38;
-                const gap = layout.cardGapV2 ?? 2;
+                const gap = (layout.cardGapV2 !== undefined && layout.cardGapV2 !== 2) ? layout.cardGapV2 : 0;
                 const winnerColor = layout.winnerColor || '#10b981';
                 const suplenteColor = layout.suplenteColor || '#3b82f6';
                 const suplente2Color = layout.suplente2Color || '#64748b';
@@ -2370,7 +2370,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <p className="text-[11px] text-slate-500">Conforme os eleitores votarem no celular, o ranking e as barras atualizarão automaticamente aqui.</p>
                   </div>
                 ) : (
-                  <div className="space-y-[3px] flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
+                  <div className="flex flex-col -space-y-px flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
                     {/* Cabeçalho de Colunas Alinhadas (sem a coluna % separada) */}
                     <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 bg-white/[0.03] rounded-md border border-white/[0.05] gap-2 mb-0.5">
                       <div className="flex items-center gap-2 shrink-0">
@@ -2387,6 +2387,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       </div>
                     </div>
 
+                    <LayoutGroup id="admin-ranking-list">
                     {rankedCandidates.map((candidate, idx) => {
                       const votes = Math.floor(candidate.votesCount || 0);
                       const percent = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
@@ -2422,11 +2423,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           )}
 
-                          <div
+                          <motion.div
+                            layout
+                            key={candidate.id}
+                            transition={{
+                              layout: { type: 'spring', stiffness: 240, damping: 28 },
+                            }}
                             style={{
                               borderColor: hexToRgba(activeColor, isTitular ? 0.45 : isSuplente1 ? 0.35 : 0.2),
                             }}
-                            className="relative overflow-hidden rounded-lg p-2 sm:p-2.5 bg-[#0b0d13] border transition-all duration-300 flex items-center justify-between gap-2 shadow-sm hover:border-opacity-80"
+                            className={`relative overflow-hidden p-2 sm:p-2.5 bg-[#0b0d13] border transition-colors duration-200 flex items-center justify-between gap-2 shadow-sm ${
+                              idx === 0
+                                ? 'rounded-t-lg'
+                                : idx === rankedCandidates.length - 1
+                                ? 'rounded-b-lg'
+                                : 'rounded-none'
+                            } -mt-px hover:z-20 hover:border-opacity-100`}
                           >
                             {/* COLUNA 1: POSIÇÃO / RANK */}
                             <span className="w-6 text-center font-mono font-bold text-xs text-slate-400 shrink-0">
@@ -2483,12 +2495,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
                             {/* COLUNA 4: ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DOS VOTOS) */}
                             <div className="flex-1 relative h-6 sm:h-7 mx-1.5 min-w-[80px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner">
-                              {/* Barra de Progresso com Efeito Vidro nas Cores de Config (Verde nos Vencedores) */}
+                              {/* Barra de Progresso Fluída, Suave e sem Solavancos */}
                               {votes > 0 ? (
-                                <div
-                                  className="absolute left-0 top-0 bottom-0 pointer-events-none rounded-l overflow-visible z-10 transition-all duration-500"
+                                <motion.div
+                                  initial={false}
+                                  animate={{ width: `${barWidth}%` }}
+                                  transition={{
+                                    duration: 0.85,
+                                    ease: [0.16, 1, 0.3, 1],
+                                  }}
+                                  className="absolute left-0 top-0 bottom-0 pointer-events-none rounded-l overflow-visible z-10 will-change-[width] flex items-center justify-end"
                                   style={{
-                                    width: `${barWidth}%`,
                                     background: `linear-gradient(90deg, ${hexToRgba(activeColor, 0.20)} 0%, ${hexToRgba(activeColor, 0.38)} 60%, ${hexToRgba(activeColor, 0.58)} 100%)`,
                                     backdropFilter: 'blur(8px)',
                                     borderTop: '1px solid rgba(255, 255, 255, 0.45)',
@@ -2499,17 +2516,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   {/* Brilho especular superior do vidro */}
                                   <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
 
-                                  {/* % antes da cabeça brilhosa + Faixinha laranja (20% mais estreita: 4.8px) */}
+                                  {/* % puxada 1 caracter para a esq (mr-[14px]), bold, fonte 15% maior (text-[12px] sm:text-[13px]) + Faixinha laranja */}
                                   <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20 pr-0.5">
-                                    <span className="text-[10px] sm:text-[11px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] mr-1.5 select-none leading-none">
+                                    <span className="text-[12px] sm:text-[13px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[14px] select-none leading-none">
                                       {percent}%
                                     </span>
                                     <div className="absolute -inset-y-1 w-3 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[3px]" />
                                     <div className="relative w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
                                   </div>
-                                </div>
+                                </motion.div>
                               ) : (
-                                <span className="text-[10px] font-mono font-medium text-slate-500 pl-2">
+                                <span className="text-[11px] font-mono font-semibold text-slate-500 pl-2">
                                   0%
                                 </span>
                               )}
@@ -2532,10 +2549,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 {votes} {votes === 1 ? 'voto' : 'votos'}
                               </span>
                             </div>
-                          </div>
+                          </motion.div>
                         </React.Fragment>
                       );
                     })}
+                    </LayoutGroup>
                   </div>
                 )}
               </div>

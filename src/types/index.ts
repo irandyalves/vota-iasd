@@ -15,7 +15,7 @@ export interface TelaoLayoutConfig {
   qrSize?: number; // Escala/tamanho do QR Code em % (padrão: 100, de 50 a 150)
   cardHeight?: number; // Altura mínima do card em px (padrão: 38)
   cardGap?: number; // Legado
-  cardGapV2?: number; // Espaçamento entre os cards em px reduzido em 80% (padrão: 2)
+  cardGapV2?: number; // Espaçamento entre os cards em px (padrão: 0, encostados)
   winnerColor?: string; // Cor dos cards Vencedores/Titulares (padrão: '#10b981')
   suplenteColor?: string; // Cor dos cards 1º Suplentes (padrão: '#3b82f6')
   suplente2Color?: string; // Cor dos cards 2º Suplentes (padrão: '#64748b')

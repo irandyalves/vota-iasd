@@ -160,7 +160,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
       ? 'self-end'
       : 'self-center';
   const cardHeight = session.telaoLayout?.cardHeight ?? 38;
-  const cardGap = session.telaoLayout?.cardGapV2 ?? 2;
+  const cardGap = (session.telaoLayout?.cardGapV2 !== undefined && session.telaoLayout.cardGapV2 !== 2) ? session.telaoLayout.cardGapV2 : 0;
   const winnerColor = session.telaoLayout?.winnerColor || '#10b981';
   const suplenteColor = session.telaoLayout?.suplenteColor || '#3b82f6';
   const suplente2Color = session.telaoLayout?.suplente2Color || '#64748b';
@@ -649,12 +649,16 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                     return (
                       <motion.div
+                        layout
                         key={option.id}
+                        transition={{
+                          layout: { type: 'spring', stiffness: 240, damping: 28 },
+                        }}
                         style={{
                           minHeight: `${cardHeight}px`,
                           ...(tiedGroup ? {} : categoryStyles.cardStyle),
                         }}
-                        className={`border transition-colors duration-300 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-lg gap-2 shadow-sm ${
+                        className={`border transition-colors duration-200 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-none first:rounded-t-lg last:rounded-b-lg -mt-px gap-2 shadow-sm hover:z-20 ${
                           tiedGroup
                             ? 'bg-[#18080c]/90 border border-rose-500/80 text-white shadow-md'
                             : isElected
@@ -768,10 +772,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         <div className="flex-1 relative h-6 sm:h-7 mx-1.5 min-w-[60px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner z-10">
                           {(option.votesCount || 0) > 0 ? (
                             <motion.div
-                              initial={{ width: 0 }}
+                              initial={false}
                               animate={{ width: `${Math.max(percentage, 2)}%` }}
-                              transition={{ duration: 0.6, ease: 'easeOut' }}
-                              className="absolute top-0 bottom-0 left-0 pointer-events-none rounded-l overflow-visible z-10"
+                              transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+                              className="absolute top-0 bottom-0 left-0 pointer-events-none rounded-l overflow-visible z-10 will-change-[width]"
                               style={{
                                 background: tiedGroup
                                   ? 'linear-gradient(90deg, rgba(225, 29, 72, 0.22) 0%, rgba(225, 29, 72, 0.40) 60%, rgba(225, 29, 72, 0.60) 100%)'
@@ -785,9 +789,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               {/* Brilho especular superior do vidro */}
                               <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
 
-                              {/* % antes da cabeça brilhosa + Faixinha laranja (20% mais estreita: 4.8px) */}
+                              {/* % puxada 1 caracter para a esq (mr-[14px]), bold, fonte 15% maior (text-[12px] sm:text-[13px]) + Faixinha laranja */}
                               <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20 pr-0.5">
-                                <span className="text-[10px] sm:text-[11px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)] mr-1.5 select-none leading-none">
+                                <span className="text-[12px] sm:text-[13px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[14px] select-none leading-none">
                                   {percentage}%
                                 </span>
                                 <div className="absolute -inset-y-1 w-3.5 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[3px]" />
@@ -795,7 +799,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               </div>
                             </motion.div>
                           ) : (
-                            <span className="text-[10px] font-mono font-medium text-slate-500 pl-2">
+                            <span className="text-[11px] font-mono font-semibold text-slate-500 pl-2">
                               0%
                             </span>
                           )}
