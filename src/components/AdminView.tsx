@@ -1218,10 +1218,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     >
                       <div className="flex items-center justify-between gap-2 border-b border-rose-500/20 pb-2">
                         <div>
-                          <h4 className="font-black text-sm sm:text-base text-amber-300 tracking-wide">
-                            {tie.vacanciesInDispute === 1
-                              ? 'É 1 vaga, escolha 2 nomes'
-                              : `São ${tie.vacanciesInDispute} vagas, escolha ${tie.vacanciesInDispute + 1} nomes`}
+                          <h4 className="font-black text-xs sm:text-sm tracking-wide flex items-center flex-wrap gap-1 text-white uppercase select-none">
+                            <span>{tie.vacanciesInDispute === 1 ? 'É' : 'SÃO'}</span>
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
+                              {String(tie.vacanciesInDispute).padStart(2, '0')}
+                            </span>
+                            <span>{tie.vacanciesInDispute === 1 ? 'VAGA, ESCOLHA' : 'VAGAS, ESCOLHA'}</span>
+                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
+                              {String(tie.vacanciesInDispute + 1).padStart(2, '0')}
+                            </span>
+                            <span>NOMES</span>
                           </h4>
                           <p className="text-[11px] text-slate-300">
                             {tie.label} • <strong className="text-white">{tie.votesCount}</strong> {tie.votesCount === 1 ? 'voto cada' : 'votos cada'}

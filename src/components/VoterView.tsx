@@ -790,10 +790,10 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       >
         <div className="flex items-center justify-between gap-2 text-xs sm:text-sm text-white">
           {/* Esquerda: Escolha xx nomes */}
-          <div className="flex items-baseline gap-1 font-semibold shrink-0">
+          <div className="flex items-center gap-1.5 font-semibold shrink-0">
             <span>Escolha</span>
-            <span className="font-black text-amber-300" style={{ fontSize: '1.15em' }}>
-              {maxVotes}
+            <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs shadow-sm leading-none">
+              {String(maxVotes).padStart(2, '0')}
             </span>
             <span>{maxVotes === 1 ? 'nome' : 'nomes'}</span>
           </div>
