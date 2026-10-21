@@ -5,7 +5,6 @@ import confetti from 'canvas-confetti';
 import {
   CheckCircle,
   Maximize,
-  Minimize,
   Users,
   Star,
 } from 'lucide-react';
@@ -174,25 +173,60 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const totalVotersVoted =
     totalVotesCast > 0 ? Math.max(1, Math.round(totalVotesCast / maxVotesPerBallot)) : 0;
 
-  // Alterna Modo Tela Cheia (Fullscreen)
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
+  // Força Modo Tela Cheia (Fullscreen) contínuo
+  const enterFullscreen = () => {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
       document.documentElement.requestFullscreen().catch(() => {});
       setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen().catch(() => {});
-        setIsFullscreen(false);
-      }
     }
   };
 
   useEffect(() => {
     const handleFsChange = () => {
-      setIsFullscreen(Boolean(document.fullscreenElement));
+      const isFs = Boolean(document.fullscreenElement);
+      setIsFullscreen(isFs);
+      // Se saiu de tela cheia por algum motivo, tenta reentrar
+      if (!isFs) {
+        enterFullscreen();
+      }
     };
     document.addEventListener('fullscreenchange', handleFsChange);
     return () => document.removeEventListener('fullscreenchange', handleFsChange);
+  }, []);
+
+  // Monitoramento contínuo para garantir que a 2ª tela fique SEMPRE em tela cheia
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // 1. Tenta tela cheia imediatamente
+    enterFullscreen();
+
+    // 2. Qualquer gesto, clique, tecla ou foco na tela ativa tela cheia imediatamente
+    const handleForceFs = () => {
+      enterFullscreen();
+    };
+
+    window.addEventListener('click', handleForceFs);
+    window.addEventListener('touchstart', handleForceFs);
+    window.addEventListener('keydown', handleForceFs);
+    window.addEventListener('focus', handleForceFs);
+    window.addEventListener('mousemove', handleForceFs, { once: true });
+
+    const handleVisibility = () => {
+      if (!document.hidden) {
+        enterFullscreen();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      window.removeEventListener('click', handleForceFs);
+      window.removeEventListener('touchstart', handleForceFs);
+      window.removeEventListener('keydown', handleForceFs);
+      window.removeEventListener('focus', handleForceFs);
+      window.removeEventListener('mousemove', handleForceFs);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
   }, []);
 
   useEffect(() => {
@@ -202,10 +236,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
         ? 'https://vota-iasd-central.web.app/'
         : `${window.location.origin}${window.location.pathname}`;
       setVoterUrl(`${baseOrigin}?view=voter&pin=${session.pin}`);
-      const params = new URLSearchParams(window.location.search);
-      if (params.get('fullscreen') === 'true' && !document.fullscreenElement) {
-        document.documentElement.requestFullscreen().catch(() => {});
-      }
+      enterFullscreen();
     }
   }, [session.pin]);
 
@@ -242,6 +273,18 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   return (
     <div className="min-h-screen bg-[#07132a] text-white p-2 sm:p-3 lg:p-3.5 flex flex-col justify-between select-none">
+      {/* AVISO / BOTÃO DE TELA CHEIA PERSISTENTE (GARANTE TELA CHEIA SEMPRE) */}
+      {!isFullscreen && (
+        <div
+          onClick={enterFullscreen}
+          className="fixed top-2.5 right-4 z-50 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-blue-950 font-black px-4 py-2 rounded-xl shadow-2xl flex items-center gap-2 cursor-pointer animate-pulse text-xs uppercase tracking-wider border-2 border-amber-300"
+          title="Clique para ativar Tela Cheia"
+        >
+          <Maximize className="w-4 h-4" />
+          <span>Ativar Tela Cheia (Telão)</span>
+        </div>
+      )}
+
       {/* ÁREA CENTRAL: QR CODE CENTRALIZADO EM RELAÇÃO À SEÇÃO DE CARDS (items-center) */}
       <div className="flex-1 w-full">
         <div className="flex flex-col md:flex-row items-center w-full">
@@ -317,15 +360,15 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     )}
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    {/* BOTÃO TELA CHEIA */}
+                    {/* BOTÃO TELA CHEIA (GARANTIA DE TELA CHEIA SEMPRE) */}
                     <button
                       type="button"
-                      onClick={toggleFullscreen}
-                      title="Alternar Tela Cheia para o Projetor / TV (F11)"
+                      onClick={enterFullscreen}
+                      title="Garantir modo Tela Cheia no Projetor / TV (F11)"
                       className="bg-[#07132a] hover:bg-[#002f6c] border border-blue-700/80 text-amber-300 font-bold px-2.5 py-1 rounded-lg flex items-center gap-1 shadow transition cursor-pointer text-xs active:scale-95"
                     >
-                      {isFullscreen ? <Minimize className="w-3.5 h-3.5" /> : <Maximize className="w-3.5 h-3.5" />}
-                      <span>{isFullscreen ? 'Sair' : 'Tela Cheia'}</span>
+                      <Maximize className="w-3.5 h-3.5" />
+                      <span>{isFullscreen ? 'Tela Cheia Ativa' : 'Tela Cheia'}</span>
                     </button>
                   </div>
                 </div>

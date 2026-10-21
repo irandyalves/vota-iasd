@@ -127,6 +127,7 @@ function openWindowOnMonitor(url: string, monitor: MonitorRect, index: number = 
     'status=no',
     'resizable=yes',
     'scrollbars=no',
+    'fullscreen=yes',
   ].join(',');
 
   try {
@@ -137,6 +138,7 @@ function openWindowOnMonitor(url: string, monitor: MonitorRect, index: number = 
     try {
       popup.moveTo(monitor.left, monitor.top);
       popup.resizeTo(monitor.width, monitor.height);
+      popup.focus();
     } catch (_) {}
 
     secondaryWindows.set(index, popup);
