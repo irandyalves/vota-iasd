@@ -1200,32 +1200,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       {/* MODAL REUTILIZÁVEL DE CONFIGURAR VOTAÇÃO / CRIAR NOVA VOTAÇÃO */}
       {(() => null)()}
 
-      {/* BARRA DE EVENTOS (+10% DE ALTURA): FAIXA LARANJA ESTENDIDA ATÉ DEBAIXO DO "+ CRIAR VOTAÇÃO" COM TRANSPARÊNCIA A PARTIR DOS 35% INICIAIS ATÉ ZERO */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 shadow-xl mb-3 flex items-stretch justify-between min-h-[71px] relative z-30">
+      {/* BARRA DE EVENTOS: LAYOUT ESTÚDIO MODERNO COM CORES SUAVES E SEM CAIXA ALTA */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative z-30">
         <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
-          {/* LINHA CENTRALIZADA VERTICALMENTE: FAIXA LARANJA ("EVENTOS" + "+ CRIAR VOTAÇÃO") À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
+          {/* LINHA CENTRALIZADA VERTICALMENTE: "EVENTOS" + "+ CRIAR VOTAÇÃO" À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
           <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
-            {/* FAIXA LARANJA/AMARELO PASTEL SUAVE (MENOS INTENSO) DE "EVENTOS" ATÉ DEBAIXO DE "+ CRIAR VOTAÇÃO" */}
-            <div
-              style={{
-                background:
-                  'linear-gradient(90deg, rgba(235, 195, 115, 0.72) 0%, rgba(225, 185, 100, 0.6) 35%, rgba(225, 185, 100, 0) 100%)',
-              }}
-              className="self-stretch flex items-center shrink-0 pr-3 sm:pr-4 py-2.5"
-            >
+            {/* FAIXA SUTIL DE "EVENTOS" ATÉ O BOTÃO "+ CRIAR VOTAÇÃO" */}
+            <div className="self-stretch flex items-center shrink-0 pr-3 sm:pr-4 py-2">
               <button
                 type="button"
                 onClick={() => {
                   setActiveTab('candidates');
                   setIsBottomSectionOpen(true);
                 }}
-                className="text-blue-950 hover:text-blue-900 font-black text-xs sm:text-sm uppercase tracking-wider px-5 sm:px-6 self-stretch flex items-center justify-center shrink-0 transition cursor-pointer select-none"
+                className="text-slate-300 hover:text-white font-medium text-xs sm:text-sm tracking-wide px-4 sm:px-5 self-stretch flex items-center justify-center shrink-0 transition cursor-pointer select-none"
                 title="Mostrar seção de nomes do evento"
               >
-                EVENTOS
+                Eventos
               </button>
 
-              {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO QUE REVELA PARA BAIXO */}
+              {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO */}
               <div className="relative flex items-center shrink-0 pl-1 sm:pl-2">
                 <button
                   ref={createEventBtnRef}
@@ -1240,10 +1234,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     }
                   }}
                   title="Criar nova votação / evento"
-                  className="px-3 py-2 min-h-[34px] rounded-[4px] bg-[#001f47]/85 hover:bg-[#07132a]/95 border border-blue-400 hover:border-amber-300 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)]"
+                  className="px-3 py-1.5 min-h-[34px] rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
                 >
-                  <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
-                  <span>+ Criar Votação</span>
+                  <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>+ Criar votação</span>
                 </button>
 
                 {/* MODAL DE CRIAR VOTAÇÃO */}
@@ -1253,13 +1247,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
             </div>
 
-            {/* 2 SETINHAS JUNTAS E AZUL APÓS O BOTÃO CRIAR VOTAÇÃO */}
+            {/* SETINHAS DISCRETAS APÓS O BOTÃO CRIAR VOTAÇÃO */}
             <ChevronsRight
-              className="w-5 h-5 text-blue-400 shrink-0 -mx-0.5 drop-shadow-[0_0_6px_rgba(96,165,250,0.6)]"
-              strokeWidth={2.75}
+              className="w-4 h-4 text-slate-500 shrink-0 -mx-0.5"
+              strokeWidth={2}
             />
 
-            {/* À DIREITA DO BOTÃO "+ CRIAR VOTAÇÃO": EVENTOS CRIADOS (QTD EM AMARELO, SEM SETINHA, APENAS LÁPIS E LIXEIRA CLICÁVEIS) */}
+            {/* EVENTOS CRIADOS COM BORDA DESIGNER DIRECIONAL */}
             {eventsList.map((evt) => {
               const isSelected = evt.id === currentActiveEventId;
               const count = isSelected ? session.options.length : (evt.options?.length || 0);
@@ -1270,13 +1264,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <div
                     onClick={() => handleSelectEventButton(evt)}
                     title="Selecionar este evento"
-                    className={`group relative pl-3.5 pr-2.5 py-1.5 min-h-[34px] rounded-l-lg rounded-r-md text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none ${
+                    className={`group relative pl-3.5 pr-2.5 py-1.5 min-h-[34px] rounded-l-lg rounded-r-md text-xs tracking-normal flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none ${
                       isSelected
-                        ? 'font-bold text-white bg-gradient-to-r from-emerald-950/80 via-[#041c30]/75 to-[#07132a]/30 shadow-[0_4px_16px_rgba(0,0,0,0.6)]'
-                        : 'font-normal text-slate-200 bg-[#07132a]/80 hover:bg-[#0c1f44]/80 shadow-[0_2px_8px_rgba(0,0,0,0.4)]'
+                        ? 'font-medium text-slate-100 bg-[#0b0d13] shadow-md'
+                        : 'font-normal text-slate-400 bg-[#0b0d13]/60 hover:bg-[#0b0d13] hover:text-slate-200'
                     }`}
                   >
-                    {/* Borda desenhada: mais grossa e arredondada à esquerda, sem borda à direita, superior e inferior com transparência gradual a partir dos 30% */}
+                    {/* Borda desenhada com gradientes suaves */}
                     <div
                       className="absolute inset-0 pointer-events-none rounded-l-lg transition-all duration-150"
                       style={{
@@ -1285,29 +1279,29 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         borderLeftWidth: isSelected ? '4.5px' : '3.5px',
                         borderRightWidth: '0px',
                         borderStyle: 'solid',
-                        borderColor: isSelected ? '#10b981' : '#3b82f6',
+                        borderColor: isSelected ? '#10b981' : 'rgba(255,255,255,0.18)',
                         borderTopLeftRadius: '8px',
                         borderBottomLeftRadius: '8px',
                         borderTopRightRadius: '0px',
                         borderBottomRightRadius: '0px',
                         WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
                         maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
-                        filter: isSelected ? 'drop-shadow(0 0 5px rgba(16,185,129,0.5))' : undefined,
+                        filter: isSelected ? 'drop-shadow(0 0 5px rgba(16,185,129,0.35))' : undefined,
                         opacity: isSelected ? 1 : 0.6,
                       }}
                     />
 
                     <span className="relative z-10">{displayName}</span>
                     <span
-                      className={`relative z-10 px-1.5 py-0.2 rounded-[3px] text-[12px] font-mono font-black ${
+                      className={`relative z-10 px-1.5 py-0.5 rounded-[4px] text-xs font-mono font-medium ${
                         isSelected
-                          ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
-                          : 'bg-[#07132a] text-amber-400'
+                          ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                          : 'bg-white/[0.06] text-slate-400'
                       }`}
                     >
                       {count}
                     </span>
-                    {/* Único ícone clicável 1: Lápis (Editar Nome e Configurações do Evento) */}
+                    {/* Lápis */}
                     <button
                       type="button"
                       data-edit-event-btn="true"
@@ -1322,18 +1316,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       }}
                       title="Editar configurações desta votação"
                       className={`relative z-10 p-0.5 transition cursor-pointer active:scale-90 ${
-                        isSelected ? 'text-emerald-300 hover:text-white' : 'text-slate-400 hover:text-amber-300'
+                        isSelected ? 'text-emerald-300 hover:text-white' : 'text-slate-500 hover:text-slate-300'
                       }`}
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
-                    {/* Único ícone clicável 2: Lixeira (Excluir Evento) */}
+                    {/* Lixeira */}
                     {eventsList.length > 1 && (
                       <button
                         type="button"
                         onClick={(e) => handleDeleteEvent(evt.id, e)}
                         title="Excluir este evento"
-                        className="relative z-10 p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer active:scale-90"
+                        className="relative z-10 p-0.5 text-slate-500 hover:text-rose-400 transition cursor-pointer active:scale-90"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
@@ -1349,17 +1343,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             })}
           </div>
 
-          {/* CANTO DIREITO: ENGRENAGEM COLORIDA (AO CLICAR REVELA SUAVEMENTE AS OPÇÕES EMPURRANDO AS DEMAIS PARA BAIXO) */}
+          {/* CANTO DIREITO: ENGRENAGEM */}
           <div className="flex items-center shrink-0">
             <button
               ref={gearButtonRef}
               type="button"
               onClick={() => setIsGearOpen((prev) => !prev)}
               title="Abrir/Recolher Opções (ESC ou clique fora para recolher)"
-              className={`group relative p-1.5 rounded-xl border-2 transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center ${
+              className={`group relative p-2 rounded-xl border transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center ${
                 isGearOpen
-                  ? 'bg-[#07132a] border-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.45)]'
-                  : 'bg-[#07132a]/90 hover:bg-[#0c1f44] border-blue-700/80 hover:border-amber-400/70 shadow-md'
+                  ? 'bg-[#0b0d13] border-emerald-500/60 shadow-[0_0_16px_rgba(16,185,129,0.3)]'
+                  : 'bg-[#0b0d13] hover:bg-[#141721] border-white/[0.1] hover:border-white/[0.2] shadow-sm'
               }`}
             >
               <svg
@@ -1979,26 +1973,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             onChange={(e) => handleFileImport(e, 'replace')}
           />
 
-          {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ COM A SEÇÃO DA DIREITA INDO DO TOPO ATÉ EMBAIXO */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-xl">
+          {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ - LAYOUT ESTÚDIO MODERNO E SUAVE */}
+          <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
             <div className="flex flex-col lg:flex-row gap-4 items-stretch">
               {/* COLUNA DA ESQUERDA: CABEÇALHO + IMPORTAR DADOS + TEXTAREA */}
               <div className="flex-1 flex flex-col justify-between gap-3 min-w-0">
-                {/* CABEÇALHO NA MESMA LINHA: TÍTULO + SEÇÃO "IMPORTAR DADOS" LOGO À FRENTE (SEM FUNDO PRETO E SEM ÍCONE ANTES) */}
+                {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
                 <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                   <div className="flex items-center gap-2 shrink-0">
-                    <label className="font-bold text-white text-sm sm:text-base font-sans tracking-tight">
+                    <label className="font-medium text-slate-200 text-sm tracking-normal">
                       Digite ou fale os nomes
                     </label>
                     {isListening && (
-                      <span className="text-[10px] font-bold text-rose-400 bg-rose-950/90 px-2 py-0.5 rounded-full border border-rose-600 animate-pulse flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                      <span className="text-[10px] font-medium text-rose-300 bg-rose-950/80 px-2 py-0.5 rounded-full border border-rose-500/40 animate-pulse flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
                         Ouvindo...
                       </span>
                     )}
                   </div>
 
-                  {/* SEÇÃO IMPORTAR (LISTBOX COM EXCEL .XLSX, CSV, TXT + ARRASTE O ARQUIVO AQUI, SEM MODELO .CSV) */}
+                  {/* SEÇÃO IMPORTAR */}
                   <div
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
@@ -2016,12 +2010,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       <button
                         type="button"
                         onClick={() => setIsImportMenuOpen((prev) => !prev)}
-                        className="px-3 py-1 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-600/80 hover:border-amber-400 rounded-lg text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-2 transition cursor-pointer shadow-sm"
+                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 rounded-lg text-xs font-medium text-slate-300 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer shadow-sm"
                         title="Clique para escolher o formato de arquivo para importar"
                       >
                         <span>Importar</span>
                         <svg
-                          className={`w-3.5 h-3.5 text-amber-400 transition-transform duration-200 ${
+                          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
                             isImportMenuOpen ? 'rotate-180' : ''
                           }`}
                           viewBox="0 0 20 20"
@@ -2042,7 +2036,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             animate={{ opacity: 1, y: 0, scale: 1 }}
                             exit={{ opacity: 0, y: -4, scale: 0.96 }}
                             transition={{ duration: 0.15 }}
-                            className="absolute left-0 top-full mt-1.5 w-40 bg-[#07132a] border border-blue-600 rounded-xl shadow-[0_12px_28px_rgba(0,0,0,0.85)] py-1 z-50 overflow-hidden"
+                            className="absolute left-0 top-full mt-1.5 w-40 bg-[#141721] border border-white/[0.1] rounded-xl shadow-2xl py-1 z-50 overflow-hidden"
                           >
                             <button
                               type="button"
@@ -2053,9 +2047,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   fileUploadAppendRef.current.click();
                                 }
                               }}
-                              className="w-full px-3 py-1.5 text-left text-xs font-bold text-emerald-400 hover:bg-emerald-500/15 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer"
+                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
                             >
-                              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
                               <span>Excel (.xlsx)</span>
                             </button>
 
@@ -2068,9 +2062,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   fileUploadAppendRef.current.click();
                                 }
                               }}
-                              className="w-full px-3 py-1.5 text-left text-xs font-bold text-blue-400 hover:bg-blue-500/15 hover:text-blue-300 flex items-center gap-2 transition cursor-pointer"
+                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
                             >
-                              <FileText className="w-3.5 h-3.5 shrink-0" />
+                              <FileText className="w-3.5 h-3.5 shrink-0 text-blue-400" />
                               <span>CSV</span>
                             </button>
 
@@ -2083,9 +2077,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   fileUploadAppendRef.current.click();
                                 }
                               }}
-                              className="w-full px-3 py-1.5 text-left text-xs font-bold text-slate-300 hover:bg-slate-500/15 hover:text-white flex items-center gap-2 transition cursor-pointer"
+                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
                             >
-                              <FileText className="w-3.5 h-3.5 shrink-0" />
+                              <FileText className="w-3.5 h-3.5 shrink-0 text-slate-400" />
                               <span>TXT</span>
                             </button>
                           </motion.div>
@@ -2101,16 +2095,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           fileUploadAppendRef.current.click();
                         }
                       }}
-                      className="px-2.5 py-1 bg-[#001f47]/70 hover:bg-[#0c1f44] border border-dashed border-blue-500 hover:border-amber-400 rounded-lg text-[10px] text-blue-200 hover:text-amber-300 font-semibold transition cursor-pointer flex items-center gap-1"
+                      className="px-2.5 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-dashed border-white/[0.12] hover:border-emerald-500/40 rounded-lg text-xs text-slate-400 hover:text-slate-200 font-normal transition cursor-pointer flex items-center gap-1.5"
                       title="Arraste qualquer arquivo e solte aqui"
                     >
-                      <Upload className="w-3 h-3 text-amber-400" />
+                      <Upload className="w-3 h-3 text-slate-400" />
                       <span>ou arraste o arquivo aqui</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Textarea com Microfone Verde no canto direito centralizado (ALTURA REDUZIDA EM 25%) */}
+                {/* Textarea com Microfone */}
                 <div className="flex-1 relative flex flex-col">
                   <textarea
                     value={newName}
@@ -2121,19 +2115,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         handleAddCandidateName(newName);
                       }
                     }}
-                    placeholder="DIGITE OU COLE OS NOMES AQUI (DÊ ENTER OU SEPARE POR VÍRGULA OU LINHA)..."
-                    className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 bg-[#07132a] border-2 border-blue-700/80 focus:border-amber-400 rounded-2xl text-white font-bold text-sm sm:text-base placeholder-slate-400 outline-none transition shadow-inner uppercase resize-none leading-relaxed"
+                    placeholder="Digite ou cole os nomes aqui (dê Enter ou separe por vírgula ou linha)..."
+                    className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
                   />
 
-                  {/* Microfone Verde no Canto Direito Centralizado */}
+                  {/* Microfone */}
                   <button
                     type="button"
                     onClick={() => setIsListening(!isListening)}
                     title={isListening ? 'Parar microfone' : 'Falar nomes por voz'}
-                    className={`absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full border-2 flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                    className={`absolute right-3 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
                       isListening
-                        ? 'bg-rose-600/70 border-rose-300 text-white shadow-[0_0_20px_rgba(244,63,94,0.75)] animate-pulse'
-                        : 'bg-emerald-600/50 hover:bg-emerald-600/70 border-emerald-400 text-emerald-100 shadow-[0_0_15px_rgba(52,211,153,0.45)] hover:shadow-[0_0_22px_rgba(52,211,153,0.65)]'
+                        ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
+                        : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
                     }`}
                   >
                     {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
@@ -2141,15 +2135,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </div>
 
                 {speechTranscript && isListening && (
-                  <p className="text-xs text-amber-300 font-mono bg-blue-950/80 p-2 rounded-lg border border-blue-800">
-                    Ouvindo: <span className="text-white font-bold">"{speechTranscript}"</span>
+                  <p className="text-xs text-emerald-300 font-mono bg-[#0b0d13] p-2 rounded-lg border border-white/[0.08]">
+                    Ouvindo: <span className="text-slate-100 font-normal">"{speechTranscript}"</span>
                   </p>
                 )}
               </div>
 
-              {/* SEÇÃO DA DIREITA: SEM BORDINHA EXTERNA, BOTÕES COM ALTURA REDUZIDA EM 35%, E SEM BOLD EM MOSTRAR TELÃO E QR.CODE TELÃO */}
-              <div className="flex flex-col gap-5 shrink-0 w-full lg:w-48 justify-center">
-                {/* 1. Botão NOMES NO TELÃO (SEM COR; ATIVO = SÓ A BORDINHA AZUL) */}
+              {/* SEÇÃO DA DIREITA: BOTÕES DE TELÃO E QR CODE */}
+              <div className="flex flex-col gap-3 shrink-0 w-full lg:w-48 justify-center">
+                {/* 1. Botão Nomes no Telão */}
                 <button
                   type="button"
                   onClick={() => {
@@ -2162,10 +2156,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         : 'Exibindo Votação/Resultados no Telão!'
                     );
                   }}
-                  className={`h-[46px] px-3 py-1.5 bg-transparent border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs text-white ${
+                  className={`h-[44px] px-3 py-1.5 rounded-lg border transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs ${
                     session.telaoMode === 'names'
-                      ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.45)]'
-                      : 'border-slate-600/70 hover:border-slate-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 shadow-sm'
+                      : 'bg-[#0b0d13] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.16]'
                   }`}
                   title="Abrir o Telão e alternar exibição dos Nomes para Escolha"
                 >
@@ -2173,7 +2167,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <span>Nomes no telão</span>
                 </button>
 
-                {/* 2. Botão QR CODE NO TELÃO (SEM COR; ATIVO = SÓ A BORDINHA AZUL) */}
+                {/* 2. Botão QR Code no Telão */}
                 <button
                   type="button"
                   onClick={() => {
@@ -2183,28 +2177,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     });
                   }}
                   title="Mostrar ou ocultar o QR Code no Telão"
-                  className={`h-[46px] px-3 py-1.5 bg-transparent border-2 rounded-lg transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs text-white ${
+                  className={`h-[44px] px-3 py-1.5 rounded-lg border transition-all duration-150 active:scale-95 cursor-pointer flex items-center justify-center gap-2 font-normal text-xs ${
                     session.showQrOnTelao !== false
-                      ? 'border-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.45)]'
-                      : 'border-slate-600/70 hover:border-slate-400'
+                      ? 'bg-emerald-500/10 border-emerald-500/50 text-emerald-300 shadow-sm'
+                      : 'bg-[#0b0d13] border-white/[0.08] text-slate-400 hover:text-slate-200 hover:border-white/[0.16]'
                   }`}
                 >
                   <QrCode className="w-3.5 h-3.5 shrink-0" />
-                  <span>QR CODE no telão</span>
+                  <span>QR Code no telão</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* 3. NOMES CADASTRADOS (CARDS EM LINHA, SEM SUBTITULO, SEM VOTOS) */}
-          <div className="bg-[#001f47] border border-blue-800 rounded-2xl p-4 shadow-lg">
+          {/* 3. NOMES CADASTRADOS - CARDS ESTÚDIO DISCRETOS */}
+          <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="font-bold text-white text-sm sm:text-base font-sans tracking-tight flex items-center gap-2">
+              <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
                 <span>Nomes para escolha ({session.options.length})</span>
               </h3>
               {(session.options.length > 0 || backupNamesList.length > 0) && (
                 <div className="flex items-center gap-2">
-                  {/* Botão Recuperar Nomes: joga todos os nomes na seção de cima separados por vírgula */}
+                  {/* Botão Recuperar Nomes */}
                   <button
                     type="button"
                     onClick={() => {
@@ -2222,7 +2216,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         `${sourceNames.length} nomes enviados para o campo de digitação acima (separados por vírgula)!`
                       );
                     }}
-                    className="px-3 py-1.5 bg-amber-500/30 hover:bg-amber-500/50 border-2 border-amber-400 text-amber-100 shadow-[0_0_12px_rgba(251,191,36,0.3)] hover:shadow-[0_0_18px_rgba(251,191,36,0.5)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 cursor-pointer"
+                    className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
                     title="Jogar todos os nomes na caixa de digitação acima separados por vírgula"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
@@ -2241,7 +2235,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           saveSession({ ...session, options: sorted });
                           showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
                         }}
-                        className="px-3 py-1.5 bg-blue-600/40 hover:bg-blue-600/60 border-2 border-blue-400 text-blue-100 shadow-[0_0_12px_rgba(59,130,246,0.35)] hover:shadow-[0_0_18px_rgba(59,130,246,0.55)] rounded-xl font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 active:scale-90 cursor-pointer"
+                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
                         title="Ordenar nomes em ordem alfabética (A-Z)"
                       >
                         <ArrowDownAZ className="w-3.5 h-3.5" />
@@ -2254,7 +2248,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         onClick={() => {
                           setConfirmModal({
                             title: 'Limpar Todos os Nomes',
-                            highlight: `${session.options.length} NOMES CADASTRADOS`,
+                            highlight: `${session.options.length} nomes cadastrados`,
                             description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
                             confirmLabel: 'Sim, Limpar Tudo',
                             onConfirm: () => {
@@ -2265,7 +2259,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             },
                           });
                         }}
-                        className="p-2 bg-rose-600/40 hover:bg-rose-600/60 border-2 border-rose-400 text-rose-100 shadow-[0_0_12px_rgba(244,63,94,0.35)] hover:shadow-[0_0_18px_rgba(244,63,94,0.55)] rounded-xl flex items-center justify-center transition-all duration-150 active:scale-90 active:bg-rose-600/90 cursor-pointer"
+                        className="p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
                         title="Apagar todos os nomes cadastrados"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
@@ -2277,11 +2271,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
 
             {session.options.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-blue-800 rounded-xl bg-[#07132a]/40">
+              <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/60">
                 Nenhum nome cadastrado ainda. Digite ou fale no campo acima para começar!
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-[3px]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
                 <AnimatePresence mode="popLayout">
                   {[...session.options]
                     .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
@@ -2306,13 +2300,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             layout: { type: 'spring', stiffness: 320, damping: 26 },
                             duration: 0.35,
                           }}
-                          className={`w-full px-3.5 py-2 rounded-xl flex items-center justify-between gap-2 transition-all duration-500 group min-w-0 ${
+                          className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
                             isGlowing
-                              ? 'bg-gradient-to-r from-amber-500/40 via-yellow-400/35 to-amber-500/40 border-2 border-yellow-300 ring-2 ring-amber-300/90 shadow-[0_0_30px_rgba(251,191,36,0.95),inset_0_0_16px_rgba(254,240,138,0.65)] z-10'
-                              : 'bg-[#07132a] hover:bg-[#0c1f44] border border-blue-800/80 hover:border-amber-400/80 shadow-sm'
+                              ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
+                              : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
                           }`}
                         >
-                          {/* Nome Editável Inline (Largura Fixa na Coluna) */}
+                          {/* Nome Editável Inline */}
                           {isEditing ? (
                             <input
                               type="text"
@@ -2324,7 +2318,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
                                 if (e.key === 'Escape') setEditingCandidateId(null);
                               }}
-                              className="w-full min-w-0 px-2 py-0.5 bg-blue-950 border border-amber-400 rounded text-xs text-white font-bold uppercase outline-none"
+                              className="w-full min-w-0 px-2 py-0.5 bg-[#141721] border border-emerald-500/50 rounded text-xs text-slate-100 font-normal outline-none"
                             />
                           ) : (
                             <span
@@ -2332,10 +2326,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 setEditingCandidateId(option.id);
                                 setEditingCandidateName(option.name);
                               }}
-                              className={`flex-1 min-w-0 truncate font-black text-xs uppercase tracking-wide cursor-pointer transition-colors duration-500 ${
+                              className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
                                 isGlowing
-                                  ? 'text-yellow-100 drop-shadow-[0_0_10px_rgba(254,240,138,1)]'
-                                  : 'text-white hover:text-amber-300'
+                                  ? 'text-emerald-200'
+                                  : 'text-slate-200 hover:text-white'
                               }`}
                               title={`${option.name} (Clique para editar)`}
                             >
