@@ -30,7 +30,8 @@ import {
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
-import { saveSession, subscribeToConnectedVoters } from '../services/votingService';
+import { saveSession, subscribeToConnectedVoters, applyBallotToSession, getLocalSession, isFirestoreQuotaExceeded } from '../services/votingService';
+import { startAdminPeerHost } from '../services/peerSyncService';
 import { parseImportFile } from '../utils/fileImporter';
 import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 
@@ -107,6 +108,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const totalVacancies = vacancies + s1Count + s2Count;
   const cutoffVotes = rankedCandidates[vacancies - 1]?.votesCount || 0;
   const cutoffSuplente1 = s1Count > 0 ? (rankedCandidates[vacancies + s1Count - 1]?.votesCount || 0) : 0;
+
+  const [quotaWarning, setQuotaWarning] = useState<boolean>(isFirestoreQuotaExceeded());
+
+  useEffect(() => {
+    const handleQuotaExceeded = () => setQuotaWarning(true);
+    window.addEventListener('vota_iasd_quota_exceeded', handleQuotaExceeded);
+    return () => window.removeEventListener('vota_iasd_quota_exceeded', handleQuotaExceeded);
+  }, []);
+
+  // Inicia o Host P2P WebRTC (alternativa direta caso Firebase atinja cota de 50.000 gravações)
+  useEffect(() => {
+    if (!session?.id) return;
+    const unsubPeer = startAdminPeerHost(
+      session.id,
+      (ballot) => {
+        const current = getLocalSession();
+        const updated = applyBallotToSession(current, ballot.selectedOptionIds, ballot.round);
+        saveSession(updated);
+        return true;
+      },
+      () => getLocalSession()
+    );
+    return unsubPeer;
+  }, [session?.id]);
 
   const [connectedVotersCount, setConnectedVotersCount] = useState<number>(0);
 
@@ -1469,6 +1494,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
       {/* MODAL REUTILIZÁVEL DE CONFIGURAR VOTAÇÃO / CRIAR NOVA VOTAÇÃO */}
       {(() => null)()}
+
+      {quotaWarning && (
+        <div className="mb-2.5 px-3 py-2 rounded-xl bg-amber-500/20 border border-amber-500/50 text-amber-200 text-xs flex items-center justify-between gap-3 shadow-md select-none">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+            <span>
+              <strong>Cota diária de gravações do Firebase atingida (50.000).</strong> O sistema ativou automaticamente a contingência <strong>P2P / Rede Local</strong>. A votação continua funcionando normalmente! Para reabilitar a nuvem, ative o plano Blaze no Firebase Console (continua grátis nas primeiras 20k/dia).
+            </span>
+          </div>
+          <button
+            onClick={() => setQuotaWarning(false)}
+            className="text-amber-300 hover:text-white px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 text-[11px] font-bold shrink-0"
+          >
+            Entendi
+          </button>
+        </div>
+      )}
 
       {/* BARRA DE EVENTOS: LAYOUT ESTÚDIO MODERNO COM CORES SUAVES E SEM CAIXA ALTA */}
       <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative z-30">

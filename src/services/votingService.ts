@@ -1,9 +1,16 @@
-import { doc, onSnapshot, setDoc, getDoc, runTransaction, collection } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import type { VotingSession, VoterBallot } from '../types';
+import { sendBallotViaP2P, broadcastSessionP2P } from './peerSyncService';
 
 const STORAGE_SESSION_KEY = 'vota_iasd_active_session';
 const STORAGE_DEVICE_KEY = 'vota_iasd_device_id';
+
+let isQuotaExceeded = false;
+
+export function isFirestoreQuotaExceeded(): boolean {
+  return isQuotaExceeded;
+}
 
 // Obter ou gerar ID exclusivo deste aparelho/navegador
 export function getDeviceId(): string {
@@ -41,12 +48,15 @@ export async function verifyBallotOnServer(
   round: 'MAIN' | 'TIE_BREAK' = 'MAIN',
   iteration: number = 1
 ): Promise<boolean | null> {
-  if (!isFirebaseConfigured || !db) return null;
+  if (!isFirebaseConfigured || !db || isQuotaExceeded) return null;
   try {
     const ballotRef = doc(db, 'sessions', sessionId, 'ballots', `${getDeviceId()}_${round}_i${iteration}`);
     const snap = await getDoc(ballotRef);
     return snap.exists();
-  } catch (_) {
+  } catch (err: any) {
+    if (err?.code === 'resource-exhausted') {
+      isQuotaExceeded = true;
+    }
     return null;
   }
 }
@@ -96,7 +106,7 @@ export function getLocalSession(): VotingSession {
   return DEFAULT_INITIAL_SESSION;
 }
 
-function setLocalSession(session: VotingSession) {
+export function setLocalSession(session: VotingSession) {
   try {
     localStorage.setItem(STORAGE_SESSION_KEY, JSON.stringify(session));
     if (broadcastChannel) {
@@ -107,6 +117,9 @@ function setLocalSession(session: VotingSession) {
     console.error('Erro ao salvar sessão local:', e);
   }
 }
+
+// Timer para debouncing de escrita no Firestore (evita que cada tecla digitada envie 1 write)
+let firestoreDebounceTimer: any = null;
 
 // Salva ou atualiza a sessão (Firebase e Local simultâneos para ultra velocidade)
 export async function saveSession(session: VotingSession): Promise<void> {
@@ -140,7 +153,6 @@ export async function saveSession(session: VotingSession): Promise<void> {
 
   // Limpa campos undefined para total compatibilidade com Firestore
   const cleanSession = JSON.parse(JSON.stringify(session));
-  // tieBreak removido precisa ser gravado como null, senão o merge mantém o desempate antigo no Firestore
   if (!session.tieBreak) {
     cleanSession.tieBreak = null;
   }
@@ -148,14 +160,29 @@ export async function saveSession(session: VotingSession): Promise<void> {
   // 1. Atualiza o estado local imediatamente (0ms de latência para Telão e Admin na mesma máquina)
   setLocalSession(cleanSession);
 
-  // 2. Transmite em tempo real para o Firestore para todos os celulares conectados
-  if (isFirebaseConfigured && db) {
-    try {
-      const sessionRef = doc(db, 'sessions', session.id);
-      await setDoc(sessionRef, cleanSession, { merge: true });
-    } catch (error) {
-      console.error('Erro ao salvar no Firestore:', error);
+  // 2. Transmite via P2P WebRTC diretamente a celulares conectados
+  broadcastSessionP2P(cleanSession);
+
+  // 3. Transmite para o Firestore com debounce para economizar cota (evita queimar cotas ao digitar)
+  if (isFirebaseConfigured && db && !isQuotaExceeded) {
+    const database = db;
+    if (firestoreDebounceTimer) {
+      clearTimeout(firestoreDebounceTimer);
     }
+    firestoreDebounceTimer = setTimeout(async () => {
+      try {
+        const sessionRef = doc(database, 'sessions', session.id);
+        await setDoc(sessionRef, cleanSession, { merge: true });
+      } catch (error: any) {
+        if (error?.code === 'resource-exhausted') {
+          isQuotaExceeded = true;
+          window.dispatchEvent(new CustomEvent('vota_iasd_quota_exceeded'));
+          console.warn('⚠️ Cota diária do Firestore esgotada. Alternativa P2P/Local ativada.');
+        } else {
+          console.error('Erro ao salvar no Firestore:', error);
+        }
+      }
+    }, 300);
   }
 }
 
@@ -189,7 +216,13 @@ export function subscribeToSession(
           }
         },
         (error) => {
-          console.warn('Erro de escuta no Firestore:', error);
+          if ((error as any)?.code === 'resource-exhausted') {
+            isQuotaExceeded = true;
+            window.dispatchEvent(new CustomEvent('vota_iasd_quota_exceeded'));
+            console.warn('⚠️ Cota do Firestore esgotada na escuta. Mantendo sincronização local/P2P.');
+          } else {
+            console.warn('Erro de escuta no Firestore:', error);
+          }
         }
       );
     } catch (err) {
@@ -239,6 +272,79 @@ export function subscribeToSession(
   };
 }
 
+/**
+ * Computa uma cédula de votação em uma sessão (função pura e universal).
+ * Usada tanto na gravação local, quanto em contingência P2P quando o Firebase atinge a cota de 50k.
+ */
+export function applyBallotToSession(
+  session: VotingSession,
+  selectedOptionIds: string[],
+  round: 'MAIN' | 'TIE_BREAK' = 'MAIN'
+): VotingSession {
+  const updated = JSON.parse(JSON.stringify(session)) as VotingSession;
+
+  if (round === 'MAIN') {
+    updated.options = (updated.options || []).map((opt) => {
+      if (selectedOptionIds.includes(opt.id)) {
+        return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+      }
+      return opt;
+    });
+    updated.mainVotersCount = ((updated as any).mainVotersCount || 0) + 1;
+    updated.updatedAt = Date.now();
+  } else if (updated.tieBreak) {
+    const updatedTieOptions = (updated.tieBreak.options || []).map((opt) => {
+      if (selectedOptionIds.includes(opt.id)) {
+        return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
+      }
+      return opt;
+    });
+
+    const currentTieVoters = (updated as any).tieBreakVotersCount || 0;
+    const newTieVotersCount = currentTieVoters + 1;
+    (updated as any).tieBreakVotersCount = newTieVotersCount;
+    updated.tieBreak.options = updatedTieOptions;
+
+    const expectedVoters =
+      (updated as any).mainVotersCount ||
+      Math.max(...(updated.options || []).map((o) => Math.floor(o.votesCount || 0)), 1);
+
+    const isTieBreakFinished = newTieVotersCount >= expectedVoters;
+
+    if (isTieBreakFinished) {
+      const sortedTieOptions = [...updatedTieOptions].sort(
+        (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
+      );
+      const vacancies = updated.tieBreak.vacancies || 1;
+      const winnerIds: string[] = [];
+
+      if (sortedTieOptions.length > vacancies) {
+        const cutoffTieVotes = sortedTieOptions[vacancies - 1]?.votesCount || 0;
+        const nextTieVotes = sortedTieOptions[vacancies]?.votesCount || 0;
+        if (cutoffTieVotes > nextTieVotes) {
+          sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+        }
+      } else if (sortedTieOptions.length > 0) {
+        sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+      }
+
+      updated.options = (updated.options || []).map((opt) => {
+        if (winnerIds.includes(opt.id)) {
+          return { ...opt, votesCount: (opt.votesCount || 0) + 0.01 };
+        }
+        return opt;
+      });
+
+      updated.status = 'CLOSED';
+      updated.telaoMode = 'voting';
+      updated.tieBreak.active = false;
+      (updated.tieBreak as any).resolved = true;
+    }
+  }
+
+  return updated;
+}
+
 // Submissão de Cédula de Voto
 export async function submitBallot(
   session: VotingSession,
@@ -246,7 +352,6 @@ export async function submitBallot(
   round: 'MAIN' | 'TIE_BREAK' = 'MAIN'
 ): Promise<{ success: boolean; message?: string }> {
   const voterId = getDeviceId();
-
   const iteration = session.votingIteration || 1;
 
   if (hasVoted(session.id, round, iteration)) {
@@ -265,8 +370,8 @@ export async function submitBallot(
     return { success: false, message: `O limite máximo é de ${maxAllowed} votos!` };
   }
 
-  // Grava voto na nuvem Firestore (tempo real para todos os dispositivos e Telão)
-  if (isFirebaseConfigured && db) {
+  // 1. Grava voto no Firestore (se configurado e cota não excedida)
+  if (isFirebaseConfigured && db && !isQuotaExceeded) {
     try {
       const sessionRef = doc(db, 'sessions', session.id);
       const ballotDocId = `${voterId}_${round}_i${iteration}`;
@@ -283,7 +388,6 @@ export async function submitBallot(
         const sessionSnap = await transaction.get(sessionRef);
         const existingBallot = await transaction.get(ballotRef);
 
-        // Trava no servidor: este aparelho já votou nesta rodada/iteração
         if (existingBallot.exists()) {
           throw new Error('ALREADY_VOTED');
         }
@@ -294,7 +398,6 @@ export async function submitBallot(
 
         if (sessionSnap.exists()) {
           liveData = sessionSnap.data() as VotingSession;
-          // Rodada mudou/encerrou enquanto o eleitor escolhia -> não computa em rodada errada
           const liveIteration = liveData.votingIteration || 1;
           const expectedStatus = round === 'TIE_BREAK' ? 'TIE_BREAK' : 'VOTING';
           if (liveIteration !== iteration || liveData.status !== expectedStatus) {
@@ -308,10 +411,10 @@ export async function submitBallot(
           }
         }
 
-        // 1. Grava a cédula de auditoria
+        // Grava cédula de auditoria
         transaction.set(ballotRef, ballot);
 
-        // 2. Incrementa a contagem de votos atomicamente no documento da sessão
+        // Incrementa contagem de votos atomicamente no documento da sessão
         if (round === 'MAIN') {
           const updatedOptions = liveOptions.map((opt) => {
             if (selectedOptionIds.includes(opt.id)) {
@@ -336,7 +439,6 @@ export async function submitBallot(
           const currentTieVoters = (liveData as any)?.tieBreakVotersCount || 0;
           const newTieVotersCount = currentTieVoters + 1;
 
-          // Quantos votantes votaram na rodada principal (ou o maior número de votos de um candidato)
           const expectedVoters =
             (liveData as any)?.mainVotersCount ||
             Math.max(...liveOptions.map((o) => Math.floor(o.votesCount || 0)), 1);
@@ -344,13 +446,11 @@ export async function submitBallot(
           const isTieBreakFinished = newTieVotersCount >= expectedVoters;
 
           if (isTieBreakFinished) {
-            // Todos os votantes finalizaram o desempate!
             const sortedTieOptions = [...updatedTieOptions].sort(
               (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
             );
             const vacancies = liveTieBreak.vacancies || 1;
 
-            // Identifica os vencedores do desempate
             const winnerIds: string[] = [];
             if (sortedTieOptions.length > vacancies) {
               const cutoffTieVotes = sortedTieOptions[vacancies - 1]?.votesCount || 0;
@@ -362,7 +462,6 @@ export async function submitBallot(
               sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
             }
 
-            // Atribui o desempate aos vencedores nas opções principais
             const updatedMainOptions = liveOptions.map((opt) => {
               if (winnerIds.includes(opt.id)) {
                 return { ...opt, votesCount: (opt.votesCount || 0) + 0.01 };
@@ -394,59 +493,8 @@ export async function submitBallot(
       try {
         const currentSession = getLocalSession();
         if (currentSession && currentSession.id === session.id) {
-          if (round === 'MAIN') {
-            currentSession.options = currentSession.options.map((opt) => {
-              if (selectedOptionIds.includes(opt.id)) {
-                return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
-              }
-              return opt;
-            });
-          } else if (currentSession.tieBreak) {
-            const updatedTieOptions = currentSession.tieBreak.options.map((opt) => {
-              if (selectedOptionIds.includes(opt.id)) {
-                return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
-              }
-              return opt;
-            });
-            currentSession.tieBreak.options = updatedTieOptions;
-
-            const newTieVotersCount = ((currentSession as any).tieBreakVotersCount || 0) + 1;
-            (currentSession as any).tieBreakVotersCount = newTieVotersCount;
-
-            const expectedVoters =
-              (currentSession as any).mainVotersCount ||
-              Math.max(...currentSession.options.map((o) => Math.floor(o.votesCount || 0)), 1);
-
-            if (newTieVotersCount >= expectedVoters) {
-              const sortedTieOptions = [...updatedTieOptions].sort(
-                (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
-              );
-              const vacancies = currentSession.tieBreak.vacancies || 1;
-              const winnerIds: string[] = [];
-              if (sortedTieOptions.length > vacancies) {
-                const cutoff = sortedTieOptions[vacancies - 1]?.votesCount || 0;
-                const next = sortedTieOptions[vacancies]?.votesCount || 0;
-                if (cutoff > next) {
-                  sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-                }
-              } else if (sortedTieOptions.length > 0) {
-                sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-              }
-
-              currentSession.options = currentSession.options.map((opt) => {
-                if (winnerIds.includes(opt.id)) {
-                  return { ...opt, votesCount: (opt.votesCount || 0) + 0.01 };
-                }
-                return opt;
-              });
-
-              currentSession.status = 'CLOSED';
-              currentSession.telaoMode = 'voting';
-              currentSession.tieBreak.active = false;
-              (currentSession.tieBreak as any).resolved = true;
-            }
-          }
-          setLocalSession(currentSession);
+          const updated = applyBallotToSession(currentSession, selectedOptionIds, round);
+          setLocalSession(updated);
         }
       } catch (_) {}
 
@@ -460,96 +508,71 @@ export async function submitBallot(
       if (err instanceof Error && err.message === 'ROUND_CHANGED') {
         return { success: false, message: 'A votação foi alterada pelo líder. Aguarde a tela atualizar e vote novamente.' };
       }
-      console.error('Erro na transação Firebase ao computar voto:', err);
-      return {
-        success: false,
-        message: 'Falha na conexão com o servidor ao computar voto. Por favor, tente novamente.',
-      };
+
+      if ((err as any)?.code === 'resource-exhausted') {
+        isQuotaExceeded = true;
+        window.dispatchEvent(new CustomEvent('vota_iasd_quota_exceeded'));
+        console.warn('⚠️ Cota diária do Firestore excedida durante o voto. Acionando contingência P2P/Local.');
+      } else {
+        console.warn('Erro Firestore ao computar voto. Tentando contingência P2P/Local:', err);
+      }
     }
   }
 
-  // Modo puramente Local / Demonstração (sem Firebase configurado)
-  const currentSession = getLocalSession();
-  if (round === 'MAIN') {
-    currentSession.options = currentSession.options.map((opt) => {
-      if (selectedOptionIds.includes(opt.id)) {
-        return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
-      }
-      return opt;
-    });
-  } else if (currentSession.tieBreak) {
-    currentSession.tieBreak.options = currentSession.tieBreak.options.map((opt) => {
-      if (selectedOptionIds.includes(opt.id)) {
-        return { ...opt, votesCount: (opt.votesCount || 0) + 1 };
-      }
-      return opt;
-    });
+  // 2. ALTERNATIVA / CONTINGÊNCIA 1: Envio direto via P2P WebRTC ao Admin
+  try {
+    const p2pSuccess = await sendBallotViaP2P(selectedOptionIds, round, iteration, voterId);
+    if (p2pSuccess) {
+      markAsVoted(session.id, round, iteration);
+      return { success: true };
+    }
+  } catch (p2pErr) {
+    console.warn('Tentativa P2P falhou, aplicando fallback local:', p2pErr);
   }
-  setLocalSession(currentSession);
-  markAsVoted(session.id, round, iteration);
 
-  return { success: true };
+  // 3. ALTERNATIVA / CONTINGÊNCIA 2: Modo Local / Broadcast / Telão
+  try {
+    const currentSession = getLocalSession();
+    const updated = applyBallotToSession(currentSession, selectedOptionIds, round);
+    setLocalSession(updated);
+    broadcastSessionP2P(updated);
+    markAsVoted(session.id, round, iteration);
+    return { success: true };
+  } catch (localErr) {
+    console.error('Falha ao aplicar voto localmente:', localErr);
+    return {
+      success: false,
+      message: 'Falha ao registrar voto. Por favor, tente novamente.',
+    };
+  }
 }
 
-// Registra a presença de um votante conectado (via QR Code ou link direto)
-export function registerVoterPresence(sessionId: string): () => void {
+// Registra a presença de um votante conectado (SOMENTE LOCAL/BROADCAST - sem Firestore para não queimar cota)
+export function registerVoterPresence(_sessionId: string): () => void {
   if (typeof window === 'undefined') return () => {};
   const voterId = getDeviceId();
-  const effectiveSessionId = sessionId || 'iasd-central-01';
 
-  const pingPresence = async () => {
-    // 1. Grava no Firestore se configurado
-    if (isFirebaseConfigured && db) {
-      try {
-        const presenceRef = doc(db, 'sessions', effectiveSessionId, 'presence', voterId);
-        await setDoc(
-          presenceRef,
-          {
-            voterId,
-            lastSeen: Date.now(),
-            connectedAt: Date.now(),
-          },
-          { merge: true }
-        );
-      } catch (err) {
-        console.warn('Erro ao registrar presença Firestore:', err);
-      }
+  try {
+    const raw = localStorage.getItem('vota_iasd_local_voters');
+    const list: string[] = raw ? JSON.parse(raw) : [];
+    if (!list.includes(voterId)) {
+      list.push(voterId);
+      localStorage.setItem('vota_iasd_local_voters', JSON.stringify(list));
     }
+    if (broadcastChannel) {
+      broadcastChannel.postMessage({ type: 'VOTER_CONNECTED', voterId, list });
+    }
+    window.dispatchEvent(new CustomEvent('vota_iasd_voter_connected', { detail: { voterId, list } }));
+  } catch (_) {}
 
-    // 2. Transmite via BroadcastChannel e evento local
-    try {
-      const raw = localStorage.getItem('vota_iasd_local_voters');
-      const list: string[] = raw ? JSON.parse(raw) : [];
-      if (!list.includes(voterId)) {
-        list.push(voterId);
-        localStorage.setItem('vota_iasd_local_voters', JSON.stringify(list));
-      }
-      if (broadcastChannel) {
-        broadcastChannel.postMessage({ type: 'VOTER_CONNECTED', voterId, list });
-      }
-      window.dispatchEvent(new CustomEvent('vota_iasd_voter_connected', { detail: { voterId, list } }));
-    } catch (_) {}
-  };
-
-  // Ping inicial imediato
-  pingPresence();
-
-  // Mantém ativo a cada 10 segundos
-  const interval = setInterval(pingPresence, 10000);
-
-  return () => {
-    clearInterval(interval);
-  };
+  return () => {};
 }
 
-// Inscrição em tempo real na lista de votantes conectados
+// Inscrição em tempo real na lista de votantes conectados (SOMENTE LOCAL/BROADCAST)
 export function subscribeToConnectedVoters(
-  sessionId: string,
+  _sessionId: string,
   onUpdate: (voters: string[]) => void
 ): () => void {
-  const effectiveSessionId = sessionId || 'iasd-central-01';
-  let unsubFirestore: (() => void) | null = null;
-
   // Carrega imediatamente do localStorage
   try {
     const raw = localStorage.getItem('vota_iasd_local_voters');
@@ -558,27 +581,6 @@ export function subscribeToConnectedVoters(
       if (Array.isArray(list) && list.length > 0) onUpdate(list);
     }
   } catch (_) {}
-
-  if (isFirebaseConfigured && db) {
-    try {
-      const presenceCol = collection(db, 'sessions', effectiveSessionId, 'presence');
-      unsubFirestore = onSnapshot(
-        presenceCol,
-        (snapshot) => {
-          const ids = snapshot.docs.map((d) => d.id);
-          onUpdate(ids);
-          try {
-            localStorage.setItem('vota_iasd_local_voters', JSON.stringify(ids));
-          } catch (_) {}
-        },
-        (err) => {
-          console.warn('Erro ao assinar votantes conectados:', err);
-        }
-      );
-    } catch (err) {
-      console.warn('Falha ao abrir listener de votantes:', err);
-    }
-  }
 
   // Listener local de broadcast entre abas
   const handleBroadcast = (e: MessageEvent) => {
@@ -610,7 +612,6 @@ export function subscribeToConnectedVoters(
   window.addEventListener('storage', handleStorage);
 
   return () => {
-    if (unsubFirestore) unsubFirestore();
     if (broadcastChannel) {
       broadcastChannel.removeEventListener('message', handleBroadcast);
     }

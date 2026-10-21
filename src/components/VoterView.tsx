@@ -17,7 +17,9 @@ import {
   clearVotedFlag,
   getDeviceId,
   registerVoterPresence,
+  setLocalSession,
 } from '../services/votingService';
+import { connectVoterToHost } from '../services/peerSyncService';
 import { urnaAudio } from '../utils/audio';
 import { IasdLogo } from './IasdLogo';
 import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
@@ -138,6 +140,15 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   useEffect(() => {
     if (isBlockedByLock) return;
     const unsub = registerVoterPresence(session.id);
+    return unsub;
+  }, [session.id, isBlockedByLock]);
+
+  // Conecta ao Host P2P WebRTC do Admin (alternativa direta se Firebase atingir cota)
+  useEffect(() => {
+    if (isBlockedByLock || !session.id) return;
+    const unsub = connectVoterToHost(session.id, (p2pSession) => {
+      setLocalSession(p2pSession);
+    });
     return unsub;
   }, [session.id, isBlockedByLock]);
 
