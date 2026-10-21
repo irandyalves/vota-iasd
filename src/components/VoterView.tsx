@@ -34,6 +34,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [errorTrigger, setErrorTrigger] = useState(0);
   // Controle de escala da fonte dos cards: mín 0% (+0%), passos de 8% e 8% limitado a 24% (0%, 8%, 16%, 24%)
   const [fontScalePercent, setFontScalePercent] = useState<number>(() => {
     if (typeof window !== 'undefined') {
@@ -65,12 +66,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
   const fontMultiplier = 1 + fontScalePercent / 100;
 
-  // Aviso em formato de cortina: some sozinho após alguns segundos
+  // Aviso: some sozinho após alguns segundos
   useEffect(() => {
     if (!errorMessage) return;
     const t = setTimeout(() => setErrorMessage(''), 3500);
     return () => clearTimeout(t);
-  }, [errorMessage]);
+  }, [errorMessage, errorTrigger]);
 
   // Identifica a rodada atual
   const isTieBreak = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
@@ -188,9 +189,16 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((item) => item !== id));
+      setErrorMessage('');
     } else {
       if (selectedIds.length >= maxVotes) {
-        setErrorMessage(`Você já selecionou a quantidade de ${maxVotes} ${maxVotes === 1 ? 'nome' : 'nomes'}. Desmarque um para trocar.`);
+        setErrorTrigger(Date.now());
+        setErrorMessage('LIMIT_EXCEEDED');
+        if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+          try {
+            navigator.vibrate([70, 40, 70]);
+          } catch (_) {}
+        }
         return;
       }
       setSelectedIds([...selectedIds, id]);
@@ -209,7 +217,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     if (isSubmitting || submitSuccess || alreadyVoted) return;
     // Só permite confirmar se atingiu exatamente a quantidade definida
     if (selectedIds.length !== maxVotes) {
-      setErrorMessage(`É obrigatório selecionar exatamente ${maxVotes} ${maxVotes === 1 ? 'nome' : 'nomes'} para confirmar.`);
+      setErrorTrigger(Date.now());
+      setErrorMessage('LIMIT_EXCEEDED');
       return;
     }
 
@@ -807,21 +816,38 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         </div>
       </div>
 
-      {/* Mensagem de Erro ou Validação: desce como uma CORTINA sobre os nomes (não empurra a lista para baixo) */}
+      {/* Mensagem de Erro ou Validação: CAI E QUICA (LARANJA, TEXTO EM BOLD, NÚMERO EM VERDE ESCURO) */}
       <div className="sticky top-0 z-40 h-0 overflow-visible">
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
           {errorMessage && (
             <motion.div
-              key="aviso-cortina"
+              key={`aviso-quica-${errorTrigger}-${errorMessage}`}
               onClick={() => setErrorMessage('')}
-              initial={{ clipPath: 'inset(0 0 100% 0)', opacity: 0.6 }}
-              animate={{ clipPath: 'inset(0 0 0% 0)', opacity: 1 }}
-              exit={{ clipPath: 'inset(0 0 100% 0)', opacity: 0.6 }}
-              transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-              className="absolute left-0 right-0 top-0 p-3 rounded-b-xl rounded-t-md bg-rose-950/95 backdrop-blur-sm border border-rose-700/70 text-rose-100 text-xs font-semibold flex items-center gap-2 shadow-[0_12px_28px_rgba(0,0,0,0.75)] cursor-pointer"
+              initial={{ y: -75, opacity: 0, scale: 0.9 }}
+              animate={{ y: 0, opacity: 1, scale: 1 }}
+              exit={{ y: -60, opacity: 0, scale: 0.9 }}
+              transition={{
+                type: 'spring',
+                stiffness: 550,
+                damping: 14,
+                mass: 0.85,
+              }}
+              className="absolute left-1 right-1 top-1 p-3 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 border-2 border-amber-200 text-white flex items-center justify-center gap-2 shadow-[0_14px_30px_rgba(249,115,22,0.55),0_4px_10px_rgba(0,0,0,0.5)] cursor-pointer select-none z-50"
             >
-              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-              {errorMessage}
+              <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow" />
+              <div className="flex items-center gap-1.5 flex-wrap justify-center text-xs sm:text-sm font-black uppercase tracking-wider text-white drop-shadow">
+                {errorMessage === 'LIMIT_EXCEEDED' ? (
+                  <>
+                    <span>VOCÊ SÓ PODE ESCOLHE</span>
+                    <span className="text-[#064e3b] font-black text-sm sm:text-base bg-emerald-200/95 px-2 py-0.5 rounded-md border border-emerald-800/40 shadow-inner">
+                      {maxVotes}
+                    </span>
+                    <span>{maxVotes === 1 ? 'NOME' : 'NOMES'}</span>
+                  </>
+                ) : (
+                  <span>{errorMessage}</span>
+                )}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
