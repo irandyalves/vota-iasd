@@ -1417,40 +1417,24 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         </div>
       </div>
 
-      {/* BANNER DE AVISO DE EMPATE (BORDA VERMELHA FINA, ESTRELA E "EMPATE" CLARO) */}
+      {/* BANNER DE AVISO DE EMPATE (50% MAIS ESTREITO, CENTRALIZADO, COM CAPTION E BOTÃO À DIREITA) */}
       {hasTies && (
-        <div className="mb-3 p-3 rounded-xl bg-rose-950/40 border border-rose-500/80 shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 backdrop-blur-sm">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
-              <Star className="w-5 h-5 text-rose-400 fill-rose-400" />
+        <div className="mb-3 px-4 py-2.5 rounded-xl bg-[#141721] border border-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,0.25)] flex items-center justify-between gap-3 w-full sm:w-[50%] min-w-[340px] max-w-[620px] mx-auto backdrop-blur-sm">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
+              <Star className="w-4 h-4 text-rose-400 fill-rose-400" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h4 className="font-black text-xs sm:text-sm text-white uppercase tracking-wide">
-                  Empate Detectado na Apuração
-                </h4>
-                <span className="px-2 py-0.5 rounded text-[9.5px] font-black uppercase tracking-wider bg-rose-600/40 text-rose-300 border border-rose-500/60 inline-flex items-center gap-1">
-                  <Star className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
-                  EMPATE
-                </span>
-              </div>
-              <p className="text-[11px] text-rose-200/90 font-medium mt-0.5">
-                {detectedTies
-                  .map(
-                    (t) =>
-                      `${t.label} (${t.votesCount} ${t.votesCount === 1 ? 'voto' : 'votos'}): ${t.tiedCandidates.map((c) => c.name).join(', ')}`
-                  )
-                  .join(' • ')}
-              </p>
-            </div>
+            <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wide truncate">
+              TEMOS EMPATES PARA RESOLVER
+            </h4>
           </div>
           <button
             type="button"
             onClick={() => setIsTieModalOpen(true)}
-            className="w-full sm:w-auto px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)] shrink-0"
+            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)] shrink-0"
           >
             <Star className="w-3.5 h-3.5 fill-white" />
-            <span>Resolver Empate</span>
+            <span>RESOLVER EMPATE</span>
           </button>
         </div>
       )}
