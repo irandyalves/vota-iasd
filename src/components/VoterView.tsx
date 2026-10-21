@@ -228,15 +228,15 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
           className="bg-[#001f47] border border-blue-800 rounded-2xl p-3 sm:p-4 shadow-2xl space-y-2.5"
         >
           {/* Cabeçalho de Resultados (compacto) */}
-          <div className="text-center pb-2 border-b border-blue-900/80 relative">
-            {/* A(menor) e A(maior) separados e sem borda com espaço de 2 caracteres */}
-            <div className="absolute right-0 top-0 flex items-center gap-2 select-none">
+          <div className="text-center pb-2 border-b border-blue-900/80 relative min-h-[58px] flex flex-col justify-center overflow-hidden">
+            {/* A(menor) e A(maior) separados e sem borda com espaço de 2 caracteres (z-30 sempre clicáveis) */}
+            <div className="absolute right-0 top-0 z-30 flex items-center gap-2 select-none">
               <button
                 type="button"
                 onClick={decreaseFont}
                 disabled={fontScalePercent === 0}
                 title="Reduzir fonte dos cards (mínimo)"
-                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                className={`min-w-[34px] min-h-[34px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
                   fontScalePercent === 0
                     ? 'opacity-25 cursor-not-allowed text-slate-400'
                     : 'text-white hover:text-amber-300'
@@ -249,7 +249,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                 onClick={increaseFont}
                 disabled={fontScalePercent === 24}
                 title="Aumentar fonte dos cards (limite +24%)"
-                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                className={`min-w-[34px] min-h-[34px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
                   fontScalePercent === 24
                     ? 'opacity-25 cursor-not-allowed text-slate-400'
                     : 'text-white hover:text-amber-300'
@@ -258,8 +258,9 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                 <span className="text-lg font-black leading-none pointer-events-none">A</span>
               </button>
             </div>
+
             <span
-              className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-1 shadow-sm ${
+              className={`inline-flex items-center gap-1 text-[9px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border mb-1 shadow-sm mx-auto ${
                 live
                   ? 'bg-blue-950 text-sky-300 border-sky-500/60'
                   : 'bg-emerald-950 text-emerald-300 border-emerald-500/60'
@@ -277,37 +278,32 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                 </>
               )}
             </span>
-            <h2 className="text-sm font-black text-white uppercase tracking-tight leading-tight">
+            <h2 className="text-sm font-black text-white uppercase tracking-tight leading-tight px-16">
               {session.title}
             </h2>
             {live && (
-              <p className="text-[10px] text-emerald-400 font-bold mt-0.5 inline-flex items-center gap-0.5">
+              <p className="text-[10px] text-emerald-400 font-bold mt-0.5 inline-flex items-center gap-0.5 mx-auto">
                 <CheckCircle2 className="w-3 h-3" /> Seu voto foi computado
               </p>
             )}
-          </div>
 
-          {/* Banner de Empate (somente no resultado oficial) */}
-          {hasTies && (
-            <div className="p-2 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 shadow-xl space-y-1">
-              <div className="flex items-center gap-1.5">
-                <Star className="w-4 h-4 text-rose-400 fill-rose-400 shrink-0" />
-                <h4 className="font-extrabold text-[10px] uppercase tracking-wide text-white">
-                  Empate Detectado na Apuração!
-                </h4>
-              </div>
-              <div className="text-[9px] text-rose-200/90 space-y-0.5 font-mono">
-                {detectedTies.map((t, idx) => (
-                  <div key={idx}>
-                    • <strong>{t.label}</strong> ({t.votesCount} {t.votesCount === 1 ? 'voto' : 'votos'}): {t.tiedCandidates.map((c) => c.name).join(', ')}
-                  </div>
-                ))}
-              </div>
-              <p className="text-[9px] text-rose-300 font-bold italic">
-                Aguarde o líder iniciar a rodada de desempate neste aparelho.
-              </p>
-            </div>
-          )}
+            {/* SE HOUVER EMPATE: MODALZINHO DESCE SUAVE EM 1.5s COBRINDO O CABEÇALHO */}
+            {hasTies && (
+              <motion.div
+                initial={{ y: '-100%', opacity: 0 }}
+                animate={{ y: '0%', opacity: 1 }}
+                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-0 z-20 bg-rose-950 border border-rose-500/90 rounded-xl flex items-center justify-center p-2.5 shadow-2xl backdrop-blur-sm"
+              >
+                <div className="flex items-center justify-center gap-2 text-center w-full pr-14 pl-2">
+                  <Star className="w-4 h-4 text-rose-400 fill-rose-400 shrink-0" />
+                  <h4 className="font-black text-xs sm:text-sm uppercase tracking-wider text-white text-center">
+                    EMPATE DETECTADO ENTRE CANDIDATOS.
+                  </h4>
+                </div>
+              </motion.div>
+            )}
+          </div>
 
           {/* Lista de Candidatos (cards 30% menores em altura e fonte) */}
           <div className="space-y-1">
@@ -336,8 +332,13 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   layout
                   transition={{ type: 'spring', damping: 25, stiffness: 180 }}
                   key={option.id}
-                  style={{ gridTemplateColumns: '20ch minmax(0,1fr) auto 5ch' }}
-                  className={`${hasCategorySeparator ? 'mt-3' : ''} py-1 px-2 rounded-lg border relative overflow-hidden grid items-center text-[10px] min-h-[26px] ${
+                  style={{
+                    gridTemplateColumns: `${Math.round(20 * fontMultiplier)}ch minmax(0,1fr) auto ${Math.round(5.5 * fontMultiplier)}ch`,
+                    minHeight: `${Math.round(28 * fontMultiplier)}px`,
+                    paddingTop: `${Math.round(4 * fontMultiplier)}px`,
+                    paddingBottom: `${Math.round(4 * fontMultiplier)}px`,
+                  }}
+                  className={`${hasCategorySeparator ? 'mt-3' : ''} px-2 rounded-lg border relative overflow-hidden grid items-center ${
                     tiedGroup
                       ? 'bg-[#18080c]/90 border border-rose-500/80 text-white'
                       : isElected
@@ -370,7 +371,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   {/* COLUNA 1 (20 caracteres fixos): Posição + Nome */}
                   <div className="z-10 min-w-0 flex items-center gap-1 overflow-hidden">
                   <div
-                    className={`w-[18px] h-[18px] rounded text-[9px] font-black flex items-center justify-center shrink-0 z-10 ${
+                    style={{
+                      width: `${Math.round(18 * fontMultiplier)}px`,
+                      height: `${Math.round(18 * fontMultiplier)}px`,
+                      fontSize: `${(9 * fontMultiplier).toFixed(1)}px`,
+                    }}
+                    className={`rounded font-black flex items-center justify-center shrink-0 z-10 ${
                       tiedGroup
                         ? 'bg-rose-600 text-white border border-rose-400'
                         : isElected
@@ -386,7 +392,10 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                   </div>
 
                     <h4
-                      className={`font-bold text-[10px] truncate uppercase leading-tight min-w-0 ${
+                      style={{
+                        fontSize: `${(11.5 * fontMultiplier).toFixed(1)}px`,
+                      }}
+                      className={`font-bold truncate uppercase leading-tight min-w-0 ${
                         tiedGroup
                           ? 'text-white font-black'
                           : isElected
