@@ -339,7 +339,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
               <span className="text-white/30 font-light text-xs shrink-0 select-none">|</span>
 
               {/* 2. MULHERES (negrito fonte branca) */}
-              <h2 className="text-xs sm:text-sm font-black text-white uppercase tracking-wide shrink-0">
+              <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-tight shrink-0 drop-shadow-sm">
                 {session.title}
               </h2>
 
@@ -523,8 +523,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
                   {/* COLUNA 3: Votos (puxado para a esquerda, 2 caracteres antes da %) */}
                   <div className="z-10 font-mono flex items-center justify-end gap-1 whitespace-nowrap" style={{ marginRight: '2ch' }}>
-                    <span className="text-[8px] text-slate-300/80 uppercase font-bold">votos</span>
-                    <span className="font-extrabold text-[10px] text-white">{option.votesCount || 0}</span>
+                    <span className="font-mono font-black text-xs text-amber-300 leading-none">{option.votesCount || 0}</span>
                   </div>
 
                   {/* COLUNA 4: % (5 caracteres fixos, alinhado à direita) */}
