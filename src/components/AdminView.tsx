@@ -769,7 +769,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     }`}
                   >
                     <span className={isSelected ? 'font-bold text-white' : 'font-normal text-white'}>{displayName}</span>
-                    <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] border border-amber-400/70 text-[10px] font-mono font-black text-amber-400">
+                    <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] text-[12px] font-mono font-black text-amber-400">
                       {count}
                     </span>
                     {/* Único ícone clicável 1: Lápis (Editar Nome do Evento) */}
