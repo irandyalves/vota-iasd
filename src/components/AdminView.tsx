@@ -1172,11 +1172,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
           {/* LINHA CENTRALIZADA VERTICALMENTE: FAIXA LARANJA ("EVENTOS" + "+ CRIAR VOTAÇÃO") À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
           <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
-            {/* FAIXA LARANJA ESTENDIDA DE "EVENTOS" ATÉ DEBAIXO DE "+ CRIAR VOTAÇÃO" (SÓLIDA ATÉ 35%, DEGRADÊ ATÉ 0% EM 100%) */}
+            {/* FAIXA LARANJA/AMARELO PASTEL SUAVE (MENOS INTENSO) DE "EVENTOS" ATÉ DEBAIXO DE "+ CRIAR VOTAÇÃO" */}
             <div
               style={{
                 background:
-                  'linear-gradient(90deg, rgba(245, 158, 11, 1) 0%, rgba(245, 158, 11, 1) 35%, rgba(245, 158, 11, 0) 100%)',
+                  'linear-gradient(90deg, rgba(235, 195, 115, 0.72) 0%, rgba(225, 185, 100, 0.6) 35%, rgba(225, 185, 100, 0) 100%)',
               }}
               className="self-stretch flex items-center shrink-0 pr-3 sm:pr-4 py-2.5"
             >
@@ -1239,12 +1239,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     title="Selecionar este evento"
                     className={`group px-2.5 py-2 min-h-[34px] rounded-[4px] text-[10.5px] text-white uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none border ${
                       isSelected
-                        ? 'font-bold bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 shadow-[0_6px_18px_rgba(0,0,0,0.75),0_0_12px_rgba(251,191,36,0.35)]'
-                        : 'font-normal bg-[#07132a]/95 hover:bg-[#0c1f44] border-blue-700/80 hover:border-amber-400/60 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.85)]'
+                        ? 'font-bold bg-gradient-to-r from-emerald-600/35 via-emerald-800/40 to-blue-950/85 border-emerald-400 shadow-[0_6px_18px_rgba(0,0,0,0.75),0_0_14px_rgba(16,185,129,0.4)]'
+                        : 'font-normal bg-[#07132a]/95 hover:bg-[#0c1f44] border-blue-700/80 hover:border-emerald-400/60 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.85)]'
                     }`}
                   >
                     <span className={isSelected ? 'font-bold text-white' : 'font-normal text-white'}>{displayName}</span>
-                    <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] text-[12px] font-mono font-black text-amber-400">
+                    <span
+                      className={`px-1.5 py-0.2 rounded-[3px] text-[12px] font-mono font-black ${
+                        isSelected
+                          ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
+                          : 'bg-[#07132a] text-amber-400'
+                      }`}
+                    >
                       {count}
                     </span>
                     {/* Único ícone clicável 1: Lápis (Editar Nome e Configurações do Evento) */}
@@ -1261,7 +1267,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         }
                       }}
                       title="Editar configurações desta votação"
-                      className="p-0.5 text-slate-400 hover:text-amber-300 transition cursor-pointer active:scale-90"
+                      className={`p-0.5 transition cursor-pointer active:scale-90 ${
+                        isSelected ? 'text-emerald-300 hover:text-white' : 'text-slate-400 hover:text-amber-300'
+                      }`}
                     >
                       <Pencil className="w-3 h-3" />
                     </button>
