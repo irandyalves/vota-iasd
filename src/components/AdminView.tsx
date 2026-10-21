@@ -1505,11 +1505,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 };
 
                 return (
-                  <div className="space-y-2 select-none">
+                  <div className="space-y-2.5 select-none">
                     {/* CARD 1: TELÃO (PROJEÇÃO PRINCIPAL) - ESMAGADO EM LINHA ÚNICA COM CORES À DIREITA */}
-                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-2.5 space-y-2 shadow-lg">
+                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3.5 space-y-2.5 shadow-lg">
                       {/* Cabeçalho Compacto: Telão (Projeção Principal) + Botão Projetar 2ª Tela */}
-                      <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06] flex-wrap gap-2">
+                      <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
                             <Tv className="w-3.5 h-3.5 text-slate-300" />
@@ -1528,7 +1528,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="button"
                               onClick={() => toggleSecondaryScreen()}
                               title="Fechar / Ocultar a janela do Telão no 2º monitor"
-                              className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
                             >
                               <MonitorOff className="w-3.5 h-3.5 text-rose-400" />
                               <span>Ocultar 2ª Tela</span>
@@ -1539,7 +1539,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="button"
                               onClick={() => toggleSecondaryScreen()}
                               title="Abrir o Telão em Tela Cheia no 2º monitor ou projetor"
-                              className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
                             >
                               <Tv className="w-3.5 h-3.5" />
                               <span>Projetar 2ª Tela</span>
@@ -1557,12 +1557,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         {/* GRUPO ESQUERDA: Colunas + Posição QR + 3 Sliders Compactos */}
                         <div className="flex flex-wrap items-center gap-2">
                           {/* 1. Colunas */}
-                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2.5 py-1.5 rounded-lg border border-white/[0.08]">
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Colunas:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ columns: 1 })}
-                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
+                              className={`px-2 py-1 rounded text-[11px] font-medium transition cursor-pointer ${
                                 cols === 1 ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
@@ -1571,7 +1571,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             <button
                               type="button"
                               onClick={() => updateLayout({ columns: 2 })}
-                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
+                              className={`px-2 py-1 rounded text-[11px] font-medium transition cursor-pointer ${
                                 cols === 2 ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
@@ -1580,13 +1580,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           </div>
 
                           {/* 2. Posição QR */}
-                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2.5 py-1.5 rounded-lg border border-white/[0.08]">
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mr-0.5">QR:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrPosition: 'top' })}
                               title="QR no topo"
-                              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                              className={`px-1.5 py-1 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
                                 qrPos === 'top' ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
@@ -1597,7 +1597,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="button"
                               onClick={() => updateLayout({ qrPosition: 'middle' })}
                               title="QR no centro"
-                              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                              className={`px-1.5 py-1 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
                                 qrPos === 'middle' ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
@@ -1608,7 +1608,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="button"
                               onClick={() => updateLayout({ qrPosition: 'bottom' })}
                               title="QR na base"
-                              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                              className={`px-1.5 py-1 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
                                 qrPos === 'bottom' ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
@@ -1618,12 +1618,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           </div>
 
                           {/* 3. Slider Tamanho QR */}
-                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                          <div className="flex items-center gap-1.5 bg-[#0b0d13] px-2.5 py-1.5 rounded-lg border border-white/[0.08]">
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Tam. QR:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrSize: Math.max(50, qrSize - 5) })}
-                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
+                              className="w-4 h-4.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               -
                             </button>
@@ -1634,27 +1634,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               step={5}
                               value={qrSize}
                               onChange={(e) => updateLayout({ qrSize: Number(e.target.value) })}
-                              className="w-14 h-1 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
+                              className="w-14 h-1.5 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
                             />
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrSize: Math.min(150, qrSize + 5) })}
-                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
+                              className="w-4 h-4.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               +
                             </button>
-                            <span className="text-slate-200 font-mono text-[10.5px] px-1 rounded bg-white/[0.05]">
+                            <span className="text-slate-200 font-mono text-[10.5px] px-1 py-0.5 rounded bg-white/[0.05]">
                               {qrSize}%
                             </span>
                           </div>
 
                           {/* 4. Slider Altura dos Cards */}
-                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                          <div className="flex items-center gap-1.5 bg-[#0b0d13] px-2.5 py-1.5 rounded-lg border border-white/[0.08]">
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Altura:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardHeight: Math.max(26, height - 4) })}
-                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
+                              className="w-4 h-4.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               -
                             </button>
@@ -1664,27 +1664,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               max={76}
                               value={height}
                               onChange={(e) => updateLayout({ cardHeight: Number(e.target.value) })}
-                              className="w-14 h-1 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
+                              className="w-14 h-1.5 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
                             />
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardHeight: Math.min(76, height + 4) })}
-                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
+                              className="w-4 h-4.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               +
                             </button>
-                            <span className="text-slate-200 font-mono text-[10.5px] px-1 rounded bg-white/[0.05]">
+                            <span className="text-slate-200 font-mono text-[10.5px] px-1 py-0.5 rounded bg-white/[0.05]">
                               {height}px
                             </span>
                           </div>
 
                           {/* 5. Slider Espaçamento */}
-                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                          <div className="flex items-center gap-1.5 bg-[#0b0d13] px-2.5 py-1.5 rounded-lg border border-white/[0.08]">
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Espaço:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardGapV2: Math.max(0, gap - 1) })}
-                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
+                              className="w-4 h-4.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               -
                             </button>
@@ -1695,23 +1695,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               step={1}
                               value={gap}
                               onChange={(e) => updateLayout({ cardGapV2: Number(e.target.value) })}
-                              className="w-10 h-1 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
+                              className="w-10 h-1.5 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
                             />
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardGapV2: Math.min(24, gap + 1) })}
-                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
+                              className="w-4 h-4.5 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               +
                             </button>
-                            <span className="text-slate-200 font-mono text-[10.5px] px-1 rounded bg-white/[0.05]">
+                            <span className="text-slate-200 font-mono text-[10.5px] px-1 py-0.5 rounded bg-white/[0.05]">
                               {gap}px
                             </span>
                           </div>
                         </div>
 
                         {/* GRUPO DIREITA: CORES ESMAGADAS (Titulares, 1º Supl, 2º Supl, Não Classif) */}
-                        <div className="flex items-center gap-2 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08] ml-auto">
+                        <div className="flex items-center gap-2 bg-[#0b0d13] px-2.5 py-1.5 rounded-lg border border-white/[0.08] ml-auto">
                           {/* Cor: Titulares */}
                           <div className="flex items-center gap-1">
                             <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Titular:</span>
@@ -1719,7 +1719,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="color"
                               value={winnerColor}
                               onChange={(e) => updateLayout({ winnerColor: e.target.value })}
-                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 shrink-0"
                               title="Cor dos Titulares"
                             />
                             <div className="flex items-center gap-0.5">
@@ -1729,7 +1729,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   type="button"
                                   onClick={() => updateLayout({ winnerColor: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                  className={`w-2.5 h-2.5 rounded-full cursor-pointer transition transform active:scale-90 ${
                                     winnerColor.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
@@ -1738,7 +1738,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           </div>
 
-                          <div className="h-3.5 w-px bg-white/[0.08]" />
+                          <div className="h-4 w-px bg-white/[0.08]" />
 
                           {/* Cor: 1º Suplente */}
                           <div className="flex items-center gap-1">
@@ -1747,7 +1747,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="color"
                               value={suplenteColor}
                               onChange={(e) => updateLayout({ suplenteColor: e.target.value })}
-                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 shrink-0"
                               title="Cor do 1º Suplente"
                             />
                             <div className="flex items-center gap-0.5">
@@ -1757,7 +1757,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   type="button"
                                   onClick={() => updateLayout({ suplenteColor: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                  className={`w-2.5 h-2.5 rounded-full cursor-pointer transition transform active:scale-90 ${
                                     suplenteColor.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
@@ -1766,7 +1766,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           </div>
 
-                          <div className="h-3.5 w-px bg-white/[0.08]" />
+                          <div className="h-4 w-px bg-white/[0.08]" />
 
                           {/* Cor: 2º Suplente */}
                           <div className="flex items-center gap-1">
@@ -1775,7 +1775,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="color"
                               value={suplente2Color}
                               onChange={(e) => updateLayout({ suplente2Color: e.target.value })}
-                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 shrink-0"
                               title="Cor do 2º Suplente"
                             />
                             <div className="flex items-center gap-0.5">
@@ -1785,7 +1785,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   type="button"
                                   onClick={() => updateLayout({ suplente2Color: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                  className={`w-2.5 h-2.5 rounded-full cursor-pointer transition transform active:scale-90 ${
                                     suplente2Color.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
@@ -1794,7 +1794,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           </div>
 
-                          <div className="h-3.5 w-px bg-white/[0.08]" />
+                          <div className="h-4 w-px bg-white/[0.08]" />
 
                           {/* Cor: Não Classificados */}
                           <div className="flex items-center gap-1">
@@ -1803,7 +1803,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="color"
                               value={unclassifiedColor}
                               onChange={(e) => updateLayout({ unclassifiedColor: e.target.value })}
-                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              className="w-4 h-4 rounded cursor-pointer bg-transparent border-0 shrink-0"
                               title="Cor Não Classificados"
                             />
                             <div className="flex items-center gap-0.5">
@@ -1813,7 +1813,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   type="button"
                                   onClick={() => updateLayout({ unclassifiedColor: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                  className={`w-2.5 h-2.5 rounded-full cursor-pointer transition transform active:scale-90 ${
                                     unclassifiedColor.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
@@ -1826,19 +1826,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     </div>
 
                     {/* CARD 2: REGRAS GERAIS DA ELEIÇÃO (PADRÕES) - COMPACTO / ESMAGADO */}
-                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-2 space-y-1.5 shadow-lg">
+                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3 space-y-2.5 shadow-lg">
                       {/* Cabeçalho Compacto */}
-                      <div className="flex items-center justify-between pb-1 border-b border-white/[0.06] flex-wrap gap-2">
+                      <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
-                            <Sliders className="w-3 h-3 text-slate-300" />
+                          <div className="w-6 h-6 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
+                            <Sliders className="w-3.5 h-3.5 text-slate-300" />
                           </div>
                           <span className="font-medium text-slate-100 text-xs tracking-tight">
                             Regras da Eleição (Padrões do Sistema)
                           </span>
                         </div>
 
-                        <span className="text-[10px] text-slate-400 font-normal px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.06]">
+                        <span className="text-[10px] text-slate-400 font-normal px-2.5 py-1 rounded bg-white/[0.03] border border-white/[0.06]">
                           Novas votações herdam estes padrões
                         </span>
                       </div>
@@ -1846,7 +1846,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       {/* Grade Compacta de 4 Módulos Estúdio em 1 Linha */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                         {/* 1. Titulares (Geral) */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                           <span className="text-xs font-medium text-slate-300 shrink-0">
                             Titulares:
                           </span>
@@ -1860,14 +1860,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 const val = Math.max(1, parseInt(e.target.value) || 1);
                                 saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
                               }}
-                              className="w-16 px-2 py-0.5 bg-[#141721] border border-white/[0.08] rounded text-center text-amber-300 font-semibold text-xs outline-none focus:border-emerald-500/50"
+                              className="w-16 px-2 py-1 bg-[#141721] border border-white/[0.08] rounded text-center text-amber-300 font-semibold text-xs outline-none focus:border-emerald-500/50"
                             />
                             <span className="text-[11px] text-slate-400 font-medium">vagas</span>
                           </div>
                         </div>
 
                         {/* 2. 1º Suplente */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
                             <input
                               type="checkbox"
@@ -1892,14 +1892,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 const val = Math.max(1, parseInt(e.target.value) || 1);
                                 saveSession({ ...session, suplentesCount: val });
                               }}
-                              className="w-16 px-2 py-0.5 bg-[#141721] border border-white/[0.08] rounded text-center text-blue-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
+                              className="w-16 px-2 py-1 bg-[#141721] border border-white/[0.08] rounded text-center text-blue-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
                             />
                             <span className="text-[11px] text-slate-400 font-medium">vagas</span>
                           </div>
                         </div>
 
                         {/* 3. 2º Suplente */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
                             <input
                               type="checkbox"
@@ -1924,14 +1924,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 const val = Math.max(1, parseInt(e.target.value) || 1);
                                 saveSession({ ...session, segundoSuplentesCount: val });
                               }}
-                              className="w-16 px-2 py-0.5 bg-[#141721] border border-white/[0.08] rounded text-center text-slate-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
+                              className="w-16 px-2 py-1 bg-[#141721] border border-white/[0.08] rounded text-center text-slate-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
                             />
                             <span className="text-[11px] text-slate-400 font-medium">vagas</span>
                           </div>
                         </div>
 
                         {/* 4. Resolver Empates */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5">
                             <input
                               type="checkbox"
