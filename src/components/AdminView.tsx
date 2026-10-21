@@ -1514,45 +1514,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 };
 
                 return (
-                  <div className="space-y-3.5 select-none">
-                    {/* CARD 1: TELÃO (PROJEÇÃO PRINCIPAL) - Inspirado no estilo estúdio do Print 2 */}
-                    <div className="bg-[#141721] border border-white/[0.08] rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
-                      {/* Cabeçalho do Card: Ícone em caixa arredondada + Título/Subtítulo + Indicadores e Ação à Direita */}
-                      <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] flex-wrap gap-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
-                            <Tv className="w-5 h-5 text-slate-300" />
+                  <div className="space-y-2 select-none">
+                    {/* CARD 1: TELÃO (PROJEÇÃO PRINCIPAL) - ESMAGADO EM LINHA ÚNICA COM CORES À DIREITA */}
+                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-2.5 space-y-2 shadow-lg">
+                      {/* Cabeçalho Compacto: Telão (Projeção Principal) + Botão Projetar 2ª Tela */}
+                      <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.06] flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
+                            <Tv className="w-3.5 h-3.5 text-slate-300" />
                           </div>
-                          <div>
-                            <h3 className="font-medium text-slate-100 text-sm sm:text-base tracking-tight flex items-center gap-2">
-                              Telão (Projeção Principal)
-                            </h3>
-                            <p className="text-xs text-slate-400 font-normal">
-                              Monitor do público / membros da congregação
-                            </p>
-                          </div>
+                          <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight">
+                            Telão (Projeção Principal)
+                          </span>
+                          <span className="text-[10.5px] text-slate-500 font-normal hidden lg:inline">
+                            • Layout e cores dos cards no 2º monitor
+                          </span>
                         </div>
 
-                        <div className="flex items-center gap-3 shrink-0">
-                          {/* Indicadores de Dimensão estilo Print 2 (Largura/Altura/Card/QR) */}
-                          <div className="hidden md:flex items-center gap-2 text-xs">
-                            <span className="text-slate-400 text-[11px] uppercase tracking-wider font-medium">Card:</span>
-                            <span className="bg-[#0b0d13] border border-white/[0.08] px-2.5 py-1 rounded-md text-slate-200 font-mono text-xs">
-                              {height}px
-                            </span>
-                            <span className="text-slate-400 text-[11px] uppercase tracking-wider font-medium ml-1">QR:</span>
-                            <span className="bg-[#0b0d13] border border-white/[0.08] px-2.5 py-1 rounded-md text-slate-200 font-mono text-xs">
-                              {qrSize}%
-                            </span>
-                          </div>
-
-                          {/* Botão de Projetar / Ocultar 2ª Tela */}
+                        <div className="flex items-center gap-2 shrink-0">
                           {isScreen2Open ? (
                             <button
                               type="button"
                               onClick={() => toggleSecondaryScreen()}
                               title="Fechar / Ocultar a janela do Telão no 2º monitor"
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
+                              className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
                             >
                               <MonitorOff className="w-3.5 h-3.5 text-rose-400" />
                               <span>Ocultar 2ª Tela</span>
@@ -1563,144 +1548,91 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               type="button"
                               onClick={() => toggleSecondaryScreen()}
                               title="Abrir o Telão em Tela Cheia no 2º monitor ou projetor"
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
+                              className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
                             >
                               <Tv className="w-3.5 h-3.5" />
                               <span>Projetar 2ª Tela</span>
                               <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                             </button>
                           )}
-
-                          <span className="text-[11px] text-slate-500 hidden sm:inline pl-1">
+                          <span className="text-[10px] text-slate-500 hidden sm:inline pl-1">
                             ESC fecha
                           </span>
                         </div>
                       </div>
 
-                      {/* Sub-barra de Pílulas / Segmentos (Idêntica à linha CAMADAS do Print 2) */}
-                      <div className="flex flex-wrap items-center gap-4 text-xs pt-0.5">
-                        {/* Seletor de Colunas */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                            Colunas:
-                          </span>
-                          <div className="flex items-center gap-1 bg-[#0b0d13] p-1 rounded-lg border border-white/[0.08]">
+                      {/* TUDO NA MESMA LINHA (ESMAGADO): Colunas, Posição QR, Sliders e Cores à Direita */}
+                      <div className="flex flex-wrap items-center justify-between gap-x-2.5 gap-y-1.5 text-xs">
+                        {/* GRUPO ESQUERDA: Colunas + Posição QR + 3 Sliders Compactos */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          {/* 1. Colunas */}
+                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Colunas:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ columns: 1 })}
-                              className={`px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                                cols === 1
-                                  ? 'bg-white/15 text-white border border-white/20 shadow-sm'
-                                  : 'text-slate-400 hover:text-slate-200'
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
+                                cols === 1 ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
-                              <div className="w-3 flex flex-col gap-0.5">
-                                <span className="h-0.5 w-full rounded-sm bg-current opacity-90" />
-                                <span className="h-0.5 w-full rounded-sm bg-current opacity-90" />
-                              </div>
-                              <span>1 Coluna</span>
+                              1 Col
                             </button>
                             <button
                               type="button"
                               onClick={() => updateLayout({ columns: 2 })}
-                              className={`px-3 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                                cols === 2
-                                  ? 'bg-white/15 text-white border border-white/20 shadow-sm'
-                                  : 'text-slate-400 hover:text-slate-200'
+                              className={`px-2 py-0.5 rounded text-[11px] font-medium transition cursor-pointer ${
+                                cols === 2 ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
-                              <div className="w-3 grid grid-cols-2 gap-0.5">
-                                <span className="h-0.5 w-full rounded-sm bg-current opacity-90" />
-                                <span className="h-0.5 w-full rounded-sm bg-current opacity-90" />
-                                <span className="h-0.5 w-full rounded-sm bg-current opacity-90" />
-                                <span className="h-0.5 w-full rounded-sm bg-current opacity-90" />
-                              </div>
-                              <span>2 Colunas</span>
+                              2 Cols
                             </button>
                           </div>
-                        </div>
 
-                        {/* Divisor vertical */}
-                        <div className="h-5 w-px bg-white/[0.08] hidden sm:block" />
-
-                        {/* Seletor de Posição do QR Code */}
-                        <div className="flex items-center gap-2">
-                          <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                            Posição QR:
-                          </span>
-                          <div className="flex items-center gap-1 bg-[#0b0d13] p-1 rounded-lg border border-white/[0.08]">
+                          {/* 2. Posição QR */}
+                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider mr-0.5">QR:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrPosition: 'top' })}
-                              title="QR Code no topo da tela"
-                              className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                                qrPos === 'top'
-                                  ? 'bg-white/15 text-white border border-white/20 shadow-sm'
-                                  : 'text-slate-400 hover:text-slate-200'
+                              title="QR no topo"
+                              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                                qrPos === 'top' ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="4" y1="4" x2="20" y2="4" />
-                                <rect x="7" y="7" width="10" height="7" rx="1.5" fill="currentColor" />
-                              </svg>
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="4" y1="4" x2="20" y2="4" /><rect x="7" y="7" width="10" height="7" rx="1.5" fill="currentColor" /></svg>
                               <span>Topo</span>
                             </button>
-
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrPosition: 'middle' })}
-                              title="QR Code no centro da tela"
-                              className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                                qrPos === 'middle'
-                                  ? 'bg-white/15 text-white border border-white/20 shadow-sm'
-                                  : 'text-slate-400 hover:text-slate-200'
+                              title="QR no centro"
+                              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                                qrPos === 'middle' ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="4" y1="12" x2="7" y2="12" />
-                                <line x1="17" y1="12" x2="20" y2="12" />
-                                <rect x="7" y="8.5" width="10" height="7" rx="1.5" fill="currentColor" />
-                              </svg>
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="4" y1="12" x2="7" y2="12" /><line x1="17" y1="12" x2="20" y2="12" /><rect x="7" y="8.5" width="10" height="7" rx="1.5" fill="currentColor" /></svg>
                               <span>Centro</span>
                             </button>
-
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrPosition: 'bottom' })}
-                              title="QR Code na base da tela"
-                              className={`px-2.5 py-1 rounded-md text-xs font-medium transition cursor-pointer flex items-center gap-1.5 ${
-                                qrPos === 'bottom'
-                                  ? 'bg-white/15 text-white border border-white/20 shadow-sm'
-                                  : 'text-slate-400 hover:text-slate-200'
+                              title="QR na base"
+                              className={`px-1.5 py-0.5 rounded text-[11px] font-medium transition cursor-pointer flex items-center gap-1 ${
+                                qrPos === 'bottom' ? 'bg-white/15 text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
-                              <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="7" y="10" width="10" height="7" rx="1.5" fill="currentColor" />
-                                <line x1="4" y1="20" x2="20" y2="20" />
-                              </svg>
+                              <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="7" y="10" width="10" height="7" rx="1.5" fill="currentColor" /><line x1="4" y1="20" x2="20" y2="20" /></svg>
                               <span>Base</span>
                             </button>
                           </div>
-                        </div>
-                      </div>
 
-                      {/* Grade de Controles Deslizantes (Estilo Estúdio Clean) */}
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
-                        {/* Slider: Tamanho do QR */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                              Tamanho do QR Code
-                            </span>
-                            <span className="text-slate-200 font-mono text-xs px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08]">
-                              {qrSize}%
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
+                          {/* 3. Slider Tamanho QR */}
+                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Tam. QR:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrSize: Math.max(50, qrSize - 5) })}
-                              className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 font-semibold text-xs flex items-center justify-center cursor-pointer active:scale-95 transition"
+                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               -
                             </button>
@@ -1711,33 +1643,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               step={5}
                               value={qrSize}
                               onChange={(e) => updateLayout({ qrSize: Number(e.target.value) })}
-                              className="flex-1 h-1.5 bg-white/[0.08] rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                              className="w-14 h-1 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
                             />
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrSize: Math.min(150, qrSize + 5) })}
-                              className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 font-semibold text-xs flex items-center justify-center cursor-pointer active:scale-95 transition"
+                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               +
                             </button>
+                            <span className="text-slate-200 font-mono text-[10.5px] px-1 rounded bg-white/[0.05]">
+                              {qrSize}%
+                            </span>
                           </div>
-                        </div>
 
-                        {/* Slider: Altura dos Cards */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                              Altura dos Cards
-                            </span>
-                            <span className="text-slate-200 font-mono text-xs px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08]">
-                              {height}px
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
+                          {/* 4. Slider Altura dos Cards */}
+                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Altura:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardHeight: Math.max(26, height - 4) })}
-                              className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 font-semibold text-xs flex items-center justify-center cursor-pointer active:scale-95 transition"
+                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               -
                             </button>
@@ -1747,33 +1673,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               max={76}
                               value={height}
                               onChange={(e) => updateLayout({ cardHeight: Number(e.target.value) })}
-                              className="flex-1 h-1.5 bg-white/[0.08] rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                              className="w-14 h-1 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
                             />
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardHeight: Math.min(76, height + 4) })}
-                              className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 font-semibold text-xs flex items-center justify-center cursor-pointer active:scale-95 transition"
+                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               +
                             </button>
+                            <span className="text-slate-200 font-mono text-[10.5px] px-1 rounded bg-white/[0.05]">
+                              {height}px
+                            </span>
                           </div>
-                        </div>
 
-                        {/* Slider: Espaçamento */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between gap-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">
-                              Espaçamento entre Cards
-                            </span>
-                            <span className="text-slate-200 font-mono text-xs px-2 py-0.5 rounded bg-white/[0.05] border border-white/[0.08]">
-                              {gap}px
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-2">
+                          {/* 5. Slider Espaçamento */}
+                          <div className="flex items-center gap-1 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08]">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Espaço:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardGapV2: Math.max(0, gap - 1) })}
-                              className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 font-semibold text-xs flex items-center justify-center cursor-pointer active:scale-95 transition"
+                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               -
                             </button>
@@ -1784,48 +1704,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               step={1}
                               value={gap}
                               onChange={(e) => updateLayout({ cardGapV2: Number(e.target.value) })}
-                              className="flex-1 h-1.5 bg-white/[0.08] rounded-lg appearance-none cursor-pointer accent-emerald-400"
+                              className="w-10 h-1 bg-white/[0.08] rounded appearance-none cursor-pointer accent-emerald-400"
                             />
                             <button
                               type="button"
                               onClick={() => updateLayout({ cardGapV2: Math.min(24, gap + 1) })}
-                              className="w-7 h-7 rounded-lg bg-white/[0.05] hover:bg-white/[0.1] text-slate-300 font-semibold text-xs flex items-center justify-center cursor-pointer active:scale-95 transition"
+                              className="w-4 h-4 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-300 font-bold text-[10px] flex items-center justify-center cursor-pointer active:scale-90"
                             >
                               +
                             </button>
+                            <span className="text-slate-200 font-mono text-[10.5px] px-1 rounded bg-white/[0.05]">
+                              {gap}px
+                            </span>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Paleta de Cores dos Cards (Estilo Calibração / Módulos de Cor) */}
-                      <div className="pt-2 border-t border-white/[0.06]">
-                        <div className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mb-2.5">
-                          Paleta de Cores dos Cards
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+                        {/* GRUPO DIREITA: CORES ESMAGADAS (Titulares, 1º Supl, 2º Supl, Não Classif) */}
+                        <div className="flex items-center gap-2 bg-[#0b0d13] px-2 py-1 rounded-lg border border-white/[0.08] ml-auto">
                           {/* Cor: Titulares */}
-                          <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-2.5 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-slate-300">
-                                Titulares
-                              </span>
-                              <input
-                                type="color"
-                                value={winnerColor}
-                                onChange={(e) => updateLayout({ winnerColor: e.target.value })}
-                                className="w-5 h-4 rounded cursor-pointer bg-transparent border-0"
-                                title="Cor personalizada para Titulares"
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {['#10b981', '#059669', '#22c55e', '#eab308', '#3b82f6', '#8b5cf6', '#06b6d4', '#f43f5e'].map((preset) => (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Titular:</span>
+                            <input
+                              type="color"
+                              value={winnerColor}
+                              onChange={(e) => updateLayout({ winnerColor: e.target.value })}
+                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              title="Cor dos Titulares"
+                            />
+                            <div className="flex items-center gap-0.5">
+                              {['#10b981', '#059669', '#22c55e', '#eab308', '#3b82f6'].map((preset) => (
                                 <button
                                   key={preset}
                                   type="button"
                                   onClick={() => updateLayout({ winnerColor: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-3.5 h-3.5 rounded-full cursor-pointer transition transform active:scale-90 ${
-                                    winnerColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
+                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                    winnerColor.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
                                 />
@@ -1833,29 +1747,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           </div>
 
+                          <div className="h-3.5 w-px bg-white/[0.08]" />
+
                           {/* Cor: 1º Suplente */}
-                          <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-2.5 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-slate-300">
-                                1º Suplente
-                              </span>
-                              <input
-                                type="color"
-                                value={suplenteColor}
-                                onChange={(e) => updateLayout({ suplenteColor: e.target.value })}
-                                className="w-5 h-4 rounded cursor-pointer bg-transparent border-0"
-                                title="Cor personalizada para 1º Suplente"
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {['#3b82f6', '#2563eb', '#06b6d4', '#6366f1', '#f59e0b', '#a855f7', '#14b8a6', '#ec4899'].map((preset) => (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">1º Supl:</span>
+                            <input
+                              type="color"
+                              value={suplenteColor}
+                              onChange={(e) => updateLayout({ suplenteColor: e.target.value })}
+                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              title="Cor do 1º Suplente"
+                            />
+                            <div className="flex items-center gap-0.5">
+                              {['#3b82f6', '#2563eb', '#06b6d4', '#6366f1', '#f59e0b'].map((preset) => (
                                 <button
                                   key={preset}
                                   type="button"
                                   onClick={() => updateLayout({ suplenteColor: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-3.5 h-3.5 rounded-full cursor-pointer transition transform active:scale-90 ${
-                                    suplenteColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
+                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                    suplenteColor.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
                                 />
@@ -1863,29 +1775,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           </div>
 
+                          <div className="h-3.5 w-px bg-white/[0.08]" />
+
                           {/* Cor: 2º Suplente */}
-                          <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-2.5 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-slate-300">
-                                2º Suplente
-                              </span>
-                              <input
-                                type="color"
-                                value={suplente2Color}
-                                onChange={(e) => updateLayout({ suplente2Color: e.target.value })}
-                                className="w-5 h-4 rounded cursor-pointer bg-transparent border-0"
-                                title="Cor personalizada para 2º Suplente"
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {['#64748b', '#475569', '#0d9488', '#d97706', '#7c3aed', '#0284c7', '#9333ea', '#e11d48'].map((preset) => (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">2º Supl:</span>
+                            <input
+                              type="color"
+                              value={suplente2Color}
+                              onChange={(e) => updateLayout({ suplente2Color: e.target.value })}
+                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              title="Cor do 2º Suplente"
+                            />
+                            <div className="flex items-center gap-0.5">
+                              {['#64748b', '#475569', '#0d9488', '#d97706', '#7c3aed'].map((preset) => (
                                 <button
                                   key={preset}
                                   type="button"
                                   onClick={() => updateLayout({ suplente2Color: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-3.5 h-3.5 rounded-full cursor-pointer transition transform active:scale-90 ${
-                                    suplente2Color.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
+                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                    suplente2Color.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
                                 />
@@ -1893,29 +1803,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           </div>
 
+                          <div className="h-3.5 w-px bg-white/[0.08]" />
+
                           {/* Cor: Não Classificados */}
-                          <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-2.5 space-y-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-medium text-slate-300">
-                                Não Classificados
-                              </span>
-                              <input
-                                type="color"
-                                value={unclassifiedColor}
-                                onChange={(e) => updateLayout({ unclassifiedColor: e.target.value })}
-                                className="w-5 h-4 rounded cursor-pointer bg-transparent border-0"
-                                title="Cor personalizada para Não Classificados"
-                              />
-                            </div>
-                            <div className="flex flex-wrap gap-1.5">
-                              {['#1e293b', '#0f172a', '#334155', '#1f2937', '#1e1b4b', '#172554', '#27272a', '#3f3f46'].map((preset) => (
+                          <div className="flex items-center gap-1">
+                            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">Outros:</span>
+                            <input
+                              type="color"
+                              value={unclassifiedColor}
+                              onChange={(e) => updateLayout({ unclassifiedColor: e.target.value })}
+                              className="w-3.5 h-3.5 rounded cursor-pointer bg-transparent border-0 shrink-0"
+                              title="Cor Não Classificados"
+                            />
+                            <div className="flex items-center gap-0.5">
+                              {['#1e293b', '#0f172a', '#334155', '#1f2937', '#27272a'].map((preset) => (
                                 <button
                                   key={preset}
                                   type="button"
                                   onClick={() => updateLayout({ unclassifiedColor: preset })}
                                   style={{ backgroundColor: preset }}
-                                  className={`w-3.5 h-3.5 rounded-full cursor-pointer transition transform active:scale-90 ${
-                                    unclassifiedColor.toLowerCase() === preset ? 'ring-2 ring-white scale-110' : 'opacity-70 hover:opacity-100'
+                                  className={`w-2 h-2 rounded-full cursor-pointer transition transform active:scale-90 ${
+                                    unclassifiedColor.toLowerCase() === preset ? 'ring-1 ring-white scale-125' : 'opacity-70 hover:opacity-100'
                                   }`}
                                   title={`Cor ${preset}`}
                                 />
@@ -1926,37 +1834,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       </div>
                     </div>
 
-                    {/* CARD 2: REGRAS GERAIS DA ELEIÇÃO (PADRÕES) - Inspirado no estilo estúdio do Print 2 */}
-                    <div className="bg-[#141721] border border-white/[0.08] rounded-2xl p-4 sm:p-5 space-y-4 shadow-xl">
-                      {/* Cabeçalho do Card */}
-                      <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] flex-wrap gap-2">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
-                            <Sliders className="w-5 h-5 text-slate-300" />
+                    {/* CARD 2: REGRAS GERAIS DA ELEIÇÃO (PADRÕES) - COMPACTO / ESMAGADO */}
+                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-2 space-y-1.5 shadow-lg">
+                      {/* Cabeçalho Compacto */}
+                      <div className="flex items-center justify-between pb-1 border-b border-white/[0.06] flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-5 h-5 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
+                            <Sliders className="w-3 h-3 text-slate-300" />
                           </div>
-                          <div>
-                            <h3 className="font-medium text-slate-100 text-sm sm:text-base tracking-tight">
-                              Regras da Eleição (Padrões do Sistema)
-                            </h3>
-                            <p className="text-xs text-slate-400 font-normal">
-                              Definições pré-carregadas automaticamente ao criar novas votações
-                            </p>
-                          </div>
+                          <span className="font-medium text-slate-100 text-xs tracking-tight">
+                            Regras da Eleição (Padrões do Sistema)
+                          </span>
                         </div>
 
-                        <span className="text-[11px] text-slate-400 font-normal px-2.5 py-1 rounded-md bg-white/[0.03] border border-white/[0.06]">
-                          Novas votações puxam estes padrões
+                        <span className="text-[10px] text-slate-400 font-normal px-2 py-0.5 rounded bg-white/[0.03] border border-white/[0.06]">
+                          Novas votações herdam estes padrões
                         </span>
                       </div>
 
-                      {/* Grade de 4 Módulos Estúdio */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                      {/* Grade Compacta de 4 Módulos Estúdio em 1 Linha */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                         {/* 1. Titulares (Geral) */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between gap-2.5">
-                          <span className="text-xs font-medium text-slate-300">
-                            Titulares (Geral)
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                          <span className="text-xs font-medium text-slate-300 shrink-0">
+                            Titulares:
                           </span>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="number"
                               min={1}
@@ -1966,31 +1869,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 const val = Math.max(1, parseInt(e.target.value) || 1);
                                 saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
                               }}
-                              className="w-full px-3 py-1.5 bg-[#141721] border border-white/[0.08] rounded-lg text-center text-amber-300 font-semibold text-sm outline-none focus:border-emerald-500/50"
+                              className="w-16 px-2 py-0.5 bg-[#141721] border border-white/[0.08] rounded text-center text-amber-300 font-semibold text-xs outline-none focus:border-emerald-500/50"
                             />
-                            <span className="text-xs text-slate-400 font-medium">vagas</span>
+                            <span className="text-[11px] text-slate-400 font-medium">vagas</span>
                           </div>
-                          <span className="text-[10px] text-slate-500">
-                            Vagas para eleição direta
-                          </span>
                         </div>
 
                         {/* 2. 1º Suplente */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between gap-2.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-300">
-                              1º Suplente
-                            </span>
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="checkbox"
                               checked={session.habilitarSuplente1 !== false}
                               onChange={(e) => {
                                 saveSession({ ...session, habilitarSuplente1: e.target.checked });
                               }}
-                              className="rounded cursor-pointer accent-emerald-500 w-4 h-4"
+                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
                             />
+                            <span className="text-xs font-medium text-slate-300">
+                              1º Suplente:
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="number"
                               min={1}
@@ -2001,31 +1901,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 const val = Math.max(1, parseInt(e.target.value) || 1);
                                 saveSession({ ...session, suplentesCount: val });
                               }}
-                              className="w-full px-3 py-1.5 bg-[#141721] border border-white/[0.08] rounded-lg text-center text-blue-300 font-semibold text-sm outline-none focus:border-emerald-500/50 disabled:opacity-30"
+                              className="w-16 px-2 py-0.5 bg-[#141721] border border-white/[0.08] rounded text-center text-blue-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
                             />
-                            <span className="text-xs text-slate-400 font-medium">vagas</span>
+                            <span className="text-[11px] text-slate-400 font-medium">vagas</span>
                           </div>
-                          <span className="text-[10px] text-slate-500">
-                            {session.habilitarSuplente1 !== false ? 'Habilitado' : 'Desabilitado'}
-                          </span>
                         </div>
 
                         {/* 3. 2º Suplente */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between gap-2.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-300">
-                              2º Suplente
-                            </span>
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="checkbox"
                               checked={session.habilitarSuplente2 === true}
                               onChange={(e) => {
                                 saveSession({ ...session, habilitarSuplente2: e.target.checked });
                               }}
-                              className="rounded cursor-pointer accent-emerald-500 w-4 h-4"
+                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
                             />
+                            <span className="text-xs font-medium text-slate-300">
+                              2º Suplente:
+                            </span>
                           </div>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="number"
                               min={1}
@@ -2036,40 +1933,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 const val = Math.max(1, parseInt(e.target.value) || 1);
                                 saveSession({ ...session, segundoSuplentesCount: val });
                               }}
-                              className="w-full px-3 py-1.5 bg-[#141721] border border-white/[0.08] rounded-lg text-center text-slate-300 font-semibold text-sm outline-none focus:border-emerald-500/50 disabled:opacity-30"
+                              className="w-16 px-2 py-0.5 bg-[#141721] border border-white/[0.08] rounded text-center text-slate-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
                             />
-                            <span className="text-xs text-slate-400 font-medium">vagas</span>
+                            <span className="text-[11px] text-slate-400 font-medium">vagas</span>
                           </div>
-                          <span className="text-[10px] text-slate-500">
-                            {session.habilitarSuplente2 === true ? 'Habilitado' : 'Desabilitado'}
-                          </span>
                         </div>
 
                         {/* 4. Resolver Empates */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-xl p-3 flex flex-col justify-between gap-2.5">
-                          <div className="flex items-center justify-between">
-                            <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
-                              <Star className="w-3.5 h-3.5 text-amber-400" />
-                              Resolver Empates
-                            </span>
+                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-2.5 py-1 flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
                             <input
                               type="checkbox"
                               checked={session.resolverEmpates !== false}
                               onChange={(e) => {
                                 saveSession({ ...session, resolverEmpates: e.target.checked });
                               }}
-                              className="rounded cursor-pointer accent-emerald-500 w-4 h-4"
+                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
                             />
+                            <span className="text-xs font-medium text-slate-300 flex items-center gap-1">
+                              <Star className="w-3 h-3 text-amber-400" />
+                              Desempate
+                            </span>
                           </div>
-                          <div className="text-xs text-slate-300 py-1">
-                            {session.resolverEmpates !== false
-                              ? 'Ativado: rodada para desempate'
-                              : 'Desativado: majoritária direta'}
-                          </div>
-                          <span className="text-[10px] text-slate-500">
-                            {session.resolverEmpates !== false
-                              ? 'Abre votação de desempate se houver empate'
-                              : 'Define eleitos pela ordem dos mais votados'}
+                          <span className="text-[10.5px] text-slate-400">
+                            {session.resolverEmpates !== false ? 'Rodada ativa' : 'Majoritária'}
                           </span>
                         </div>
                       </div>
