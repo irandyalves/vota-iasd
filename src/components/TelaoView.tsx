@@ -695,11 +695,11 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           </div>
                         )}
 
-                        {/* 1. Coluna de Nome do Candidato (Tamanho Fixo em 22 Caracteres) */}
-                        <div className="w-[22ch] min-w-[22ch] max-w-[22ch] shrink-0 z-10">
+                        {/* 1. Coluna de Nome do Candidato (Máximo 14 Caracteres, depois do 14 coloca ...) */}
+                        <div className="z-10 shrink-0">
                           <h4
                             title={option.name}
-                            className={`leading-tight truncate uppercase tracking-wide ${
+                            className={`leading-tight uppercase tracking-wide whitespace-nowrap ${
                               tiedGroup
                                 ? 'font-black text-xs sm:text-sm text-white'
                                 : isElected
@@ -711,12 +711,14 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 : 'font-semibold text-[10px] sm:text-[11px] text-slate-200'
                             }`}
                           >
-                            {option.name}
+                            {option.name && option.name.length > 14
+                              ? `${option.name.slice(0, 14)}...`
+                              : option.name}
                           </h4>
                         </div>
 
                         {/* 2. Coluna de Cargo / Eleito (Agora apenas "Titular", "1º Suplente", etc.) */}
-                        <div className="flex-1 min-w-0 z-10 flex items-center">
+                        <div className="flex-1 min-w-0 z-10 flex items-center overflow-hidden">
                           {tiedGroup ? (
                             <span className="inline-flex items-center gap-1 text-[8.5px] px-2 py-0.5 rounded-full font-black bg-rose-600/80 border border-rose-400 text-white uppercase shadow whitespace-nowrap">
                               <Star className="w-2.5 h-2.5 fill-current" />
