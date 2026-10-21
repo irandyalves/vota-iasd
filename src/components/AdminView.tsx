@@ -1701,17 +1701,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <div className="space-y-2.5 select-none">
                     {/* CARD 1: TELÃO (PROJEÇÃO PRINCIPAL) - ESMAGADO EM LINHA ÚNICA COM CORES À DIREITA */}
                     <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3.5 space-y-2.5 shadow-lg">
-                      {/* Cabeçalho Compacto: Telão (Projeção Principal) + Botão Projetar 2ª Tela */}
+                      {/* Cabeçalho Compacto: Configuração de como será exibido os elementos no Telão [público] + Botão Projetar 2ª Tela */}
                       <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
                         <div className="flex items-center gap-2">
                           <div className="w-6 h-6 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
                             <Tv className="w-3.5 h-3.5 text-slate-300" />
                           </div>
                           <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight">
-                            Telão (Projeção Principal)
-                          </span>
-                          <span className="text-[10.5px] text-slate-500 font-normal hidden lg:inline">
-                            • Layout e cores dos cards no 2º monitor
+                            Configuração de como será exibido os elementos no Telão [público]
                           </span>
                         </div>
 
@@ -1772,9 +1769,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </button>
                           </div>
 
-                          {/* 2. Posição QR */}
+                          {/* 2. Disposição QR Code */}
                           <div className="flex items-center gap-1 bg-[#0b0d13] px-3 py-2.5 rounded-lg border border-white/[0.08] min-h-[38px]">
-                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mr-0.5">QR:</span>
+                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider mr-0.5">DISP. QR CODE:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrPosition: 'top' })}
@@ -1810,9 +1807,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </button>
                           </div>
 
-                          {/* 3. Slider Tamanho QR */}
+                          {/* 3. Slider Tamanho QR Code */}
                           <div className="flex items-center gap-1.5 bg-[#0b0d13] px-3 py-2.5 rounded-lg border border-white/[0.08] min-h-[38px]">
-                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Tam. QR:</span>
+                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">TAM. QR CODE:</span>
                             <button
                               type="button"
                               onClick={() => updateLayout({ qrSize: Math.max(50, qrSize - 5) })}
