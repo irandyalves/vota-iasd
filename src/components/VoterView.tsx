@@ -35,6 +35,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [errorTrigger, setErrorTrigger] = useState(0);
+  const [isButtonPressed, setIsButtonPressed] = useState(false);
+  const [isButtonShining, setIsButtonShining] = useState(false);
   // Controle de escala da fonte dos cards: mín 0% (+0%), passos de 8% e 8% limitado a 24% (0%, 8%, 16%, 24%)
   const [fontScalePercent, setFontScalePercent] = useState<number>(() => {
     if (typeof window !== 'undefined') {
@@ -212,6 +214,14 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         navigator.vibrate([160, 60, 160]);
       } catch (_) {}
     }
+
+    // Efeito visual de clique físico e raio de brilho reluzente
+    setIsButtonPressed(true);
+    setIsButtonShining(true);
+    setTimeout(() => {
+      setIsButtonPressed(false);
+      setIsButtonShining(false);
+    }, 450);
 
     // Bloqueia duplo toque / reenvio
     if (isSubmitting || submitSuccess || alreadyVoted) return;
@@ -917,36 +927,68 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         );
       })()}
 
-      {/* BARRA FLUTUANTE INFERIOR COM O BOTÃO CONFIRMA (RÉPLICA DA TECLA VERDE DA URNA DO TSE) */}
+      {/* BARRA FLUTUANTE INFERIOR COM O BOTÃO CONFIRMA (20% MENOR NA LARGURA, EFEITO 3D DE PRESSIONAR E BRILHO RELUZENTE) */}
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-[#00132b]/95 backdrop-blur-lg border-t border-blue-900/80 z-40">
-        <div className="max-w-xl mx-auto flex items-center gap-3">
-          {/* BOTÃO CONFIRMA - RÉPLICA 3D FIEL DA TECLA VERDE DA URNA (SEM BRILHO, COM RELEVO E BRAILLE 3D) */}
-          <button
+        <div className="max-w-xl mx-auto flex items-center justify-center">
+          {/* BOTÃO CONFIRMA - RÉPLICA 3D DA TECLA VERDE DA URNA COM ANIMAÇÃO DE CLIQUE, PRESSIONAR E BRILHO */}
+          <motion.button
             type="button"
             onClick={handleConfirmVote}
+            onTouchStart={() => {
+              if (isReadyToConfirm && !isSubmitting) setIsButtonPressed(true);
+            }}
+            onTouchEnd={() => setIsButtonPressed(false)}
+            onTouchCancel={() => setIsButtonPressed(false)}
+            onMouseDown={() => {
+              if (isReadyToConfirm && !isSubmitting) setIsButtonPressed(true);
+            }}
+            onMouseUp={() => setIsButtonPressed(false)}
+            onMouseLeave={() => setIsButtonPressed(false)}
+            whileTap={isReadyToConfirm && !isSubmitting ? { scale: 0.94, y: 5 } : undefined}
             disabled={!isReadyToConfirm || isSubmitting}
             style={
               isReadyToConfirm
-                ? {
-                    backgroundColor: '#159636',
-                    borderColor: '#24b349',
-                    boxShadow: '0 8px 0 #09521b, 4px 8px 0 #063b13',
-                  }
+                ? isButtonPressed || isButtonShining
+                  ? {
+                      backgroundColor: '#1eb843',
+                      borderColor: '#42e86e',
+                      boxShadow: '0 2px 0 #074215, 0 0 25px rgba(52, 211, 153, 0.85)',
+                      transform: 'translateY(5px)',
+                    }
+                  : {
+                      backgroundColor: '#159636',
+                      borderColor: '#24b349',
+                      boxShadow: '0 8px 0 #09521b, 4px 8px 0 #063b13',
+                    }
                 : {
                     backgroundColor: '#1b3d2b',
                     borderColor: '#234d37',
                     boxShadow: '0 5px 0 #0f2419',
                   }
             }
-            className={`flex-1 pt-3 pb-3.5 px-6 rounded-[18px] border-[3.5px] flex flex-col items-center justify-center transition-transform duration-100 select-none relative ${
+            className={`w-[80%] max-w-sm pt-2.5 pb-3 px-5 rounded-[18px] border-[3.5px] flex flex-col items-center justify-center transition-all duration-100 select-none relative overflow-hidden ${
               isReadyToConfirm
-                ? 'active:translate-y-[5px] cursor-pointer'
+                ? 'cursor-pointer active:scale-95'
                 : 'opacity-45 cursor-not-allowed'
-            }`}
+            } ${isButtonShining ? 'ring-4 ring-emerald-300 shadow-[0_0_30px_rgba(52,211,153,0.95)]' : ''}`}
           >
+            {/* Efeito de Raio de Brilho Reluzente passando pelo botão no clique */}
+            <AnimatePresence>
+              {isButtonShining && (
+                <motion.div
+                  key="shine-flash"
+                  initial={{ x: '-120%', opacity: 0 }}
+                  animate={{ x: '220%', opacity: [0, 0.9, 0] }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.45, ease: 'easeOut' }}
+                  className="absolute inset-0 w-1/2 h-full bg-gradient-to-r from-transparent via-white/85 to-transparent skew-x-[-25deg] pointer-events-none z-20"
+                />
+              )}
+            </AnimatePresence>
+
             {/* Texto CONFIRMA em preto e negrito oficial */}
             <span
-              className={`font-black text-2xl sm:text-3xl tracking-wider uppercase font-sans leading-none ${
+              className={`font-black text-2xl sm:text-3xl tracking-wider uppercase font-sans leading-none z-10 ${
                 isReadyToConfirm ? 'text-[#1a1a1a]' : 'text-slate-400'
               }`}
             >
@@ -954,7 +996,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             </span>
 
             {/* Pontos em Braille 3D idênticos à imagem enviada */}
-            <div className="flex flex-col items-center gap-1 mt-2 pointer-events-none">
+            <div className="flex flex-col items-center gap-1 mt-2 pointer-events-none z-10">
               {/* Linha 1 */}
               <div className="flex items-center gap-2.5">
                 <span className={`w-2.5 h-2.5 rounded-full ${isReadyToConfirm ? 'bg-[#24b84b] shadow-[1.5px_2px_0_#074215]' : 'bg-[#12281c]'}`} />
@@ -989,7 +1031,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                 <span className="w-2.5 h-2.5 opacity-0" />
               </div>
             </div>
-          </button>
+          </motion.button>
         </div>
       </div>
     </div>
