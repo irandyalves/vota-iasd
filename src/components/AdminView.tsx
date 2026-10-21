@@ -453,9 +453,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         style={{ transformOrigin: 'top left' }}
         className="absolute top-full left-0 mt-2 z-50 w-[350px] sm:w-[410px] max-w-[calc(100vw-24px)]"
       >
-        <div className="relative bg-[#001f47] rounded-xl p-3 shadow-[0_0_24px_rgba(52,211,153,0.25),0_14px_34px_rgba(0,0,0,0.85)] space-y-2.5">
+        <div className="relative bg-[#141721] rounded-xl p-3.5 shadow-[0_0_24px_rgba(52,211,153,0.18),0_14px_34px_rgba(0,0,0,0.85)] space-y-3">
           {/* Borda Designer: espessura reduzida em 30% (1.4px) com gradientes direcionais solicitados */}
-          <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.35))' }}>
+          <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ filter: 'drop-shadow(0 0 5px rgba(16,185,129,0.3))' }}>
             {/* Canto superior esquerdo arredondado */}
             <div
               className="absolute top-0 left-0 w-4 h-4 rounded-tl-xl pointer-events-none"
@@ -488,11 +488,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               style={{ width: '1.4px', background: 'linear-gradient(to top, #10b981 0%, rgba(16,185,129,0) 100%)' }}
             />
           </div>
+
           {/* Cabeçalho */}
-          <div className="flex items-center justify-between pb-1.5 border-b border-blue-900/80">
-            <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
-              <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
-              {isEditing ? 'Configurar Votação' : 'Nova Votação'}
+          <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.08]">
+            <span className="text-xs font-medium text-slate-200 tracking-wide flex items-center gap-1.5">
+              <FolderPlus className="w-3.5 h-3.5 text-slate-400" />
+              {isEditing ? 'Configurar votação' : 'Nova votação'}
             </span>
             <button
               type="button"
@@ -500,7 +501,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 setIsCreatingNewEvent(false);
                 setEditingEventId(null);
               }}
-              className="p-0.5 text-slate-400 hover:text-white rounded transition cursor-pointer"
+              className="p-0.5 text-slate-400 hover:text-slate-100 rounded transition cursor-pointer"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -508,13 +509,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
           {/* Nome da Votação */}
           <div>
-            <label className="text-[10px] font-bold text-blue-200 uppercase tracking-wide block mb-1">
-              Nome da Votação:
+            <label className="text-xs font-normal text-slate-300 block mb-1">
+              Nome da votação:
             </label>
             <input
               type="text"
               autoFocus
-              placeholder="DIGITE O NOME (EX: ESCOLHA DO TESOUREIRO)..."
+              placeholder="Digite o nome (ex: Eleição do Tesoureiro)..."
               value={eventFormName}
               onChange={(e) => setEventFormName(e.target.value)}
               onKeyDown={(e) => {
@@ -523,15 +524,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   handleSaveEventModal();
                 }
               }}
-              className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 focus:border-emerald-400 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
+              className="w-full px-3 py-1.5 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-lg text-xs font-normal text-slate-100 outline-none placeholder-slate-500 shadow-sm"
             />
           </div>
 
           {/* Vagas Titulares, 1º Suplente e 2º Suplente */}
           <div className="grid grid-cols-3 gap-2">
             {/* Titulares */}
-            <div className="bg-[#07132a] border border-blue-800 rounded-lg p-2 flex flex-col justify-between">
-              <span className="text-[9.5px] font-black text-white uppercase block mb-1">
+            <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+              <span className="text-[11px] font-normal text-slate-300 block">
                 Titulares:
               </span>
               <div className="flex items-center gap-1">
@@ -541,23 +542,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   max={99}
                   value={eventFormVacancies}
                   onChange={(e) => setEventFormVacancies(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-1.5 py-1 bg-[#001f47] border border-blue-600 rounded text-center text-amber-300 font-black text-xs outline-none"
+                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.08] focus:border-emerald-500/50 rounded text-center text-slate-200 font-medium text-xs outline-none"
                 />
-                <span className="text-[9px] text-slate-400 font-bold uppercase">vagas</span>
+                <span className="text-[10px] text-slate-400 font-normal">vagas</span>
               </div>
             </div>
 
             {/* 1º Suplente */}
-            <div className="bg-[#07132a] border border-blue-800 rounded-lg p-2 flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[9.5px] font-black text-white uppercase">
-                  1º Supl.:
+            <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-normal text-slate-300">
+                  1º suplente:
                 </span>
                 <input
                   type="checkbox"
                   checked={eventFormSuplente1Enabled}
                   onChange={(e) => setEventFormSuplente1Enabled(e.target.checked)}
-                  className="rounded cursor-pointer accent-emerald-500 w-3 h-3"
+                  className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
                 />
               </div>
               <div className="flex items-center gap-1">
@@ -568,23 +569,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   disabled={!eventFormSuplente1Enabled}
                   value={eventFormSuplente1Enabled ? eventFormSuplente1Count : 0}
                   onChange={(e) => setEventFormSuplente1Count(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-1.5 py-1 bg-[#001f47] border border-blue-600 rounded text-center text-blue-300 font-black text-xs outline-none disabled:opacity-40"
+                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.08] focus:border-emerald-500/50 rounded text-center text-slate-200 font-medium text-xs outline-none disabled:opacity-30"
                 />
-                <span className="text-[9px] text-slate-400 font-bold uppercase">vagas</span>
+                <span className="text-[10px] text-slate-400 font-normal">vagas</span>
               </div>
             </div>
 
             {/* 2º Suplente */}
-            <div className="bg-[#07132a] border border-blue-800 rounded-lg p-2 flex flex-col justify-between">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-[9.5px] font-black text-white uppercase">
-                  2º Supl.:
+            <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-normal text-slate-300">
+                  2º suplente:
                 </span>
                 <input
                   type="checkbox"
                   checked={eventFormSuplente2Enabled}
                   onChange={(e) => setEventFormSuplente2Enabled(e.target.checked)}
-                  className="rounded cursor-pointer accent-emerald-500 w-3 h-3"
+                  className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
                 />
               </div>
               <div className="flex items-center gap-1">
@@ -595,22 +596,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   disabled={!eventFormSuplente2Enabled}
                   value={eventFormSuplente2Enabled ? eventFormSuplente2Count : 0}
                   onChange={(e) => setEventFormSuplente2Count(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-1.5 py-1 bg-[#001f47] border border-blue-600 rounded text-center text-slate-300 font-black text-xs outline-none disabled:opacity-40"
+                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.08] focus:border-emerald-500/50 rounded text-center text-slate-200 font-medium text-xs outline-none disabled:opacity-30"
                 />
-                <span className="text-[9px] text-slate-400 font-bold uppercase">vagas</span>
+                <span className="text-[10px] text-slate-400 font-normal">vagas</span>
               </div>
             </div>
           </div>
 
           {/* Se terá empate (Resolver Empates) */}
-          <div className="bg-[#07132a] border border-blue-800 rounded-lg px-2.5 py-1.5 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-1.5">
-              <Star className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg px-2.5 py-2 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <Star className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
               <div>
-                <span className="text-[10px] font-black text-white uppercase tracking-wide block">
-                  Resolver Empates:
+                <span className="text-xs font-normal text-slate-300 block">
+                  Resolver empates:
                 </span>
-                <span className="text-[8.5px] text-blue-200/80 block">
+                <span className="text-[10px] text-slate-400 block">
                   {eventFormResolverEmpates
                     ? 'Ativado: rodada para desempate'
                     : 'Desativado: eleição majoritária'}
@@ -629,13 +630,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </div>
 
           {/* Botão Salvar */}
-          <div className="flex items-center justify-end gap-2 pt-1 border-t border-blue-900/80">
+          <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-white/[0.08]">
             <button
               type="button"
               onClick={handleSaveEventModal}
-              className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow"
+              className="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-medium text-xs rounded-lg cursor-pointer active:scale-95 transition shadow-sm"
             >
-              {isEditing ? 'Salvar' : 'Criar Votação'}
+              {isEditing ? 'Salvar' : 'Criar votação'}
             </button>
           </div>
         </div>
