@@ -32,6 +32,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [activeTab, setActiveTab] = useState<'candidates' | 'control' | 'settings'>('candidates');
   const [isBottomSectionOpen, setIsBottomSectionOpen] = useState<boolean>(true);
   const [isGearOpen, setIsGearOpen] = useState<boolean>(false);
+  const [isImportMenuOpen, setIsImportMenuOpen] = useState<boolean>(false);
   const [eventNameInput, setEventNameInput] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
@@ -47,13 +48,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const eventModalRef = useRef<HTMLDivElement>(null);
   const createEventBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Fecha o painel da engrenagem ou o modalzinho de criar/editar evento ao pressionar ESC ou clicar fora
+  // Fecha o painel da engrenagem, menu de importar ou o modalzinho de criar/editar evento ao pressionar ESC ou clicar fora
   useEffect(() => {
-    if (!isGearOpen && !isCreatingNewEvent) return;
+    if (!isGearOpen && !isCreatingNewEvent && !isImportMenuOpen) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        if (isCreatingNewEvent) {
+        if (isImportMenuOpen) {
+          setIsImportMenuOpen(false);
+        } else if (isCreatingNewEvent) {
           setIsCreatingNewEvent(false);
           setEditingEventId(null);
           setEventNameInput(session.title || '');
@@ -65,6 +68,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
     const handlePointerDown = (e: MouseEvent | PointerEvent) => {
       const el = e.target instanceof Element ? e.target : null;
+      if (isImportMenuOpen) {
+        const insideImport = Boolean(el?.closest('[data-import-listbox="true"]'));
+        if (!insideImport) {
+          setIsImportMenuOpen(false);
+        }
+      }
       if (isCreatingNewEvent) {
         const insideModal = Boolean(el?.closest('[data-event-modal="true"]'));
         const insideCreateBtn = Boolean(el?.closest('[data-create-event-btn="true"]'));
@@ -94,7 +103,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       document.removeEventListener('keydown', handleKeyDown, true);
       document.removeEventListener('pointerdown', handlePointerDown, true);
     };
-  }, [isGearOpen, isCreatingNewEvent, session.title]);
+  }, [isGearOpen, isCreatingNewEvent, isImportMenuOpen, session.title]);
 
   // Garante lista de eventos (inicializando com o evento atual caso ainda não exista)
   const eventsList: VotingEventItem[] =
@@ -375,30 +384,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }
   };
 
-  // Download do Modelo de Exemplo (Compatível com Excel e Bloco de Notas)
-  const handleDownloadSampleTemplate = () => {
-    const sampleContent =
-`Nome / Tema / Brinde,Subtítulo / Descrição,Foto URL
-Carlos Eduardo Silva,Ministério Diaconal,
-Marcos Vinícius Santos,Sonoplastia e Mídia,
-Débora Rodrigues Lima,Líder de Pequenos Grupos,
-Tema 1: Conectados com Deus,Acampamento de Jovens 2026,
-Tema 2: Servir com Propósito,Semana de Oração,
-Bíblia de Estudo Luxo,Brinde de Boas-Vindas 01,
-Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
-
-    const blob = new Blob([sampleContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'modelo_importacao_vota_iasd.csv';
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    showNotification('success', 'Modelo de exemplo (.CSV compatível com Excel) baixado!');
-  };
-
   // Web Speech API - Microfone para adicionar nomes por voz
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -668,89 +653,96 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
         </div>
       )}
 
-      {/* BARRA DE EVENTOS (+10% DE ALTURA): BLOCO AMARELO VERTICAL ESQUERDO, BOTÃO "+ CRIAR VOTAÇÃO" CENTRALIZADO VERTICALMENTE COM MODALZINHO SUAVE, E EVENTOS À DIREITA (+20% MAIS ALTOS COM BOTÃO EDITAR) */}
+      {/* BARRA DE EVENTOS (+10% DE ALTURA): FAIXA LARANJA ESTENDIDA ATÉ DEBAIXO DO "+ CRIAR VOTAÇÃO" COM TRANSPARÊNCIA A PARTIR DOS 35% INICIAIS ATÉ ZERO */}
       <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#001f47] border-y-2 border-blue-800 shadow-xl mb-3 flex items-stretch justify-between min-h-[71px] relative z-30">
-        {/* LADO ESQUERDO: AMARELO DE CIMA EMBAIXO ONDE ESTÁ "EVENTOS" */}
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTab('candidates');
-            setIsBottomSectionOpen(true);
-          }}
-          className="bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-xs sm:text-sm uppercase tracking-wider px-5 sm:px-6 flex items-center justify-center shrink-0 border-r-2 border-amber-300 transition cursor-pointer select-none"
-          title="Mostrar seção de nomes do evento"
-        >
-          EVENTOS
-        </button>
-
-        {/* LADO DIREITO AZUL: BOTÃO "+ CRIAR VOTAÇÃO" CENTRALIZADO VERTICALMENTE + EVENTOS À DIREITA (+20% MAIS ALTOS) + ENGRENAGEM */}
-        <div className="flex-1 min-w-0 flex items-center justify-between pl-3 sm:pl-4 pr-4 sm:pr-6 lg:pr-8 py-2.5 gap-3">
-          {/* LINHA CENTRALIZADA VERTICALMENTE: "+ CRIAR VOTAÇÃO" À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
+        <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
+          {/* LINHA CENTRALIZADA VERTICALMENTE: FAIXA LARANJA ("EVENTOS" + "+ CRIAR VOTAÇÃO") À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
           <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
-            {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO QUE REVELA PARA BAIXO */}
-            <div className="relative flex items-center shrink-0">
+            {/* FAIXA LARANJA ESTENDIDA DE "EVENTOS" ATÉ DEBAIXO DE "+ CRIAR VOTAÇÃO" (SÓLIDA ATÉ 35%, DEGRADÊ ATÉ 0% EM 100%) */}
+            <div
+              style={{
+                background:
+                  'linear-gradient(90deg, rgba(245, 158, 11, 1) 0%, rgba(245, 158, 11, 1) 35%, rgba(245, 158, 11, 0) 100%)',
+              }}
+              className="self-stretch flex items-center shrink-0 pr-3 sm:pr-4 py-2.5"
+            >
               <button
-                ref={createEventBtnRef}
-                data-create-event-btn="true"
                 type="button"
                 onClick={() => {
-                  if (isCreatingNewEvent && !editingEventId) {
-                    setIsCreatingNewEvent(false);
-                    setEditingEventId(null);
-                  } else {
-                    setEditingEventId(null);
-                    setEventNameInput('');
-                    setIsCreatingNewEvent(true);
-                  }
+                  setActiveTab('candidates');
+                  setIsBottomSectionOpen(true);
                 }}
-                title="Criar nova votação / evento"
-                className="px-3 py-2 min-h-[34px] rounded-[4px] bg-blue-600/35 hover:bg-blue-600/55 border border-blue-400 hover:border-amber-400 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)]"
+                className="text-blue-950 hover:text-blue-900 font-black text-xs sm:text-sm uppercase tracking-wider px-5 sm:px-6 self-stretch flex items-center justify-center shrink-0 transition cursor-pointer select-none"
+                title="Mostrar seção de nomes do evento"
               >
-                <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
-                <span>+ Criar Votação</span>
+                EVENTOS
               </button>
 
-              {/* MODALZINHO DE CRIAR VOTAÇÃO (EMBAIXO DO BOTÃO + CRIAR VOTAÇÃO) */}
-              <AnimatePresence>
-                {isCreatingNewEvent && !editingEventId && (
-                  <motion.div
-                    ref={eventModalRef}
-                    data-event-modal="true"
-                    initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
-                    animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
-                    exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
-                    transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
-                    style={{ transformOrigin: 'top left' }}
-                    className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
-                  >
-                    <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl px-3.5 py-3.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          autoFocus
-                          placeholder="DIGITE O NOME DO EVENTO..."
-                          value={eventNameInput}
-                          onChange={(e) => setEventNameInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') {
-                              e.preventDefault();
-                              handleSaveEventModal();
-                            }
-                          }}
-                          className="flex-1 min-w-0 px-3 py-2 bg-[#07132a] border-0 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
-                        />
-                        <button
-                          type="button"
-                          onClick={handleSaveEventModal}
-                          className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
-                        >
-                          Salvar
-                        </button>
+              {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO QUE REVELA PARA BAIXO */}
+              <div className="relative flex items-center shrink-0 pl-1 sm:pl-2">
+                <button
+                  ref={createEventBtnRef}
+                  data-create-event-btn="true"
+                  type="button"
+                  onClick={() => {
+                    if (isCreatingNewEvent && !editingEventId) {
+                      setIsCreatingNewEvent(false);
+                      setEditingEventId(null);
+                    } else {
+                      setEditingEventId(null);
+                      setEventNameInput('');
+                      setIsCreatingNewEvent(true);
+                    }
+                  }}
+                  title="Criar nova votação / evento"
+                  className="px-3 py-2 min-h-[34px] rounded-[4px] bg-[#001f47]/85 hover:bg-[#07132a]/95 border border-blue-400 hover:border-amber-300 text-blue-100 hover:text-amber-300 font-black text-[11px] uppercase tracking-wider flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)]"
+                >
+                  <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
+                  <span>+ Criar Votação</span>
+                </button>
+
+                {/* MODALZINHO DE CRIAR VOTAÇÃO (EMBAIXO DO BOTÃO + CRIAR VOTAÇÃO) */}
+                <AnimatePresence>
+                  {isCreatingNewEvent && !editingEventId && (
+                    <motion.div
+                      ref={eventModalRef}
+                      data-event-modal="true"
+                      initial={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
+                      animate={{ opacity: 1, height: 'auto', y: 0, scaleY: 1 }}
+                      exit={{ opacity: 0, height: 0, y: -8, scaleY: 0.92 }}
+                      transition={{ duration: 0.28, ease: [0.25, 0.1, 0.25, 1] }}
+                      style={{ transformOrigin: 'top left' }}
+                      className="absolute top-full left-0 mt-2 z-50 overflow-hidden"
+                    >
+                      <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl px-3.5 py-3.5 shadow-[0_0_20px_rgba(52,211,153,0.55),0_14px_34px_rgba(0,0,0,0.85)] w-72 sm:w-80">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            autoFocus
+                            placeholder="DIGITE O NOME DO EVENTO..."
+                            value={eventNameInput}
+                            onChange={(e) => setEventNameInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                e.preventDefault();
+                                handleSaveEventModal();
+                              }
+                            }}
+                            className="flex-1 min-w-0 px-3 py-2 bg-[#07132a] border-0 rounded-lg text-xs font-black text-white uppercase outline-none placeholder-slate-500 shadow-inner"
+                          />
+                          <button
+                            type="button"
+                            onClick={handleSaveEventModal}
+                            className="px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-blue-950 font-black text-[11px] rounded-lg uppercase tracking-wider cursor-pointer active:scale-95 transition shadow shrink-0"
+                          >
+                            Salvar
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             </div>
 
             {/* 2 SETINHAS JUNTAS E AZUL APÓS O BOTÃO CRIAR VOTAÇÃO */}
@@ -1379,7 +1371,7 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                     )}
                   </div>
 
-                  {/* SEÇÃO IMPORTAR DADOS (SEM FUNDO PRETO E SEM ÍCONE ANTES DE IMPORTAR DADOS) */}
+                  {/* SEÇÃO IMPORTAR (LISTBOX COM EXCEL .XLSX, CSV, TXT + ARRASTE O ARQUIVO AQUI, SEM MODELO .CSV) */}
                   <div
                     onDragOver={(e) => e.preventDefault()}
                     onDrop={(e) => {
@@ -1390,62 +1382,104 @@ Kit Lição da Escola Sabatina,Brinde de Boas-Vindas 02,`;
                         handleFileImport(syntheticEvent, 'append');
                       }
                     }}
-                    className="flex flex-wrap items-center gap-1.5 py-1"
+                    className="flex flex-wrap items-center gap-2 py-1"
                   >
-                    <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center pr-2 mr-0.5 border-r border-blue-800">
-                      <span>Importar dados:</span>
-                    </span>
+                    {/* Listbox Importar */}
+                    <div className="relative" data-import-listbox="true">
+                      <button
+                        type="button"
+                        onClick={() => setIsImportMenuOpen((prev) => !prev)}
+                        className="px-3 py-1 bg-[#07132a] hover:bg-[#0c1f44] border border-blue-600/80 hover:border-amber-400 rounded-lg text-[11px] font-extrabold text-amber-300 uppercase tracking-wider flex items-center gap-2 transition cursor-pointer shadow-sm"
+                        title="Clique para escolher o formato de arquivo para importar"
+                      >
+                        <span>Importar</span>
+                        <svg
+                          className={`w-3.5 h-3.5 text-amber-400 transition-transform duration-200 ${
+                            isImportMenuOpen ? 'rotate-180' : ''
+                          }`}
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                      </button>
 
-                    <button
-                      type="button"
-                      onClick={() => fileUploadAppendRef.current?.click()}
-                      className="px-2.5 py-1 bg-transparent hover:bg-emerald-500/15 border border-emerald-500/80 text-emerald-400 hover:text-emerald-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-emerald-500/30 shadow-sm"
-                      title="Importar de arquivo Excel (.xlsx, .xls)"
-                    >
-                      <FileSpreadsheet className="w-3.5 h-3.5" />
-                      <span>Excel (.xlsx)</span>
-                    </button>
+                      <AnimatePresence>
+                        {isImportMenuOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 top-full mt-1.5 w-40 bg-[#07132a] border border-blue-600 rounded-xl shadow-[0_12px_28px_rgba(0,0,0,0.85)] py-1 z-50 overflow-hidden"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsImportMenuOpen(false);
+                                if (fileUploadAppendRef.current) {
+                                  fileUploadAppendRef.current.accept = '.xls,.xlsx';
+                                  fileUploadAppendRef.current.click();
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 text-left text-xs font-bold text-emerald-400 hover:bg-emerald-500/15 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0" />
+                              <span>Excel (.xlsx)</span>
+                            </button>
 
-                    <button
-                      type="button"
-                      onClick={() => fileUploadAppendRef.current?.click()}
-                      className="px-2.5 py-1 bg-transparent hover:bg-blue-500/15 border border-blue-500/80 text-blue-400 hover:text-blue-300 rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-blue-500/30 shadow-sm"
-                      title="Importar de arquivo CSV"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>CSV</span>
-                    </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsImportMenuOpen(false);
+                                if (fileUploadAppendRef.current) {
+                                  fileUploadAppendRef.current.accept = '.csv';
+                                  fileUploadAppendRef.current.click();
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 text-left text-xs font-bold text-blue-400 hover:bg-blue-500/15 hover:text-blue-300 flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 shrink-0" />
+                              <span>CSV</span>
+                            </button>
 
-                    <button
-                      type="button"
-                      onClick={() => fileUploadAppendRef.current?.click()}
-                      className="px-2.5 py-1 bg-transparent hover:bg-slate-400/15 border border-slate-500/80 text-slate-300 hover:text-white rounded-lg text-[11px] font-bold transition-all duration-150 flex items-center gap-1 cursor-pointer active:scale-90 active:bg-slate-500/30 shadow-sm"
-                      title="Importar de arquivo TXT"
-                    >
-                      <FileText className="w-3.5 h-3.5" />
-                      <span>TXT</span>
-                    </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsImportMenuOpen(false);
+                                if (fileUploadAppendRef.current) {
+                                  fileUploadAppendRef.current.accept = '.txt';
+                                  fileUploadAppendRef.current.click();
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 text-left text-xs font-bold text-slate-300 hover:bg-slate-500/15 hover:text-white flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 shrink-0" />
+                              <span>TXT</span>
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
 
                     {/* Arrastar e Soltar */}
                     <div
-                      onClick={() => fileUploadAppendRef.current?.click()}
+                      onClick={() => {
+                        if (fileUploadAppendRef.current) {
+                          fileUploadAppendRef.current.accept = '.txt,.csv,.xls,.xlsx';
+                          fileUploadAppendRef.current.click();
+                        }
+                      }}
                       className="px-2.5 py-1 bg-[#001f47]/70 hover:bg-[#0c1f44] border border-dashed border-blue-500 hover:border-amber-400 rounded-lg text-[10px] text-blue-200 hover:text-amber-300 font-semibold transition cursor-pointer flex items-center gap-1"
                       title="Arraste qualquer arquivo e solte aqui"
                     >
                       <Upload className="w-3 h-3 text-amber-400" />
                       <span>ou arraste o arquivo aqui</span>
                     </div>
-
-                    {/* Baixar Modelo */}
-                    <button
-                      type="button"
-                      onClick={handleDownloadSampleTemplate}
-                      className="px-2 py-1 text-blue-300/80 hover:text-white rounded-lg text-[10px] font-semibold transition flex items-center gap-0.5 cursor-pointer"
-                      title="Baixar arquivo modelo de exemplo"
-                    >
-                      <Download className="w-3 h-3" />
-                      <span>Modelo (.csv)</span>
-                    </button>
                   </div>
                 </div>
 
