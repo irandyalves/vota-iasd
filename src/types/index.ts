@@ -69,6 +69,8 @@ export interface VotingSession {
   resolverEmpates?: boolean;
   mainVotersCount?: number;
   tieBreakVotersCount?: number;
+  accessLocked?: boolean;
+  allowedVoterIds?: string[];
   createdAt?: number;
   updatedAt?: number;
 }

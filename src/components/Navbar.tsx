@@ -1,9 +1,10 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X } from 'lucide-react';
+import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X, Lock, Unlock } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
 import { toggleSecondaryScreen, subscribeSecondaryScreen, openTelaoOnSecondMonitor } from '../utils/screen';
 import type { VotingSession } from '../types';
+import { subscribeToConnectedVoters } from '../services/votingService';
 
 interface NavbarProps {
   currentView: 'voter' | 'telao' | 'admin';
@@ -31,6 +32,31 @@ export const Navbar: React.FC<NavbarProps> = ({
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [localPin, setLocalPin] = useState(pin);
   const [isScreen2Open, setIsScreen2Open] = useState(false);
+  const [connectedVoters, setConnectedVoters] = useState<string[]>([]);
+
+  // Escuta os votantes que conectaram pelo QR Code ou endereço
+  useEffect(() => {
+    if (!session?.id) return;
+    const unsub = subscribeToConnectedVoters(session.id, (voters) => {
+      setConnectedVoters(voters);
+    });
+    return unsub;
+  }, [session?.id]);
+
+  const isLocked = Boolean(session?.accessLocked);
+
+  // Clicou no cadeado: tranca ou destranca novos acessos
+  const handleToggleLock = () => {
+    if (!session || !onSaveSession) return;
+    const willLock = !session.accessLocked;
+    onSaveSession({
+      ...session,
+      accessLocked: willLock,
+      allowedVoterIds: willLock
+        ? (connectedVoters.length > 0 ? connectedVoters : session.allowedVoterIds || [])
+        : undefined,
+    });
+  };
 
   // Sincroniza estado de senha caso venha externamente
   useEffect(() => {
@@ -195,6 +221,36 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <RefreshCw className="w-3 h-3" />
               </button>
+            </div>
+
+            {/* VOTANTES COM CADEADO (CLICOU, TRANCOU, NINGUÉM MAIS ACESSA) */}
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <button
+                type="button"
+                onClick={handleToggleLock}
+                title={
+                  isLocked
+                    ? 'Votação TRANCADA (Novos acessos bloqueados. Clique para destrancar)'
+                    : 'Votação ABERTA (Clique no cadeado para trancar e bloquear novos acessos)'
+                }
+                className={`p-0.5 rounded transition cursor-pointer active:scale-90 flex items-center justify-center ${
+                  isLocked
+                    ? 'text-rose-400 hover:text-rose-300 drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]'
+                    : 'text-emerald-400 hover:text-emerald-300'
+                }`}
+              >
+                {isLocked ? (
+                  <Lock className="w-3.5 h-3.5 stroke-[2.5]" />
+                ) : (
+                  <Unlock className="w-3.5 h-3.5 stroke-[2.5]" />
+                )}
+              </button>
+              <span className="text-[10.5px] text-blue-300 font-bold uppercase select-none">
+                VOTANTES
+              </span>
+              <span className="font-mono font-black text-xs text-amber-300 min-w-[16px]">
+                {connectedVoters.length}
+              </span>
             </div>
           </div>
         </div>

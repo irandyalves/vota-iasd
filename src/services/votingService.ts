@@ -1,4 +1,4 @@
-import { doc, onSnapshot, setDoc, getDoc, runTransaction } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, runTransaction, collection } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import type { VotingSession, VoterBallot } from '../types';
 
@@ -480,4 +480,106 @@ export async function submitBallot(
   markAsVoted(session.id, round, iteration);
 
   return { success: true };
+}
+
+// Registra a presença de um votante conectado (via QR Code ou link direto)
+export function registerVoterPresence(sessionId: string): () => void {
+  if (typeof window === 'undefined') return () => {};
+  const voterId = getDeviceId();
+
+  const pingPresence = async () => {
+    // 1. Grava no Firestore se configurado
+    if (isFirebaseConfigured && db) {
+      try {
+        const presenceRef = doc(db, 'sessions', sessionId, 'presence', voterId);
+        await setDoc(presenceRef, {
+          voterId,
+          lastSeen: Date.now(),
+          connectedAt: Date.now(),
+        }, { merge: true });
+      } catch (err) {
+        console.warn('Erro ao registrar presença Firestore:', err);
+      }
+    }
+
+    // 2. Transmite via BroadcastChannel e evento local
+    try {
+      const raw = localStorage.getItem('vota_iasd_local_voters');
+      const list: string[] = raw ? JSON.parse(raw) : [];
+      if (!list.includes(voterId)) {
+        list.push(voterId);
+        localStorage.setItem('vota_iasd_local_voters', JSON.stringify(list));
+      }
+      if (broadcastChannel) {
+        broadcastChannel.postMessage({ type: 'VOTER_CONNECTED', voterId, list });
+      }
+      window.dispatchEvent(new CustomEvent('vota_iasd_voter_connected', { detail: { voterId, list } }));
+    } catch (_) {}
+  };
+
+  // Ping inicial imediato
+  pingPresence();
+
+  // Mantém ativo a cada 30 segundos
+  const interval = setInterval(pingPresence, 30000);
+
+  return () => {
+    clearInterval(interval);
+  };
+}
+
+// Inscrição em tempo real na lista de votantes conectados
+export function subscribeToConnectedVoters(
+  sessionId: string,
+  onUpdate: (voters: string[]) => void
+): () => void {
+  let unsubFirestore: (() => void) | null = null;
+
+  // Carrega imediatamente do localStorage
+  try {
+    const raw = localStorage.getItem('vota_iasd_local_voters');
+    if (raw) onUpdate(JSON.parse(raw));
+  } catch (_) {}
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const presenceCol = collection(db, 'sessions', sessionId, 'presence');
+      unsubFirestore = onSnapshot(presenceCol, (snapshot) => {
+        const ids = snapshot.docs.map((d) => d.id);
+        onUpdate(ids);
+        try {
+          localStorage.setItem('vota_iasd_local_voters', JSON.stringify(ids));
+        } catch (_) {}
+      });
+    } catch (err) {
+      console.warn('Erro ao assinar votantes conectados:', err);
+    }
+  }
+
+  // Listener local de broadcast
+  const handleBroadcast = (e: MessageEvent) => {
+    if (e.data && e.data.type === 'VOTER_CONNECTED' && Array.isArray(e.data.list)) {
+      onUpdate(e.data.list);
+    }
+  };
+
+  const handleCustom = (e: Event) => {
+    const custom = e as CustomEvent<{ voterId: string; list: string[] }>;
+    if (custom.detail?.list) {
+      onUpdate(custom.detail.list);
+    }
+  };
+
+  if (broadcastChannel) {
+    broadcastChannel.addEventListener('message', handleBroadcast);
+  }
+  window.addEventListener('vota_iasd_voter_connected', handleCustom);
+
+  return () => {
+    if (unsubFirestore) unsubFirestore();
+    if (broadcastChannel) {
+      broadcastChannel.removeEventListener('message', handleBroadcast);
+    }
+    window.removeEventListener('vota_iasd_voter_connected', handleCustom);
+  };
 }

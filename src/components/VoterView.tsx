@@ -10,7 +10,14 @@ import {
   Star,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
-import { submitBallot, hasVoted, verifyBallotOnServer, clearVotedFlag } from '../services/votingService';
+import {
+  submitBallot,
+  hasVoted,
+  verifyBallotOnServer,
+  clearVotedFlag,
+  getDeviceId,
+  registerVoterPresence,
+} from '../services/votingService';
 import { urnaAudio } from '../utils/audio';
 import { IasdLogo } from './IasdLogo';
 import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
@@ -117,8 +124,23 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     return () => clearTimeout(timer);
   }, [hasVotedNow]);
 
+  const myDeviceId = getDeviceId();
+  const isLocked = Boolean(session.accessLocked);
+  const isAlreadyAllowed =
+    (Array.isArray(session.allowedVoterIds) && session.allowedVoterIds.includes(myDeviceId)) ||
+    (typeof window !== 'undefined' && Boolean(sessionStorage.getItem(`auth_pin_${session.id}`)));
+  const isBlockedByLock = isLocked && !isAlreadyAllowed;
+
+  // Registra presença do votante assim que acessa a página (via QR Code ou link direto)
+  useEffect(() => {
+    if (isBlockedByLock) return;
+    const unsub = registerVoterPresence(session.id);
+    return unsub;
+  }, [session.id, isBlockedByLock]);
+
   // Auto-login se já autenticado antes nesta sessão ou se o QR Code já trouxe o PIN na URL
   useEffect(() => {
+    if (isBlockedByLock) return;
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const urlPin = params.get('pin');
@@ -132,7 +154,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     if (savedPin === session.pin) {
       setIsAuthenticated(true);
     }
-  }, [session.id, session.pin]);
+  }, [session.id, session.pin, isBlockedByLock]);
 
   // Limpa seleções e reseta trava de sucesso se a rodada, iteração ou status mudar
   useEffect(() => {
@@ -471,6 +493,33 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       </div>
     );
   };
+
+  // 0. TELA DE ACESSO TRANCADO PELO ADMINISTRADOR (CADEADO ATIVO)
+  if (isBlockedByLock) {
+    return (
+      <div className="min-h-[90vh] flex items-center justify-center p-4">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="max-w-md w-full bg-[#001f47] border-2 border-rose-500 rounded-3xl p-6 sm:p-8 shadow-[0_0_35px_rgba(244,63,94,0.35)] text-center"
+        >
+          <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-rose-500/20 border-2 border-rose-500/60 flex items-center justify-center shadow-lg">
+            <Lock className="w-8 h-8 text-rose-400" />
+          </div>
+          <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wider mb-2 font-serif">
+            Acesso Trancado
+          </h2>
+          <p className="text-sm text-blue-200 leading-relaxed mb-5">
+            A entrada de novos votantes foi encerrada pela liderança da eleição. Novos aparelhos não podem acessar esta votação no momento.
+          </p>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-rose-950/70 border border-rose-500/60 text-xs font-bold text-rose-300">
+            <Lock className="w-3.5 h-3.5" />
+            <span>SALA TRANCADA</span>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
 
   // 1. TELA DE AUTENTICAÇÃO POR PIN
   if (!isAuthenticated) {
