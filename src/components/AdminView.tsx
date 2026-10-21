@@ -1216,22 +1216,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       key={idx}
                       className="p-3.5 rounded-xl bg-[#03152d]/90 border border-rose-500/50 space-y-3 shadow-inner"
                     >
-                      <div className="flex items-center justify-between gap-2 border-b border-rose-500/20 pb-2">
-                        <div>
-                          <h4 className="font-black text-xs sm:text-sm tracking-wide flex items-center flex-wrap gap-1 text-white uppercase select-none">
-                            <span>{tie.vacanciesInDispute === 1 ? 'É' : 'SÃO'}</span>
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
-                              {String(tie.vacanciesInDispute).padStart(2, '0')}
-                            </span>
-                            <span>{tie.vacanciesInDispute === 1 ? 'VAGA, ESCOLHA' : 'VAGAS, ESCOLHA'}</span>
-                            <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
-                              {String(tie.vacanciesInDispute + 1).padStart(2, '0')}
-                            </span>
-                            <span>NOMES</span>
-                          </h4>
-                          <p className="text-[11px] text-slate-300">
-                            {tie.label} • <strong className="text-white">{tie.votesCount}</strong> {tie.votesCount === 1 ? 'voto cada' : 'votos cada'}
-                          </p>
+                      <div className="border-b border-rose-500/20 pb-2.5">
+                        <h4 className="font-black text-xs sm:text-sm tracking-wide flex items-center flex-wrap gap-1 text-white uppercase select-none">
+                          <span>{tie.vacanciesInDispute === 1 ? 'É' : 'SÃO'}</span>
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
+                            {String(tie.vacanciesInDispute).padStart(2, '0')}
+                          </span>
+                          <span>{tie.vacanciesInDispute === 1 ? 'VAGA, ESCOLHA' : 'VAGAS, ESCOLHA'}</span>
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
+                            {String(tie.vacanciesInDispute + 1).padStart(2, '0')}
+                          </span>
+                          <span>NOMES</span>
+                        </h4>
+
+                        <div className="w-full h-px bg-emerald-800/80 my-2" />
+
+                        <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider select-none">
+                          <span className="text-white font-black">
+                            {tie.type === 'TITULAR'
+                              ? 'TITULAR'
+                              : tie.type === 'SUPLENTE_1'
+                              ? '1º SUPLENTE'
+                              : tie.type === 'SUPLENTE_2'
+                              ? '2º SUPLENTE'
+                              : tie.label.replace(/^Empate para (vaga de )?/i, '').toUpperCase()}
+                          </span>
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse drop-shadow-[0_0_6px_rgba(52,211,153,0.9)] shrink-0 inline-block" />
+                          <span className="text-amber-300 font-mono font-black">
+                            {String(tie.votesCount).padStart(2, '0')} {tie.votesCount === 1 ? 'VOTO CADA' : 'VOTOS CADA'}
+                          </span>
                         </div>
                       </div>
 
