@@ -451,9 +451,43 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         exit={{ opacity: 0, scale: 0.94, y: -6 }}
         transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
         style={{ transformOrigin: 'top left' }}
-        className="absolute top-full left-0 mt-2 z-50 overflow-hidden w-[350px] sm:w-[410px] max-w-[calc(100vw-24px)]"
+        className="absolute top-full left-0 mt-2 z-50 w-[350px] sm:w-[410px] max-w-[calc(100vw-24px)]"
       >
-        <div className="bg-[#001f47] border-2 border-emerald-400 rounded-xl p-3 shadow-[0_0_24px_rgba(52,211,153,0.5),0_14px_34px_rgba(0,0,0,0.85)] space-y-2.5">
+        <div className="relative bg-[#001f47] rounded-xl p-3 shadow-[0_0_24px_rgba(52,211,153,0.25),0_14px_34px_rgba(0,0,0,0.85)] space-y-2.5">
+          {/* Borda Designer: espessura reduzida em 30% (1.4px) com gradientes direcionais solicitados */}
+          <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.35))' }}>
+            {/* Canto superior esquerdo arredondado */}
+            <div
+              className="absolute top-0 left-0 w-4 h-4 rounded-tl-xl pointer-events-none"
+              style={{ borderTop: '1.4px solid #10b981', borderLeft: '1.4px solid #10b981' }}
+            />
+            {/* Linha superior: no sentido da esquerda para a direita ficando transparente */}
+            <div
+              className="absolute top-0 left-4 right-0 pointer-events-none"
+              style={{ height: '1.4px', background: 'linear-gradient(to right, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+            />
+            {/* Linha esquerda: no sentido descendo ficando transparente até 100% */}
+            <div
+              className="absolute top-4 bottom-0 left-0 pointer-events-none"
+              style={{ width: '1.4px', background: 'linear-gradient(to bottom, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+            />
+
+            {/* Canto inferior direito arredondado */}
+            <div
+              className="absolute bottom-0 right-0 w-4 h-4 rounded-br-xl pointer-events-none"
+              style={{ borderBottom: '1.4px solid #10b981', borderRight: '1.4px solid #10b981' }}
+            />
+            {/* Linha inferior: da direita para a esquerda ficando transparente */}
+            <div
+              className="absolute bottom-0 right-4 left-0 pointer-events-none"
+              style={{ height: '1.4px', background: 'linear-gradient(to left, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+            />
+            {/* Linha direita: no sentido subindo ficando transparente até 100% */}
+            <div
+              className="absolute bottom-4 top-0 right-0 pointer-events-none"
+              style={{ width: '1.4px', background: 'linear-gradient(to top, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+            />
+          </div>
           {/* Cabeçalho */}
           <div className="flex items-center justify-between pb-1.5 border-b border-blue-900/80">
             <span className="text-xs font-black text-white uppercase tracking-wider flex items-center gap-1.5">
