@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Tv, MonitorOff, ExternalLink, RefreshCw, Camera, X } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
 import { toggleSecondaryScreen, subscribeSecondaryScreen, openTelaoOnSecondMonitor } from '../utils/screen';
 import type { VotingSession } from '../types';
@@ -193,8 +194,38 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* CENTRO: BOTÃO DA URNA (3D VERDE COM RELEVO E BRAILLE, SEM BRILHO) */}
-        <div className="flex items-center justify-center justify-self-center">
+        {/* CENTRO: BOTÃO DA URNA (3D COM RELEVO E BRAILLE). EM APURAÇÃO FICA BRANCO, COM A RODA SUAVE (PULSAR + GIRO) À ESQUERDA DO BOTÃO */}
+        <div className="flex items-center justify-center justify-self-center gap-3">
+          {isVotingActive && (
+            /* Roda à esquerda do botão: giro lento + pulsar suave */
+            <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 pointer-events-none" aria-hidden="true">
+              {/* Halo pulsante suave */}
+              <motion.div
+                className="absolute inset-0 rounded-full bg-white/20"
+                animate={{ scale: [0.85, 1.25, 0.85], opacity: [0.45, 0, 0.45] }}
+                transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              {/* Anel externo girando devagar (horário) */}
+              <motion.div
+                className="absolute inset-1 rounded-full border-[3px] border-white/15 border-t-white border-r-amber-300/90"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
+              />
+              {/* Anel interno tracejado girando ao contrário */}
+              <motion.div
+                className="absolute inset-[11px] rounded-full border-2 border-dashed border-white/60"
+                animate={{ rotate: -360 }}
+                transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+              />
+              {/* Núcleo pulsando */}
+              <motion.div
+                className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.9)]"
+                animate={{ scale: [1, 1.5, 1], opacity: [0.8, 1, 0.8] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+              />
+            </div>
+          )}
+
           <button
             type="button"
             onClick={handleCenterVotingButtonClick}
@@ -206,81 +237,63 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'Iniciar Votação mantendo os nomes em ordem A-Z'
             }
             style={{
-              backgroundColor: showApuracaoCaption ? '#d97706' : '#159636',
-              borderColor: showApuracaoCaption ? '#f59e0b' : '#24b349',
+              backgroundColor: showApuracaoCaption ? '#ffffff' : '#159636',
+              borderColor: showApuracaoCaption ? '#e2e8f0' : '#24b349',
               boxShadow: showApuracaoCaption
-                ? '0 6px 0 #78350f, 3px 6px 0 #451a03'
+                ? '0 6px 0 #94a3b8, 3px 6px 0 #64748b'
                 : '0 6px 0 #09521b, 3px 6px 0 #063b13',
             }}
-            className="px-7 pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-transform duration-100 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none"
+            className="px-7 pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none"
           >
             <div className="flex items-center justify-center gap-2">
-              {isVotingActive && (
-                /* Rodinha com efeito de girar antes do texto enquanto a votação está ativa */
-                <svg
-                  className="w-4 h-4 sm:w-5 sm:h-5 animate-spin shrink-0 text-[#181818]"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="9"
-                    stroke="currentColor"
-                    strokeWidth="2.8"
-                    strokeDasharray="14 8"
-                  />
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="4"
-                    stroke="currentColor"
-                    strokeWidth="2.2"
-                    strokeDasharray="6 4"
-                  />
-                </svg>
-              )}
               <span className="font-black text-sm sm:text-base tracking-wider uppercase font-sans text-[#1a1a1a] leading-none">
                 {showApuracaoCaption ? 'APURAÇÃO' : 'INICIAR VOTAÇÃO'}
               </span>
             </div>
 
             {/* Pontos em Braille 3D idênticos à tecla física da Urna */}
-            <div className="flex flex-col items-center gap-[2.5px] mt-1.5 pointer-events-none">
-              {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2.5" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-              </div>
-              {/* Linha 2 */}
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 opacity-0" />
-              </div>
-              {/* Linha 3 */}
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2.5" />
-                <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 opacity-0" />
-                <span className="w-2 h-2 opacity-0" />
-              </div>
-            </div>
+            {(() => {
+              const dot = showApuracaoCaption
+                ? 'w-2 h-2 rounded-full bg-[#cbd5e1] shadow-[1px_1.5px_0_#94a3b8]'
+                : 'w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]';
+              return (
+                <div className="flex flex-col items-center gap-[2.5px] mt-1.5 pointer-events-none">
+                  {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
+                  <div className="flex items-center gap-2">
+                    <span className={dot} />
+                    <span className={dot} />
+                    <span className={dot} />
+                    <span className="w-2.5" />
+                    <span className={dot} />
+                    <span className={dot} />
+                    <span className={dot} />
+                    <span className={dot} />
+                  </div>
+                  {/* Linha 2 */}
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className={dot} />
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className={dot} />
+                    <span className={dot} />
+                    <span className="w-2 h-2 opacity-0" />
+                  </div>
+                  {/* Linha 3 */}
+                  <div className="flex items-center gap-2">
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className={dot} />
+                    <span className="w-2.5" />
+                    <span className={dot} />
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className="w-2 h-2 opacity-0" />
+                    <span className="w-2 h-2 opacity-0" />
+                  </div>
+                </div>
+              );
+            })()}
           </button>
         </div>
 
