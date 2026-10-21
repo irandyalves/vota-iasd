@@ -377,30 +377,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                   <div className="w-80 h-80 rounded-full bg-blue-500/10 blur-3xl" />
                 </div>
 
-                {/* Cabeçalho no topo: XX JÁ VOTARAM | Ícone de Tela Cheia */}
-                <div className="flex items-center justify-between border-b border-blue-800/70 pb-3 z-10">
-                  <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-md">
-                    <div className="flex items-center gap-1.5 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider">
-                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                      <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
-                        {totalVotersVoted}
-                      </strong>
-                      <span>{totalVotersVoted === 1 ? 'JÁ VOTOU' : 'JÁ VOTARAM'}</span>
-                    </div>
-
-                    <span className="text-blue-600/80 font-light text-base select-none">|</span>
-
-                    <button
-                      type="button"
-                      onClick={toggleFullscreen}
-                      title={isFullscreen ? 'Sair da Tela Cheia (ESC)' : 'Alternar Tela Cheia (F11)'}
-                      className="p-1 rounded-lg hover:bg-blue-900/70 text-amber-300 hover:text-amber-200 transition cursor-pointer active:scale-90 flex items-center justify-center"
-                    >
-                      {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                    </button>
-                  </div>
-
-                  <span className="text-xs font-bold uppercase tracking-widest text-blue-300/80">
+                {/* Cabeçalho no topo: Título da votação centralizado em laranja (sem o card 1 JÁ VOTOU no topo esq) */}
+                <div className="flex items-center justify-center border-b border-blue-800/70 pb-3 z-10">
+                  <span className="text-sm sm:text-base lg:text-lg font-black uppercase tracking-widest text-orange-400 text-center">
                     {isTieBreak ? 'Rodada de Desempate' : session.title}
                   </span>
                 </div>
@@ -465,19 +444,16 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     </motion.div>
                   </div>
 
-                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white uppercase tracking-wide mb-2">
+                  <h2 className="text-xl sm:text-2xl lg:text-3xl font-black text-white uppercase tracking-wide">
                     Aguardando o resultado...
                   </h2>
-                  <p className="text-xs sm:text-sm text-blue-200/85 max-w-md">
-                    Votação em andamento. O resultado oficial será exibido nesta tela assim que a votação for encerrada.
-                  </p>
                 </div>
 
                 <div className="h-2" />
               </div>
             ) : (
               <div className="bg-[#001f47]/80 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-xl">
-                {/* CABEÇALHO DO PAINEL TELÃO: XX JÁ VOTARAM | ÍCONE DE TELA CHEIA */}
+                {/* CABEÇALHO DO PAINEL TELÃO: XX JÁ VOTARAM (SEM O ÍCONE [ ] DE TELA CHEIA) */}
                 <div className="flex flex-wrap items-center justify-between mb-3 pb-2.5 border-b border-blue-800/80 gap-2">
                   <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-md">
                     <div className="flex items-center gap-1.5 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider">
@@ -487,18 +463,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       </strong>
                       <span>{totalVotersVoted === 1 ? 'JÁ VOTOU' : 'JÁ VOTARAM'}</span>
                     </div>
-
-                    <span className="text-blue-600/80 font-light text-base select-none">|</span>
-
-                    {/* ÍCONE DE TELA CHEIA */}
-                    <button
-                      type="button"
-                      onClick={toggleFullscreen}
-                      title={isFullscreen ? 'Sair da Tela Cheia (ESC)' : 'Alternar Tela Cheia (F11)'}
-                      className="p-1 rounded-lg hover:bg-blue-900/70 text-amber-300 hover:text-amber-200 transition cursor-pointer active:scale-90 flex items-center justify-center"
-                    >
-                      {isFullscreen ? <Minimize className="w-4 h-4" /> : <Maximize className="w-4 h-4" />}
-                    </button>
                   </div>
 
                   <div className="flex items-center gap-3 text-[11px] font-semibold">
