@@ -262,10 +262,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                 />
               </div>
 
-              {/* Caixa da Senha em Grande Destaque */}
-              <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl p-2 shadow-inner">
-                <span className="text-[10px] uppercase font-bold text-blue-300 block tracking-wider">
-                  SENHA DE ACESSO
+              {/* Caixa da Senha em Linha Única: SENHA XXXX */}
+              <div className="w-full bg-[#07132a] border border-[#d4af37] rounded-xl py-2 px-3 shadow-inner flex items-center justify-center gap-2.5">
+                <span className="text-sm sm:text-base uppercase font-black text-blue-300 tracking-wider">
+                  SENHA
                 </span>
                 <span className="text-xl sm:text-2xl font-mono font-black text-[#d4af37] tracking-widest">
                   {session.pin}
