@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
-import { saveSession } from '../services/votingService';
+import { saveSession, subscribeToConnectedVoters } from '../services/votingService';
 import { parseImportFile } from '../utils/fileImporter';
 import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
 
@@ -106,6 +106,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const s2Count = session.habilitarSuplente2 === true ? (session.segundoSuplentesCount ?? 1) : 0;
   const totalVacancies = vacancies + s1Count + s2Count;
   const cutoffVotes = rankedCandidates[vacancies - 1]?.votesCount || 0;
+  const cutoffSuplente1 = s1Count > 0 ? (rankedCandidates[vacancies + s1Count - 1]?.votesCount || 0) : 0;
+
+  const [connectedVotersCount, setConnectedVotersCount] = useState<number>(0);
+
+  useEffect(() => {
+    if (!session?.id) return;
+    const unsub = subscribeToConnectedVoters(session.id, (voters) => {
+      setConnectedVotersCount(voters.length);
+    });
+    return unsub;
+  }, [session?.id]);
+
+  const displayVotersCount = Math.max(session.mainVotersCount || 0, connectedVotersCount);
 
   // Escuta o evento emitido pelo botão branco ("APURAÇÃO") da Navbar
   useEffect(() => {
@@ -2265,8 +2278,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-medium text-slate-100 text-sm sm:text-base tracking-tight">
-                        Evolução da Votação em Tempo Real
+                      <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide uppercase">
+                        VOTAÇÃO EM TEMPO REAL
                       </h3>
                       <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
@@ -2301,56 +2314,64 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </div>
               </div>
 
-              {/* 4 Cards de KPI / Telemetria */}
+              {/* 4 Cards de KPI / Telemetria com Fonte Grande */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {/* Votantes */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-                    <Users className="w-4 h-4" />
+                {/* 1. Votantes (quantidade em fonte grande) */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-blue-500/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+                    <Users className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] text-slate-400 block truncate">Votantes confirmados</span>
-                    <span className="text-base sm:text-lg font-semibold text-slate-100 font-mono">
-                      {session.mainVotersCount || 0}
+                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                      Votantes
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black text-slate-100 font-mono leading-none tracking-tight block mt-0.5">
+                      {displayVotersCount}
                     </span>
                   </div>
                 </div>
 
-                {/* Total de Votos */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                    <Activity className="w-4 h-4" />
+                {/* 2. Total de Votos (quantidade em fonte grande) */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-emerald-500/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
+                    <Activity className="w-5 h-5 animate-pulse" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] text-slate-400 block truncate">Votos computados</span>
-                    <span className="text-base sm:text-lg font-semibold text-emerald-300 font-mono">
+                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                      Total de votos
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-300 font-mono leading-none tracking-tight block mt-0.5">
                       {totalVotesCast}
                     </span>
                   </div>
                 </div>
 
-                {/* Líder Atual */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0">
-                    <Award className="w-4 h-4" />
+                {/* 3. Corte Titulares (quantidade em fonte grande) */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-purple-500/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 shadow-inner">
+                    <Award className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] text-slate-400 block truncate">Líder provisório</span>
-                    <span className="text-xs sm:text-sm font-semibold text-amber-300 block truncate capitalize">
-                      {rankedCandidates[0]?.votesCount ? rankedCandidates[0].name : 'Aguardando votos'}
+                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                      Corte Titulares
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black text-purple-300 font-mono leading-none tracking-tight block mt-0.5">
+                      {cutoffVotes}
                     </span>
                   </div>
                 </div>
 
-                {/* Linha de Corte Titular */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
-                    <TrendingUp className="w-4 h-4" />
+                {/* 4. Corte 1º Suplente (quantidade em fonte grande) */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-sky-500/30 transition-colors">
+                  <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-inner">
+                    <TrendingUp className="w-5 h-5" />
                   </div>
                   <div className="min-w-0">
-                    <span className="text-[11px] text-slate-400 block truncate">Corte Titulares</span>
-                    <span className="text-base sm:text-lg font-semibold text-purple-300 font-mono">
-                      {cutoffVotes} <span className="text-xs font-normal text-slate-400">votos</span>
+                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                      Corte 1º Suplente
+                    </span>
+                    <span className="text-2xl sm:text-3xl font-black text-sky-300 font-mono leading-none tracking-tight block mt-0.5">
+                      {cutoffSuplente1}
                     </span>
                   </div>
                 </div>
