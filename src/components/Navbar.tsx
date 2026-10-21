@@ -270,7 +270,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           <div className="leading-tight">
             <span
-              className="font-extrabold tracking-wider text-white text-[12px] sm:text-[13px] block select-none mb-1"
+              className="font-extrabold tracking-wider text-white text-sm sm:text-base block select-none"
               style={{
                 fontFamily:
                   '"Varela Round", "Nunito", "Quicksand", ui-rounded, "Segoe UI", system-ui, sans-serif',
@@ -278,36 +278,9 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               VOTA <span className="text-[#d4af37]">IASD</span>
             </span>
-
-            {/* VOTANTES COM CADEADO */}
-            <div className="flex items-center gap-1.5 bg-[#07132a]/80 px-2 py-0.5 rounded-md border border-blue-900/50">
-              <span className="text-[10px] text-blue-300 font-semibold cursor-default select-none">
-                VOTANTES:
-              </span>
-              <span className="min-w-[18px] px-0.5 py-0 font-mono font-black text-xs text-amber-300 tracking-wider flex items-center">
-                {connectedVoters.length}
-              </span>
-              <button
-                type="button"
-                onClick={handleToggleLock}
-                title={
-                  isLocked
-                    ? 'Votação TRANCADA (Novos acessos bloqueados. Clique para destrancar)'
-                    : 'Votação ABERTA (Clique no cadeado para trancar e bloquear novos acessos)'
-                }
-                className={`p-0.5 rounded transition cursor-pointer active:scale-95 flex items-center justify-center ${
-                  isLocked
-                    ? 'text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.95)] hover:text-red-400'
-                    : 'text-emerald-400 hover:text-emerald-300 drop-shadow-[0_0_4px_rgba(52,211,153,0.5)]'
-                }`}
-              >
-                {isLocked ? (
-                  <Lock className="w-3.5 h-3.5 stroke-[2.75]" />
-                ) : (
-                  <Unlock className="w-3.5 h-3.5 stroke-[2.5]" />
-                )}
-              </button>
-            </div>
+            <span className="text-[10px] text-blue-300/80 font-semibold tracking-wider uppercase block mt-0.5 select-none">
+              SISTEMA ELEITORAL
+            </span>
           </div>
         </div>
 
@@ -441,9 +414,67 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
         </div>
 
-        {/* DIREITA: "VISÃO DE:" e logo abaixo "SENHA: XXX" */}
+        {/* DIREITA: CADEADO (com Hint Bonito) ACIMA DE "VISÃO DE:" + "SENHA: XXX" */}
         <div className="flex flex-col items-end gap-1.5 justify-self-end">
-          {/* 1. VISÃO DE: */}
+          {/* 1. CADEADINHO ACIMA DE VISÃO DE (Com Hint Bonito Personalizado) */}
+          <div className="relative group flex items-center justify-end">
+            <button
+              type="button"
+              onClick={handleToggleLock}
+              className={`px-2 py-0.5 rounded-lg transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-1.5 border shadow-sm ${
+                isLocked
+                  ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.35)] hover:bg-rose-900/90'
+                  : 'bg-emerald-950/60 border-emerald-500/60 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.25)] hover:bg-emerald-900/80'
+              }`}
+            >
+              {isLocked ? (
+                <>
+                  <Lock className="w-3.5 h-3.5 stroke-[2.75] text-rose-400 drop-shadow-[0_0_6px_rgba(244,63,94,0.8)]" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-rose-300">
+                    Fechada
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-3.5 h-3.5 stroke-[2.5] text-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.8)]" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-300">
+                    Aberta
+                  </span>
+                </>
+              )}
+            </button>
+
+            {/* HINT BONITO FLUTUANTE (Substitui o tooltip feio do navegador) */}
+            <div
+              className={`pointer-events-none absolute right-full mr-2.5 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all duration-200 ease-out z-50 flex items-center gap-2 px-3 py-1.5 rounded-xl shadow-2xl backdrop-blur-md border whitespace-nowrap ${
+                isLocked
+                  ? 'bg-[#120407]/95 border-rose-500/70 text-rose-200 shadow-[0_0_20px_rgba(244,63,94,0.4)]'
+                  : 'bg-[#02140b]/95 border-emerald-500/70 text-emerald-200 shadow-[0_0_20px_rgba(16,185,129,0.4)]'
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  isLocked ? 'bg-rose-500 animate-ping' : 'bg-emerald-400 animate-pulse'
+                }`}
+              />
+              <span className="text-xs font-black tracking-wide uppercase">
+                {isLocked ? 'Sessão fechada' : 'Sessão aberta'}
+              </span>
+              <span className="text-[10px] text-slate-300 font-medium pl-1.5 border-l border-white/20">
+                {isLocked
+                  ? 'Quem tentar entrar receberá aviso de bloqueio'
+                  : 'Novos eleitores podem se conectar'}
+              </span>
+              {/* Seta indicadora para o botão */}
+              <div
+                className={`absolute left-full top-1/2 -translate-y-1/2 -ml-px border-4 border-transparent ${
+                  isLocked ? 'border-l-rose-500/70' : 'border-l-emerald-500/70'
+                }`}
+              />
+            </div>
+          </div>
+
+          {/* 2. VISÃO DE: */}
           <div className="flex items-center gap-1.5 bg-[#07132a] px-2.5 py-1 rounded-lg border border-blue-800/80 shadow-inner">
             <label
               htmlFor="navbar-view-select"
@@ -471,7 +502,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </select>
           </div>
 
-          {/* 2. SENHA: XXX (MOVIDO PARA DEBAIXO DO VISÃO DE) */}
+          {/* 3. SENHA: XXX (DEBAIXO DE VISÃO DE) */}
           <div className="flex items-center gap-1 bg-[#07132a]/90 px-2 py-0.5 rounded-lg border border-blue-800/60 shadow-inner">
             <label
               htmlFor="navbar-pin-input"

@@ -168,6 +168,10 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
   const handleVerifyPin = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isBlockedByLock) {
+      setPinError('Acesso trancado: A entrada de novos votantes foi encerrada pela liderança.');
+      return;
+    }
     if (enteredPin.trim() === session.pin) {
       setIsAuthenticated(true);
       sessionStorage.setItem(`auth_pin_${session.id}`, session.pin);
