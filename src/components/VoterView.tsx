@@ -157,6 +157,13 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     urnaAudio.playKeyBeep();
     setErrorMessage('');
 
+    // Feedback tátil sutil no celular ao selecionar/desmarcar candidato
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate(35);
+      } catch (_) {}
+    }
+
     if (selectedIds.includes(id)) {
       setSelectedIds(selectedIds.filter((item) => item !== id));
     } else {
@@ -169,6 +176,13 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   };
 
   const handleConfirmVote = async () => {
+    // 📳 Vibração tátil IMEDIATA ao clicar no BOTÃO VOTAR / CONFIRMA
+    if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
+      try {
+        navigator.vibrate([160, 60, 160]);
+      } catch (_) {}
+    }
+
     // Bloqueia duplo toque / reenvio
     if (isSubmitting || submitSuccess || alreadyVoted) return;
     // Só permite confirmar se atingiu exatamente a quantidade definida
@@ -186,8 +200,8 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       // 🔔 Toca o som oficial da Urna Eletrônica do TSE!
       urnaAudio.playTseConfirma();
 
-      // Vibração tátil no celular
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      // Vibração tátil no celular ao concluir a gravação do voto
+      if (typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function') {
         try {
           navigator.vibrate([100, 50, 200]);
         } catch (_) {}
