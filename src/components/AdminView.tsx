@@ -762,13 +762,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <div
                     onClick={() => handleSelectEventButton(evt)}
                     title="Selecionar este evento"
-                    className={`group px-2.5 py-2 min-h-[34px] rounded-[4px] font-black text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none border ${
+                    className={`group px-2.5 py-2 min-h-[34px] rounded-[4px] text-[10.5px] text-white uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none border ${
                       isSelected
-                        ? 'bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 text-amber-300 shadow-[0_6px_18px_rgba(0,0,0,0.75),0_0_12px_rgba(251,191,36,0.35)]'
-                        : 'bg-[#07132a]/95 hover:bg-[#0c1f44] border-blue-700/80 text-slate-200 hover:border-amber-400/60 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.85)]'
+                        ? 'font-bold bg-gradient-to-r from-amber-500/25 to-blue-900/80 border-amber-400 shadow-[0_6px_18px_rgba(0,0,0,0.75),0_0_12px_rgba(251,191,36,0.35)]'
+                        : 'font-normal bg-[#07132a]/95 hover:bg-[#0c1f44] border-blue-700/80 hover:border-amber-400/60 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.85)]'
                     }`}
                   >
-                    <span>{displayName}</span>
+                    <span className={isSelected ? 'font-bold text-white' : 'font-normal text-white'}>{displayName}</span>
                     <span className="px-1.5 py-0.2 rounded-[3px] bg-[#07132a] border border-amber-400/70 text-[10px] font-mono font-black text-amber-400">
                       {count}
                     </span>
