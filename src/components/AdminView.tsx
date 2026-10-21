@@ -1236,15 +1236,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <div
                     onClick={() => handleSelectEventButton(evt)}
                     title="Selecionar este evento"
-                    className={`group px-2.5 py-2 min-h-[34px] rounded-[4px] text-[10.5px] text-white uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none border ${
+                    className={`group relative pl-3.5 pr-2.5 py-1.5 min-h-[34px] rounded-l-lg rounded-r-md text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none ${
                       isSelected
-                        ? 'font-bold bg-gradient-to-r from-emerald-600/35 via-emerald-800/40 to-blue-950/85 border-emerald-400 shadow-[0_6px_18px_rgba(0,0,0,0.75),0_0_14px_rgba(16,185,129,0.4)]'
-                        : 'font-normal bg-[#07132a]/95 hover:bg-[#0c1f44] border-blue-700/80 hover:border-emerald-400/60 shadow-[0_6px_16px_rgba(0,0,0,0.7),0_2px_5px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_20px_rgba(0,0,0,0.85)]'
+                        ? 'font-bold text-white bg-gradient-to-r from-emerald-950/80 via-[#041c30]/75 to-[#07132a]/30 shadow-[0_4px_16px_rgba(0,0,0,0.6)]'
+                        : 'font-normal text-slate-200 bg-[#07132a]/80 hover:bg-[#0c1f44]/80 shadow-[0_2px_8px_rgba(0,0,0,0.4)]'
                     }`}
                   >
-                    <span className={isSelected ? 'font-bold text-white' : 'font-normal text-white'}>{displayName}</span>
+                    {/* Borda desenhada: mais grossa e arredondada à esquerda, sem borda à direita, superior e inferior com transparência gradual a partir dos 30% */}
+                    <div
+                      className="absolute inset-0 pointer-events-none rounded-l-lg transition-all duration-150"
+                      style={{
+                        borderTopWidth: isSelected ? '1.5px' : '1px',
+                        borderBottomWidth: isSelected ? '1.5px' : '1px',
+                        borderLeftWidth: isSelected ? '4.5px' : '3.5px',
+                        borderRightWidth: '0px',
+                        borderStyle: 'solid',
+                        borderColor: isSelected ? '#10b981' : '#3b82f6',
+                        borderTopLeftRadius: '8px',
+                        borderBottomLeftRadius: '8px',
+                        borderTopRightRadius: '0px',
+                        borderBottomRightRadius: '0px',
+                        WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
+                        maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
+                        filter: isSelected ? 'drop-shadow(0 0 5px rgba(16,185,129,0.5))' : undefined,
+                        opacity: isSelected ? 1 : 0.6,
+                      }}
+                    />
+
+                    <span className="relative z-10">{displayName}</span>
                     <span
-                      className={`px-1.5 py-0.2 rounded-[3px] text-[12px] font-mono font-black ${
+                      className={`relative z-10 px-1.5 py-0.2 rounded-[3px] text-[12px] font-mono font-black ${
                         isSelected
                           ? 'bg-emerald-950/90 text-emerald-300 border border-emerald-500/40'
                           : 'bg-[#07132a] text-amber-400'
@@ -1266,7 +1287,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         }
                       }}
                       title="Editar configurações desta votação"
-                      className={`p-0.5 transition cursor-pointer active:scale-90 ${
+                      className={`relative z-10 p-0.5 transition cursor-pointer active:scale-90 ${
                         isSelected ? 'text-emerald-300 hover:text-white' : 'text-slate-400 hover:text-amber-300'
                       }`}
                     >
@@ -1278,7 +1299,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         type="button"
                         onClick={(e) => handleDeleteEvent(evt.id, e)}
                         title="Excluir este evento"
-                        className="p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer active:scale-90"
+                        className="relative z-10 p-0.5 text-slate-400 hover:text-rose-400 transition cursor-pointer active:scale-90"
                       >
                         <Trash2 className="w-3 h-3" />
                       </button>
