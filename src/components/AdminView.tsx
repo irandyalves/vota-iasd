@@ -106,6 +106,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [newGeneralEventNameInput, setNewGeneralEventNameInput] = useState<string>('');
   const [isEditingGeneralModalOpen, setIsEditingGeneralModalOpen] = useState<boolean>(false);
   const [editingGeneralEventName, setEditingGeneralEventName] = useState<string>('');
+  const [deleteConfirmGeneralEvent, setDeleteConfirmGeneralEvent] = useState<{ id: string; name: string } | null>(null);
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
@@ -739,6 +740,181 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     });
     setIsEditingGeneralModalOpen(false);
     showNotification('success', `Nome do Evento Geral atualizado para "${cleaned}"!`);
+  };
+
+  // Exclui um Evento Geral com confirmação
+  const handleDeleteGeneralEvent = (idToDelete: string) => {
+    const targetToDelete = generalEventsList.find((g) => g.id === idToDelete);
+    const targetName = targetToDelete?.name || session.generalEventName || 'Evento Geral';
+    const remainingGenList = generalEventsList.filter((g) => g.id !== idToDelete);
+
+    if (remainingGenList.length > 0) {
+      // Se o evento apagado for o ativo, migra para o primeiro restante
+      const isDeletingActive =
+        idToDelete === currentGeneralEventId ||
+        targetName.toUpperCase() === (session.generalEventName || '').toUpperCase();
+
+      if (isDeletingActive) {
+        const nextEvent = remainingGenList[0];
+        const defaultRules = getGlobalElectionRules();
+        const localLayout = getLocalTelaoLayout() || session.telaoLayout;
+        const targetEvents =
+          nextEvent.events && nextEvent.events.length > 0
+            ? nextEvent.events
+            : [
+                {
+                  id: 'evt_' + Date.now(),
+                  name: nextEvent.title || 'TESOUREIRO',
+                  options: nextEvent.options || [],
+                  vacancies: nextEvent.vacancies ?? defaultRules.vacancies ?? 1,
+                  maxVotesPerVoter: nextEvent.maxVotesPerVoter ?? defaultRules.vacancies ?? 1,
+                  suplentesCount: nextEvent.suplentesCount ?? defaultRules.suplentesCount ?? 1,
+                  segundoSuplentesCount: nextEvent.segundoSuplentesCount ?? defaultRules.segundoSuplentesCount ?? 0,
+                  habilitarSuplente1: nextEvent.habilitarSuplente1 ?? defaultRules.habilitarSuplente1 ?? true,
+                  habilitarSuplente2: nextEvent.habilitarSuplente2 ?? defaultRules.habilitarSuplente2 ?? false,
+                  resolverEmpates: nextEvent.resolverEmpates ?? true,
+                  totalVotersConnected: defaultRules.totalVotersConnected || 1,
+                  rulesConfigured: nextEvent.rulesConfigured ?? false,
+                  labelTitulares: nextEvent.labelTitulares || defaultRules.labelTitulares || 'Titulares',
+                  labelSuplente1: nextEvent.labelSuplente1 || defaultRules.labelSuplente1 || '1º suplente',
+                  labelSuplente2: nextEvent.labelSuplente2 || defaultRules.labelSuplente2 || '2º suplente',
+                  status: nextEvent.status || ('WAITING' as const),
+                  tieBreak: nextEvent.tieBreak || null,
+                  mainVotersCount: nextEvent.mainVotersCount || 0,
+                  tieBreakVotersCount: nextEvent.tieBreakVotersCount || 0,
+                  votingIteration: (session.votingIteration || 1) + 1,
+                  telaoMode: nextEvent.telaoMode || ('names' as const),
+                },
+              ];
+        const firstEvent = targetEvents.find((e) => e.id === nextEvent.activeEventId) || targetEvents[0];
+
+        const updatedSession: VotingSession = {
+          ...session,
+          activeGeneralEventId: nextEvent.id,
+          generalEventName: nextEvent.name,
+          generalEvents: remainingGenList,
+          title: firstEvent?.name || nextEvent.title || 'TESOUREIRO',
+          activeEventId: firstEvent?.id,
+          events: targetEvents,
+          options: firstEvent?.options || nextEvent.options || [],
+          history: nextEvent.history || [],
+          vacancies: firstEvent?.vacancies ?? nextEvent.vacancies ?? 1,
+          maxVotesPerVoter: firstEvent?.maxVotesPerVoter ?? nextEvent.maxVotesPerVoter ?? 1,
+          suplentesCount: firstEvent?.suplentesCount ?? nextEvent.suplentesCount ?? 1,
+          segundoSuplentesCount: firstEvent?.segundoSuplentesCount ?? nextEvent.segundoSuplentesCount ?? 0,
+          habilitarSuplente1: firstEvent?.habilitarSuplente1 ?? nextEvent.habilitarSuplente1 ?? true,
+          habilitarSuplente2: firstEvent?.habilitarSuplente2 ?? nextEvent.habilitarSuplente2 ?? false,
+          resolverEmpates: firstEvent?.resolverEmpates ?? nextEvent.resolverEmpates ?? true,
+          rulesConfigured: firstEvent?.rulesConfigured ?? nextEvent.rulesConfigured ?? false,
+          labelTitulares: firstEvent?.labelTitulares || nextEvent.labelTitulares || 'Titulares',
+          labelSuplente1: firstEvent?.labelSuplente1 || nextEvent.labelSuplente1 || '1º suplente',
+          labelSuplente2: firstEvent?.labelSuplente2 || nextEvent.labelSuplente2 || '2º suplente',
+          status: firstEvent?.status || nextEvent.status || 'WAITING',
+          tieBreak: firstEvent?.tieBreak || nextEvent.tieBreak || null,
+          mainVotersCount: firstEvent?.mainVotersCount ?? nextEvent.mainVotersCount ?? 0,
+          tieBreakVotersCount: firstEvent?.tieBreakVotersCount ?? nextEvent.tieBreakVotersCount ?? 0,
+          votingIteration: (session.votingIteration || 1) + 1,
+          telaoMode: firstEvent?.telaoMode || nextEvent.telaoMode || 'names',
+          telaoLayout: localLayout,
+        };
+        saveSession(updatedSession);
+      } else {
+        saveSession({
+          ...session,
+          generalEvents: remainingGenList,
+        });
+      }
+    } else {
+      // Se não sobrou nenhum evento na lista, cria um evento limpo inicial
+      const newGenId = 'gen_' + Date.now();
+      const initialId = 'evt_' + Date.now();
+      const defaultRules = getGlobalElectionRules();
+      const localLayout = getLocalTelaoLayout() || session.telaoLayout;
+      const initialEvent: VotingEventItem = {
+        id: initialId,
+        name: 'TESOUREIRO',
+        options: [],
+        vacancies: defaultRules.vacancies || 1,
+        maxVotesPerVoter: defaultRules.vacancies || 1,
+        suplentesCount: defaultRules.suplentesCount ?? 1,
+        segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
+        habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
+        habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
+        resolverEmpates: true,
+        totalVotersConnected: defaultRules.totalVotersConnected || 1,
+        rulesConfigured: false,
+        labelTitulares: defaultRules.labelTitulares || 'Titulares',
+        labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
+        labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
+        status: 'WAITING',
+        tieBreak: null,
+        mainVotersCount: 0,
+        tieBreakVotersCount: 0,
+        votingIteration: (session.votingIteration || 1) + 10,
+        telaoMode: 'names',
+      };
+      const newGenRecord: GeneralEventRecord = {
+        id: newGenId,
+        name: 'COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE',
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        events: [initialEvent],
+        activeEventId: initialId,
+        title: 'TESOUREIRO',
+        options: [],
+        history: [],
+        vacancies: defaultRules.vacancies || 1,
+        maxVotesPerVoter: defaultRules.vacancies || 1,
+        suplentesCount: defaultRules.suplentesCount ?? 1,
+        segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
+        habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
+        habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
+        resolverEmpates: true,
+        rulesConfigured: false,
+        labelTitulares: defaultRules.labelTitulares || 'Titulares',
+        labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
+        labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
+        status: 'WAITING',
+        tieBreak: null,
+        mainVotersCount: 0,
+        tieBreakVotersCount: 0,
+        votingIteration: (session.votingIteration || 1) + 10,
+        telaoMode: 'names',
+      };
+      saveSession({
+        ...session,
+        activeGeneralEventId: newGenId,
+        generalEventName: 'COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE',
+        generalEvents: [newGenRecord],
+        title: 'TESOUREIRO',
+        activeEventId: initialId,
+        status: 'WAITING',
+        options: [],
+        events: [initialEvent],
+        history: [],
+        tieBreak: null,
+        mainVotersCount: 0,
+        tieBreakVotersCount: 0,
+        votingIteration: (session.votingIteration || 1) + 10,
+        vacancies: defaultRules.vacancies || 1,
+        maxVotesPerVoter: defaultRules.vacancies || 1,
+        suplentesCount: defaultRules.suplentesCount ?? 1,
+        segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
+        habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
+        habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
+        resolverEmpates: true,
+        totalVotersConnected: defaultRules.totalVotersConnected || 1,
+        rulesConfigured: false,
+        labelTitulares: defaultRules.labelTitulares || 'Titulares',
+        labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
+        labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
+        telaoLayout: localLayout,
+      });
+    }
+
+    setIsEditingGeneralModalOpen(false);
+    setDeleteConfirmGeneralEvent(null);
+    showNotification('success', `Evento "${targetName}" excluído com sucesso!`);
   };
 
   // Escuta o evento emitido pelo botão de votação cinza da Navbar para abrir as regras da eleição
@@ -2341,25 +2517,115 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   />
                 </div>
 
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 w-full pt-4 border-t border-white/10">
+                  {/* Botão Excluir no rodapé em vermelho */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeleteConfirmGeneralEvent({
+                        id: currentGeneralEventId,
+                        name: session.generalEventName || editingGeneralEventName,
+                      });
+                    }}
+                    className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 hover:text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                    title="Excluir este Evento Geral"
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                    <span>Excluir Evento</span>
+                  </button>
+
+                  <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingGeneralModalOpen(false)}
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 uppercase tracking-wider transition cursor-pointer"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (editingGeneralEventName.trim()) {
+                          handleRenameGeneralEvent(editingGeneralEventName);
+                        }
+                      }}
+                      disabled={!editingGeneralEventName.trim()}
+                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/40 transition cursor-pointer"
+                    >
+                      Salvar Alteração
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE CONFIRMAÇÃO / DUPLO CHECK PARA EXCLUIR EVENTO */}
+      <AnimatePresence>
+        {deleteConfirmGeneralEvent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setDeleteConfirmGeneralEvent(null)}
+            className="fixed inset-0 z-[110] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-[#141721] border-2 border-rose-500/80 rounded-2xl p-6 shadow-[0_0_40px_rgba(244,63,94,0.35),0_20px_50px_rgba(0,0,0,0.9)] text-white overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setDeleteConfirmGeneralEvent(null)}
+                className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-400/80 shadow-[0_0_20px_rgba(244,63,94,0.4)] flex items-center justify-center mb-3 text-rose-400">
+                  <Trash2 className="w-7 h-7" />
+                </div>
+
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-rose-400 mb-1.5">
+                  Excluir Evento Geral
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-3">
+                  Tem certeza absoluta que deseja excluir o evento:
+                </p>
+
+                <div className="w-full p-3 rounded-xl bg-black/40 border border-rose-500/30 text-amber-300 font-semibold text-xs sm:text-sm mb-4 truncate text-center">
+                  {deleteConfirmGeneralEvent.name}
+                </div>
+
+                <p className="text-[11px] text-rose-300/90 leading-tight mb-5 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg">
+                  ⚠️ <span className="font-bold">Atenção:</span> Esta ação é irreversível. Todas as votações, candidatos e histórico deste evento serão apagados do banco online.
+                </p>
+
                 <div className="flex items-center justify-center gap-3 w-full">
                   <button
                     type="button"
-                    onClick={() => setIsEditingGeneralModalOpen(false)}
+                    onClick={() => setDeleteConfirmGeneralEvent(null)}
                     className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 uppercase tracking-wider transition cursor-pointer"
                   >
                     Cancelar
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      if (editingGeneralEventName.trim()) {
-                        handleRenameGeneralEvent(editingGeneralEventName);
-                      }
-                    }}
-                    disabled={!editingGeneralEventName.trim()}
-                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/40 transition cursor-pointer"
+                    onClick={() => handleDeleteGeneralEvent(deleteConfirmGeneralEvent.id)}
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(244,63,94,0.4)] border border-rose-400/50 transition cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
                   >
-                    Salvar Alteração
+                    <Trash2 className="w-3.5 h-3.5" />
+                    <span>Sim, Excluir</span>
                   </button>
                 </div>
               </div>
@@ -2438,6 +2704,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             title="Renomear este Evento Geral"
           >
             <Pencil className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Botão de Excluir o Evento Geral Selecionado (com confirmação duplo check) */}
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteConfirmGeneralEvent({
+                id: currentGeneralEventId,
+                name: session.generalEventName || 'Evento Geral',
+              });
+            }}
+            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 border border-rose-500/30 transition cursor-pointer shrink-0"
+            title="Excluir este Evento Geral"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
           </button>
 
           {/* Botão "+ Novo evento" na frente */}
