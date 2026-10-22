@@ -2446,30 +2446,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       <Activity className="w-4 h-4 animate-pulse" />
                     </div>
                     <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                      <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide whitespace-nowrap">
+                      <h3 className="font-normal text-slate-100 text-sm sm:text-base tracking-wide whitespace-nowrap">
                         Escolha de
                       </h3>
 
-                      {/* Card Escolhido (ex: MULHERES): linhas estendidas em 15% para dir/esq, intensidade reduzida em 25%, texto branco sem bold */}
+                      {/* Card Escolhido (ex: MULHERES): linhas estendidas em mais 15% para dir/esq (-30% total), cobrindo o final de Escolha de */}
                       <div className="relative px-4 py-1 flex items-center justify-center select-none">
-                        {/* Linha superior com platô de 30% no centro e transparência para esq/dir */}
+                        {/* Linha superior com platô no centro e transparência cobrindo o final de Escolha de */}
                         <span
                           className="absolute top-0 h-[1.5px] pointer-events-none"
                           style={{
-                            left: '-15%',
-                            right: '-15%',
-                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
-                            boxShadow: '0 0 4px rgba(251,191,36,0.25)',
+                            left: '-30%',
+                            right: '-30%',
+                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 30%, rgba(251,191,36,0.70) 70%, rgba(251,191,36,0) 100%)',
+                            boxShadow: '0 0 5px rgba(251,191,36,0.30)',
                           }}
                         />
-                        {/* Linha inferior com platô de 30% no centro e transparência para esq/dir */}
+                        {/* Linha inferior com platô no centro e transparência cobrindo o final de Escolha de */}
                         <span
                           className="absolute bottom-0 h-[1.5px] pointer-events-none"
                           style={{
-                            left: '-15%',
-                            right: '-15%',
-                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
-                            boxShadow: '0 0 4px rgba(251,191,36,0.25)',
+                            left: '-30%',
+                            right: '-30%',
+                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 30%, rgba(251,191,36,0.70) 70%, rgba(251,191,36,0) 100%)',
+                            boxShadow: '0 0 5px rgba(251,191,36,0.30)',
                           }}
                         />
 
