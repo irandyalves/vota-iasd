@@ -28,9 +28,12 @@ import {
   Award,
   AlertCircle,
   ArrowLeft,
+  History,
+  Calendar,
+  Copy,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
-import type { VotingSession, VotingOption, VotingEventItem } from '../types';
+import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord } from '../types';
 import { saveSession, subscribeToConnectedVoters, applyBallotToSession, getLocalSession, isFirestoreQuotaExceeded } from '../services/votingService';
 import { startAdminPeerHost } from '../services/peerSyncService';
 import { parseImportFile } from '../utils/fileImporter';
@@ -986,6 +989,78 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setTimeout(() => setNotification(null), 4000);
   };
 
+  useEffect(() => {
+    const handleCustomNotify = (e: any) => {
+      if (e.detail?.type && e.detail?.message) {
+        showNotification(e.detail.type, e.detail.message);
+      }
+    };
+    window.addEventListener('vota_iasd_notification', handleCustomNotify);
+    return () => window.removeEventListener('vota_iasd_notification', handleCustomNotify);
+  }, []);
+
+  const handleDeleteHistoryItem = (historyId: string) => {
+    if (!window.confirm('Excluir este registro do histórico de votações?')) return;
+    const updatedHistory = (session.history || []).filter((h) => h.id !== historyId);
+    saveSession({ ...session, history: updatedHistory });
+    try {
+      localStorage.setItem('vota_iasd_voting_history', JSON.stringify(updatedHistory));
+    } catch (e) {
+      console.error(e);
+    }
+    showNotification('success', 'Registro removido do histórico com sucesso.');
+  };
+
+  const handleClearHistory = () => {
+    if (!window.confirm('Tem certeza que deseja apagar TODO o histórico de votações arquivado?')) return;
+    saveSession({ ...session, history: [] });
+    try {
+      localStorage.removeItem('vota_iasd_voting_history');
+    } catch (e) {
+      console.error(e);
+    }
+    showNotification('success', 'Histórico de votações limpo com sucesso.');
+  };
+
+  const handleCopyHistoryAta = (record: VotingHistoryRecord) => {
+    const eleitosText = record.eleitos && record.eleitos.length > 0
+      ? record.eleitos.map((c, i) => `${i + 1}. ${c.name} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      : 'Nenhum';
+
+    const suplentesAll = [...(record.suplentes || []), ...(record.segundoSuplentes || [])];
+    const suplentesText = suplentesAll.length > 0
+      ? suplentesAll.map((c, i) => `${i + 1}. ${c.name} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      : 'Nenhum';
+
+    const naoClassificadosText = record.naoClassificados && record.naoClassificados.length > 0
+      ? record.naoClassificados.map((c, i) => `${i + 1}. ${c.name} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      : 'Nenhum';
+
+    const text = [
+      '==================================================',
+      'IASD - ATA OFICIAL DE ELEIÇÃO',
+      `${record.headerTitle} (${record.timeFormatted})`,
+      `Total de Votantes: ${record.totalVoters} | Total de Votos: ${record.totalVotes}`,
+      '==================================================',
+      '',
+      '🏆 ELEITOS (TITULARES):',
+      eleitosText,
+      '',
+      '🥈 SUPLENTES:',
+      suplentesText,
+      '',
+      '⚪ NÃO CLASSIFICADOS:',
+      naoClassificadosText,
+      '==================================================',
+    ].join('\n');
+
+    navigator.clipboard.writeText(text).then(() => {
+      showNotification('success', `Ata de "${record.headerTitle}" copiada com sucesso!`);
+    }).catch(() => {
+      showNotification('error', 'Não foi possível copiar para a área de transferência.');
+    });
+  };
+
   // Processador de Arquivos (.TXT, .CSV, .XLS, .XLSX)
   const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>, mode: 'append' | 'replace') => {
     const file = e.target.files?.[0];
@@ -1848,6 +1923,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             {/* Divisor sutil */}
             <div className="h-5 w-px bg-white/[0.1] mx-0.5" />
 
+            {/* Atalho para Histórico de Votações */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsGearOpen(true);
+                  setTimeout(() => {
+                    document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
+                  }, 200);
+                }}
+                className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 ${
+                  session.history && session.history.length > 0
+                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+                    : 'bg-[#0b0d13] hover:bg-[#141721] border-white/[0.1] text-slate-400 hover:text-slate-200 hover:border-white/[0.2] shadow-sm'
+                }`}
+                title="Ver Histórico de Votações Encerradas"
+                aria-label="Ver Histórico de Votações Encerradas"
+              >
+                <History className="w-4 h-4" />
+                {session.history && session.history.length > 0 && (
+                  <span className="text-[10px] font-black px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono leading-none">
+                    {session.history.length}
+                  </span>
+                )}
+              </button>
+              <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
+                Histórico de Votações
+              </div>
+            </div>
+
             {/* 3. Engrenagem */}
             <button
               ref={gearButtonRef}
@@ -2477,6 +2582,232 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           </span>
                         </div>
                       </div>
+                    </div>
+
+                    {/* CARD 3: HISTÓRICO DE VOTAÇÕES ENCERRADAS (EM CONFIGURAÇÕES) */}
+                    <div
+                      id="historico-votacoes-card"
+                      className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3.5 space-y-3 shadow-lg"
+                    >
+                      {/* Cabeçalho do Card */}
+                      <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0">
+                            <History className="w-3.5 h-3.5 text-amber-400" />
+                          </div>
+                          <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight flex items-center gap-2">
+                            Histórico de Votações Encerradas
+                            {session.history && session.history.length > 0 && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                                {session.history.length} {session.history.length === 1 ? 'eleição' : 'eleições'}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+
+                        {session.history && session.history.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={handleClearHistory}
+                            title="Limpar todos os registros arquivados"
+                            className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-medium transition cursor-pointer active:scale-95 flex items-center gap-1.5"
+                          >
+                            <Trash2 className="w-3 h-3 text-rose-400" />
+                            <span>Limpar Histórico</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Lista de Registros do Histórico */}
+                      {!session.history || session.history.length === 0 ? (
+                        <div className="bg-[#0b0d13]/60 border border-dashed border-white/[0.1] rounded-lg p-5 text-center space-y-1.5">
+                          <div className="w-8 h-8 mx-auto rounded-full bg-white/[0.04] flex items-center justify-center text-slate-500">
+                            <History className="w-4 h-4" />
+                          </div>
+                          <p className="text-xs text-slate-300 font-medium">
+                            Nenhuma eleição encerrada ainda
+                          </p>
+                          <p className="text-[11px] text-slate-500 max-w-md mx-auto">
+                            Ao finalizar uma votação e clicar no botão <strong className="text-slate-300">"ENCERRAR VOTAÇÃO"</strong> na barra superior, os eleitos, suplentes e não classificados serão salvos aqui automaticamente com data e hora.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3">
+                          {session.history.map((record, rIdx) => (
+                            <div
+                              key={record.id || rIdx}
+                              className="bg-[#0b0d13] border border-white/[0.08] hover:border-amber-400/30 rounded-xl p-3 sm:p-3.5 space-y-3 transition shadow-sm"
+                            >
+                              {/* Header da Eleição: Data e Título no formato oficial (dia xx/xx/xxxx ELEIÇÃO MULHERES) */}
+                              <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/[0.06]">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <div className="p-1 rounded bg-amber-400/15 text-amber-300 border border-amber-400/30">
+                                    <Calendar className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span className="font-extrabold text-amber-300 text-xs sm:text-sm tracking-wide">
+                                    {record.headerTitle}
+                                  </span>
+                                  <span className="text-[10.5px] font-mono text-slate-400 bg-white/[0.05] px-1.5 py-0.5 rounded border border-white/[0.06]">
+                                    {record.timeFormatted}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[10.5px] text-slate-300 bg-white/[0.04] px-2 py-0.5 rounded border border-white/[0.08]">
+                                    {record.totalVoters} Votantes • {record.totalVotes} Votos
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyHistoryAta(record)}
+                                    title="Copiar ata / resultado formatado"
+                                    className="px-2 py-1 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1 active:scale-95"
+                                  >
+                                    <Copy className="w-3 h-3 text-amber-300" />
+                                    <span>Copiar Ata</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteHistoryItem(record.id)}
+                                    title="Excluir este registro"
+                                    className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 transition cursor-pointer active:scale-95"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* As 3 Seções: Eleitos, Suplentes e Não Classificados */}
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+                                {/* 1. ELEITOS */}
+                                <div className="bg-[#141721] border border-emerald-500/30 rounded-lg p-2.5 space-y-1.5">
+                                  <div className="flex items-center justify-between pb-1 border-b border-emerald-500/20">
+                                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                      <Award className="w-3.5 h-3.5" />
+                                      ELEITOS ({record.eleitos?.length || 0})
+                                    </span>
+                                    <span className="text-[9.5px] font-bold text-emerald-300/80 uppercase">
+                                      Titulares
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                    {record.eleitos && record.eleitos.length > 0 ? (
+                                      record.eleitos.map((c, cIdx) => (
+                                        <div
+                                          key={c.id || cIdx}
+                                          className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                        >
+                                          <div className="flex items-center gap-1.5 min-w-0">
+                                            <span className="font-mono text-[10px] text-emerald-400 font-bold shrink-0">
+                                              #{cIdx + 1}
+                                            </span>
+                                            <span className="text-slate-100 font-medium truncate">
+                                              {c.name}
+                                            </span>
+                                          </div>
+                                          <span className="text-emerald-300 font-bold text-[10.5px] shrink-0 font-mono">
+                                            {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                          </span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span className="text-[11px] text-slate-500 italic block py-1">Nenhum eleito</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* 2. SUPLENTES */}
+                                <div className="bg-[#141721] border border-blue-500/30 rounded-lg p-2.5 space-y-1.5">
+                                  <div className="flex items-center justify-between pb-1 border-b border-blue-500/20">
+                                    <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                                      <Users className="w-3.5 h-3.5" />
+                                      SUPLENTES ({(record.suplentes?.length || 0) + (record.segundoSuplentes?.length || 0)})
+                                    </span>
+                                    <span className="text-[9.5px] font-bold text-blue-300/80 uppercase">
+                                      Reserva
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                    {((record.suplentes?.length || 0) + (record.segundoSuplentes?.length || 0)) > 0 ? (
+                                      <>
+                                        {record.suplentes?.map((c, cIdx) => (
+                                          <div
+                                            key={c.id || cIdx}
+                                            className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                          >
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              <span className="font-mono text-[9px] text-blue-300 font-bold px-1 rounded bg-blue-500/20 shrink-0">
+                                                1º Sup
+                                              </span>
+                                              <span className="text-slate-100 font-medium truncate">
+                                                {c.name}
+                                              </span>
+                                            </div>
+                                            <span className="text-blue-300 font-bold text-[10.5px] shrink-0 font-mono">
+                                              {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                            </span>
+                                          </div>
+                                        ))}
+                                        {record.segundoSuplentes?.map((c, cIdx) => (
+                                          <div
+                                            key={c.id || cIdx}
+                                            className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                          >
+                                            <div className="flex items-center gap-1.5 min-w-0">
+                                              <span className="font-mono text-[9px] text-indigo-300 font-bold px-1 rounded bg-indigo-500/20 shrink-0">
+                                                2º Sup
+                                              </span>
+                                              <span className="text-slate-100 font-medium truncate">
+                                                {c.name}
+                                              </span>
+                                            </div>
+                                            <span className="text-indigo-300 font-bold text-[10.5px] shrink-0 font-mono">
+                                              {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                            </span>
+                                          </div>
+                                        ))}
+                                      </>
+                                    ) : (
+                                      <span className="text-[11px] text-slate-500 italic block py-1">Sem suplentes</span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* 3. NÃO CLASSIFICADOS */}
+                                <div className="bg-[#141721] border border-white/[0.08] rounded-lg p-2.5 space-y-1.5">
+                                  <div className="flex items-center justify-between pb-1 border-b border-white/[0.08]">
+                                    <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                                      <Activity className="w-3.5 h-3.5 text-slate-400" />
+                                      NÃO CLASSIFICADOS ({record.naoClassificados?.length || 0})
+                                    </span>
+                                    <span className="text-[9.5px] font-bold text-slate-500 uppercase">
+                                      Demais
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                    {record.naoClassificados && record.naoClassificados.length > 0 ? (
+                                      record.naoClassificados.map((c, cIdx) => (
+                                        <div
+                                          key={c.id || cIdx}
+                                          className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                        >
+                                          <span className="text-slate-400 font-medium truncate">
+                                            {c.name}
+                                          </span>
+                                          <span className="text-slate-400 font-mono text-[10.5px] shrink-0">
+                                            {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                          </span>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <span className="text-[11px] text-slate-500 italic block py-1">Nenhum</span>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 );

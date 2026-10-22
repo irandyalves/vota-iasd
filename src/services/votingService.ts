@@ -85,6 +85,7 @@ export const DEFAULT_INITIAL_SESSION: VotingSession = {
     { id: '10', name: 'André Luiz Martins', subtitle: 'Comunicação e Mídia', votesCount: 0, photoUrl: '' },
   ],
   totalVotersConnected: 1,
+  history: [],
   createdAt: Date.now(),
   updatedAt: Date.now(),
 };

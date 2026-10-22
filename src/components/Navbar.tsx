@@ -3,7 +3,7 @@ import { RefreshCw, Camera, Lock, Unlock, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
 import { removeEasyBackground } from '../utils/imageUtils';
-import type { VotingSession } from '../types';
+import type { VotingSession, VotingHistoryRecord } from '../types';
 import { subscribeToConnectedVoters } from '../services/votingService';
 
 interface NavbarProps {
@@ -238,6 +238,156 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const handleEndVoting = () => {
+    if (!session || !onSaveSession) return;
+
+    // Se estiver em rodada de desempate, consolida os vencedores
+    let optionsToClassify = [...session.options];
+    if (session.status === 'TIE_BREAK' && session.tieBreak?.options) {
+      const tieOptions = session.tieBreak.options || [];
+      const sortedTie = [...tieOptions].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
+      const vacancies = session.tieBreak.vacancies || 1;
+      const winnerIds: string[] = [];
+
+      if (sortedTie.length > vacancies) {
+        const cutoff = sortedTie[vacancies - 1]?.votesCount || 0;
+        const next = sortedTie[vacancies]?.votesCount || 0;
+        if (cutoff > next) {
+          sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+        }
+      } else if (sortedTie.length > 0) {
+        sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
+      }
+
+      optionsToClassify = session.options.map((opt) => {
+        const tieOptIndex = sortedTie.findIndex((t) => t.id === opt.id);
+        if (tieOptIndex !== -1) {
+          const tieVotes = sortedTie[tieOptIndex].votesCount || 0;
+          const isWinner = winnerIds.includes(opt.id);
+          const bonus = (tieVotes * 0.01) + (isWinner ? 0.005 : 0) + ((sortedTie.length - tieOptIndex) * 0.0001);
+          return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + bonus };
+        }
+        return opt;
+      });
+    }
+
+    // 1. Calcular apuração final: Eleitos, Suplentes, Não Classificados
+    const sortedOptions = [...optionsToClassify].sort(
+      (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
+    );
+
+    const totalVotes = optionsToClassify.reduce(
+      (sum, o) => sum + Math.floor(o.votesCount || 0),
+      0
+    );
+    const totalVoters = totalVotersVoted || totalLimit || 0;
+
+    const V = session.vacancies || 1;
+    const s1Count = session.habilitarSuplente1 !== false ? (session.suplentesCount || 0) : 0;
+    const s2Count =
+      session.habilitarSuplente1 !== false && session.habilitarSuplente2 !== false
+        ? (session.segundoSuplentesCount || 0)
+        : 0;
+
+    const toCandidateResult = (opt: typeof sortedOptions[0]) => {
+      const realVotes = Math.floor(opt.votesCount || 0);
+      return {
+        id: opt.id,
+        name: opt.name,
+        votesCount: realVotes,
+        percentage: totalVotes > 0 ? Number(((realVotes / totalVotes) * 100).toFixed(1)) : 0,
+        photoUrl: opt.photoUrl,
+      };
+    };
+
+    const eleitos = sortedOptions.slice(0, V).map(toCandidateResult);
+    const suplentes = sortedOptions.slice(V, V + s1Count).map(toCandidateResult);
+    const segundoSuplentes = sortedOptions
+      .slice(V + s1Count, V + s1Count + s2Count)
+      .map(toCandidateResult);
+    const naoClassificados = sortedOptions
+      .slice(V + s1Count + s2Count)
+      .map(toCandidateResult);
+
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+
+    const rawTitle = (session.title || 'MULHERES').trim();
+    const titleUpper = rawTitle.toUpperCase();
+    const electionTitle = titleUpper.startsWith('ELEIÇÃO') || titleUpper.startsWith('ELEICAO')
+      ? titleUpper
+      : `ELEIÇÃO ${titleUpper}`;
+
+    const dateFormatted = `dia ${day}/${month}/${year}`;
+    const headerTitle = `${dateFormatted} ${electionTitle}`;
+
+    const newHistoryRecord: VotingHistoryRecord = {
+      id: `hist-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+      timestamp: Date.now(),
+      dateFormatted,
+      timeFormatted: `${hours}:${minutes}`,
+      headerTitle,
+      sessionTitle: rawTitle,
+      category: session.category || '',
+      totalVotes,
+      totalVoters,
+      vacancies: V,
+      suplentesCount: s1Count,
+      segundoSuplentesCount: s2Count,
+      eleitos,
+      suplentes,
+      segundoSuplentes,
+      naoClassificados,
+    };
+
+    // Redundância no localStorage
+    try {
+      const existingRaw = localStorage.getItem('vota_iasd_voting_history');
+      const existingList = existingRaw ? JSON.parse(existingRaw) : [];
+      localStorage.setItem(
+        'vota_iasd_voting_history',
+        JSON.stringify([newHistoryRecord, ...existingList])
+      );
+    } catch (err) {
+      console.error('Erro ao gravar histórico no localStorage:', err);
+    }
+
+    // 2. Fica pronto para outra: zera votos e reordena A-Z
+    const freshOptions = [...session.options]
+      .map((o) => ({ ...o, votesCount: 0 }))
+      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
+
+    const nextIteration = (session.votingIteration || 1) + 1;
+    const updatedHistory = [newHistoryRecord, ...(session.history || [])];
+
+    onSaveSession({
+      ...session,
+      status: 'WAITING',
+      options: freshOptions,
+      tieBreak: null,
+      telaoMode: 'names',
+      votingIteration: nextIteration,
+      mainVotersCount: 0,
+      tieBreakVotersCount: 0,
+      history: updatedHistory,
+    });
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('vota_iasd_notification', {
+          detail: {
+            type: 'success',
+            message: `Votação "${electionTitle}" encerrada com sucesso! Histórico salvo em Configurações. Pronto para nova votação.`,
+          },
+        })
+      );
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-4 min-h-[76px] flex items-center w-full">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 items-center gap-3">
@@ -333,161 +483,184 @@ export const Navbar: React.FC<NavbarProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* BOTÃO PRINCIPAL DA URNA: TAMANHO FIXO E POSIÇÃO TOTALMENTE TRAVADA NO CENTRO */}
-          <button
-            type="button"
-            onClick={handleCenterVotingButtonClick}
-            title={
-              showApuracaoCaption
-                ? 'Clique para encerrar a votação e exibir a Apuração no Telão'
-                : isVotingActive
-                ? 'Votação em andamento (clique para abrir a Apuração)'
-                : 'Iniciar Votação mantendo os nomes em ordem A-Z'
-            }
-            style={{
-              backgroundColor: showApuracaoCaption ? '#ffffff' : '#159636',
-              borderColor: showApuracaoCaption ? '#e2e8f0' : '#24b349',
-              boxShadow: showApuracaoCaption
-                ? '0 6px 0 #94a3b8, 3px 6px 0 #64748b'
-                : '0 6px 0 #09521b, 3px 6px 0 #063b13',
-            }}
-            className="w-[215px] min-w-[215px] max-w-[215px] pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
-          >
-            <div className="flex items-center justify-center w-full">
-              <span className="font-black text-xs sm:text-sm tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap text-center">
-                {showApuracaoCaption ? 'APURAÇÃO' : isVotingActive ? 'EM VOTAÇÃO' : 'INICIAR VOTAÇÃO'}
-              </span>
+          {/* CENTRO: BADGE APURANDO O RESULTADO (EM APURAÇÃO) OU BOTÃO DA URNA (EM VOTAÇÃO / INICIAR VOTAÇÃO) */}
+          {showApuracaoCaption ? (
+            /* O BAGGER DA ANIMAÇÃO DE APURANDO O RESULTADO (NO LUGAR DE VOTOS) FICA NO LUGAR DO BOTÃO APURAÇÃO */
+            <div
+              title="Apuração em andamento: calculando resultados da votação"
+              style={{
+                backgroundColor: '#09152b',
+                borderColor: 'rgba(251, 191, 36, 0.65)',
+                boxShadow: '0 0 18px rgba(251, 191, 36, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.1)',
+              }}
+              className="w-[215px] min-w-[215px] max-w-[215px] min-h-[54px] rounded-[14px] border-[2px] flex items-center justify-center gap-2.5 px-3 py-1.5 select-none shrink-0"
+            >
+              {/* Prancheta com linhas de apuração animadas preenchendo */}
+              <div className="relative w-5 h-6 bg-[#0f172a] rounded-[3px] border border-amber-300/70 p-0.5 flex flex-col justify-around shadow-inner overflow-hidden shrink-0">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-[2px] bg-amber-400 rounded-b-xs" />
+                <motion.div
+                  className="h-[1.5px] bg-amber-300 rounded-full"
+                  animate={{ width: ['20%', '90%', '45%', '100%'] }}
+                  transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                />
+                <motion.div
+                  className="h-[1.5px] bg-amber-300 rounded-full"
+                  animate={{ width: ['45%', '100%', '30%', '90%'] }}
+                  transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
+                />
+                <motion.div
+                  className="h-[1.5px] bg-emerald-400 rounded-full"
+                  animate={{ width: ['10%', '75%', '40%', '100%'] }}
+                  transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                />
+              </div>
+
+              {/* Mãozinha segurando a caneta escrevendo com ritmo caligráfico */}
+              <motion.div
+                className="relative w-6 h-6 flex items-center justify-center text-amber-300 origin-bottom-left shrink-0"
+                animate={{
+                  x: [0, 3.5, 1, 4.5, 1.5, 0],
+                  y: [0, -2, 1, -1, 1, 0],
+                  rotate: [-10, 8, -6, 10, -4, -10],
+                }}
+                transition={{
+                  duration: 0.85,
+                  repeat: Infinity,
+                  ease: 'easeInOut',
+                }}
+              >
+                <svg viewBox="0 0 28 28" fill="none" className="w-6 h-6 drop-shadow-[0_0_5px_rgba(251,191,36,0.9)]">
+                  {/* Corpo da Caneta */}
+                  <path
+                    d="M6 22l3-1 12-12-3-3L6 18l-1 4 1 0z"
+                    fill="#f59e0b"
+                    stroke="#ffffff"
+                    strokeWidth="1.2"
+                    strokeLinejoin="round"
+                  />
+                  {/* Ponta da Caneta */}
+                  <polygon points="5,22 8,21 6,19" fill="#0f172a" />
+                  <circle cx="5" cy="22" r="1.2" fill="#ffffff" />
+                  {/* Dedos da mão segurando */}
+                  <path
+                    d="M10 17c0-2 1.5-3 3-2s2 2 1 4-3 1-4-2z"
+                    fill="#fed7aa"
+                    stroke="#ea580c"
+                    strokeWidth="1"
+                  />
+                  <circle cx="12" cy="16" r="2.2" fill="#fed7aa" stroke="#ea580c" strokeWidth="0.8" />
+                </svg>
+              </motion.div>
+
+              {/* Texto informativo: APURANDO O RESULTADO (no lugar de votos) */}
+              <div className="flex flex-col leading-tight select-none">
+                <span className="font-mono font-black text-[11px] text-amber-300 tracking-wider uppercase animate-pulse">
+                  APURANDO
+                </span>
+                <span className="text-[9.5px] text-emerald-300 font-extrabold tracking-wider uppercase whitespace-nowrap">
+                  O RESULTADO
+                </span>
+              </div>
             </div>
+          ) : (
+            /* BOTÃO PRINCIPAL DA URNA: TAMANHO FIXO E POSIÇÃO TOTALMENTE TRAVADA NO CENTRO */
+            <button
+              type="button"
+              onClick={handleCenterVotingButtonClick}
+              title={
+                isVotingActive
+                  ? 'Votação em andamento (clique para abrir a Apuração)'
+                  : 'Iniciar Votação mantendo os nomes em ordem A-Z'
+              }
+              style={{
+                backgroundColor: '#159636',
+                borderColor: '#24b349',
+                boxShadow: '0 6px 0 #09521b, 3px 6px 0 #063b13',
+              }}
+              className="w-[215px] min-w-[215px] max-w-[215px] pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+            >
+              <div className="flex items-center justify-center w-full">
+                <span className="font-black text-xs sm:text-sm tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap text-center">
+                  {isVotingActive ? 'EM VOTAÇÃO' : 'INICIAR VOTAÇÃO'}
+                </span>
+              </div>
 
-            {/* Pontos em Braille 3D idênticos à tecla física da Urna */}
-            {(() => {
-              const dot = showApuracaoCaption
-                ? 'w-2 h-2 rounded-full bg-[#cbd5e1] shadow-[1px_1.5px_0_#94a3b8]'
-                : 'w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]';
-              return (
-                <div className="flex flex-col items-center gap-[2.5px] mt-1.5 pointer-events-none">
-                  {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
-                  <div className="flex items-center gap-2">
-                    <span className={dot} />
-                    <span className={dot} />
-                    <span className={dot} />
-                    <span className="w-2.5" />
-                    <span className={dot} />
-                    <span className={dot} />
-                    <span className={dot} />
-                    <span className={dot} />
-                  </div>
-                  {/* Linha 2 */}
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className={dot} />
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className={dot} />
-                    <span className={dot} />
-                    <span className="w-2 h-2 opacity-0" />
-                  </div>
-                  {/* Linha 3 */}
-                  <div className="flex items-center gap-2">
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className={dot} />
-                    <span className="w-2.5" />
-                    <span className={dot} />
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className="w-2 h-2 opacity-0" />
-                    <span className="w-2 h-2 opacity-0" />
-                  </div>
+              {/* Pontos em Braille 3D idênticos à tecla física da Urna */}
+              <div className="flex flex-col items-center gap-[2.5px] mt-1.5 pointer-events-none">
+                {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2.5" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
                 </div>
-              );
-            })()}
-          </button>
+                {/* Linha 2 */}
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 opacity-0" />
+                </div>
+                {/* Linha 3 */}
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2.5" />
+                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 opacity-0" />
+                  <span className="w-2 h-2 opacity-0" />
+                </div>
+              </div>
+            </button>
+          )}
 
-          {/* SLOT DIREITO: VU METER (EM VOTAÇÃO) OU MÃOZINHA ESCREVENDO/CONTANDO (EM APURAÇÃO) */}
+          {/* SLOT DIREITO: BOTÃO ENCERRAR VOTAÇÃO (EM APURAÇÃO) OU VU METER (EM VOTAÇÃO) */}
           <div className="absolute left-full ml-3 flex items-center justify-start pointer-events-none">
             <AnimatePresence mode="wait">
               {showApuracaoCaption ? (
-                /* MÃOZINHA ESCREVENDO / APURANDO CÉDULA */
+                /* BOTÃO ENCERRAR VOTAÇÃO: MENOR NO LADO DIREITO (GARANTIDO) */
                 <motion.div
-                  key="apuracao-writing-hand"
-                  initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                  key="btn-encerrar-apuracao"
+                  initial={{ opacity: 0, x: -20, scale: 0.95 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
-                  exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                  exit={{ opacity: 0, x: -20, scale: 0.95 }}
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   className="pointer-events-auto flex items-center shrink-0 pl-1 select-none"
                 >
-                  <div
-                    title="Apuração em andamento: mãozinha registrando os votos na ata"
-                    className="flex items-center gap-2 px-2.5 py-1 bg-[#09152b]/95 border border-amber-400/50 rounded-xl shadow-[0_0_14px_rgba(251,191,36,0.35)] shrink-0"
+                  <button
+                    type="button"
+                    onClick={handleEndVoting}
+                    title="Encerrar votação, registrar histórico em configurações e ficar pronto para outra"
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderColor: '#e2e8f0',
+                      boxShadow: '0 4px 0 #94a3b8, 2px 4px 0 #64748b',
+                    }}
+                    className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
                   >
-                    {/* Prancheta com linhas de apuração preenchendo */}
-                    <div className="relative w-5 h-6 bg-[#0f172a] rounded-[3px] border border-amber-300/70 p-0.5 flex flex-col justify-around shadow-inner overflow-hidden shrink-0">
-                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-[2px] bg-amber-400 rounded-b-xs" />
-                      <motion.div
-                        className="h-[1.5px] bg-amber-300 rounded-full"
-                        animate={{ width: ['20%', '90%', '45%', '100%'] }}
-                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-                      />
-                      <motion.div
-                        className="h-[1.5px] bg-amber-300 rounded-full"
-                        animate={{ width: ['45%', '100%', '30%', '90%'] }}
-                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
-                      />
-                      <motion.div
-                        className="h-[1.5px] bg-emerald-400 rounded-full"
-                        animate={{ width: ['10%', '75%', '40%', '100%'] }}
-                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
-                      />
+                    <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap">
+                      ENCERRAR VOTAÇÃO
+                    </span>
+                    {/* Braille 50% menor em cinza/prata */}
+                    <div className="flex items-center gap-1 mt-1 pointer-events-none">
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1.5" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
                     </div>
-
-                    {/* Mãozinha segurando a caneta escrevendo com ritmo caligráfico */}
-                    <motion.div
-                      className="relative w-6 h-6 flex items-center justify-center text-amber-300 origin-bottom-left shrink-0"
-                      animate={{
-                        x: [0, 3.5, 1, 4.5, 1.5, 0],
-                        y: [0, -2, 1, -1, 1, 0],
-                        rotate: [-10, 8, -6, 10, -4, -10],
-                      }}
-                      transition={{
-                        duration: 0.85,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                      }}
-                    >
-                      <svg viewBox="0 0 28 28" fill="none" className="w-6 h-6 drop-shadow-[0_0_5px_rgba(251,191,36,0.9)]">
-                        {/* Corpo da Caneta */}
-                        <path
-                          d="M6 22l3-1 12-12-3-3L6 18l-1 4 1 0z"
-                          fill="#f59e0b"
-                          stroke="#ffffff"
-                          strokeWidth="1.2"
-                          strokeLinejoin="round"
-                        />
-                        {/* Ponta da Caneta */}
-                        <polygon points="5,22 8,21 6,19" fill="#0f172a" />
-                        <circle cx="5" cy="22" r="1.2" fill="#ffffff" />
-                        {/* Dedos da mão segurando */}
-                        <path
-                          d="M10 17c0-2 1.5-3 3-2s2 2 1 4-3 1-4-2z"
-                          fill="#fed7aa"
-                          stroke="#ea580c"
-                          strokeWidth="1"
-                        />
-                        <circle cx="12" cy="16" r="2.2" fill="#fed7aa" stroke="#ea580c" strokeWidth="0.8" />
-                      </svg>
-                    </motion.div>
-
-                    {/* Texto informativo com contagem */}
-                    <div className="flex flex-col leading-tight select-none">
-                      <span className="font-mono font-black text-[10px] text-amber-300 tracking-wider uppercase animate-pulse">
-                        APURANDO
-                      </span>
-                      <span className="text-[8.5px] text-emerald-300 font-bold tracking-tight uppercase whitespace-nowrap">
-                        {totalVotersVoted} {totalVotersVoted === 1 ? 'VOTO' : 'VOTOS'}
-                      </span>
-                    </div>
-                  </div>
+                  </button>
                 </motion.div>
               ) : isVotingActive ? (
                 /* VU METER NORMAL DURANTE A VOTAÇÃO */

@@ -87,8 +87,36 @@ export interface VotingSession {
   tieBreakVotersCount?: number;
   accessLocked?: boolean;
   allowedVoterIds?: string[];
+  history?: VotingHistoryRecord[];
   createdAt?: number;
   updatedAt?: number;
+}
+
+export interface HistoryCandidateResult {
+  id: string;
+  name: string;
+  votesCount: number;
+  percentage: number;
+  photoUrl?: string;
+}
+
+export interface VotingHistoryRecord {
+  id: string;
+  timestamp: number;
+  dateFormatted: string; // Ex: "dia 22/10/2026"
+  timeFormatted: string; // Ex: "01:15"
+  headerTitle: string; // Ex: "dia 22/10/2026 ELEIÇÃO MULHERES"
+  sessionTitle: string; // Ex: "MULHERES"
+  category?: string;
+  totalVotes: number;
+  totalVoters: number;
+  vacancies: number;
+  suplentesCount?: number;
+  segundoSuplentesCount?: number;
+  eleitos: HistoryCandidateResult[];
+  suplentes: HistoryCandidateResult[];
+  segundoSuplentes?: HistoryCandidateResult[];
+  naoClassificados: HistoryCandidateResult[];
 }
 
 export interface VoterBallot {
