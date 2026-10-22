@@ -2527,34 +2527,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         name: session.generalEventName || editingGeneralEventName,
                       });
                     }}
-                    className="w-full sm:w-auto px-3.5 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 hover:text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-xl border border-rose-500/40 bg-rose-500/15 hover:bg-rose-500/30 text-rose-300 hover:text-white text-xs font-bold uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 active:scale-95 shadow-sm"
                     title="Excluir este Evento Geral"
                   >
                     <Trash2 className="w-3.5 h-3.5 text-rose-400" />
                     <span>Excluir Evento</span>
                   </button>
 
-                  <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingGeneralModalOpen(false)}
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 uppercase tracking-wider transition cursor-pointer"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (editingGeneralEventName.trim()) {
-                          handleRenameGeneralEvent(editingGeneralEventName);
-                        }
-                      }}
-                      disabled={!editingGeneralEventName.trim()}
-                      className="flex-1 sm:flex-none px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/40 transition cursor-pointer"
-                    >
-                      Salvar Alteração
-                    </button>
-                  </div>
+                  {/* Botão apenas SALVAR */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingGeneralEventName.trim()) {
+                        handleRenameGeneralEvent(editingGeneralEventName);
+                      }
+                    }}
+                    disabled={!editingGeneralEventName.trim()}
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/40 transition cursor-pointer active:scale-95"
+                  >
+                    Salvar
+                  </button>
                 </div>
               </div>
             </motion.div>
