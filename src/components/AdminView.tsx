@@ -2380,9 +2380,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         )}
       </AnimatePresence>
 
-      {/* ABA: NOMES / CANDIDATOS (ABRE AO CLICAR NO BOTÃO DO EVENTO NO CABEÇALHO) */}
+      {/* ABA: NOMES / CANDIDATOS (ABRE AO CLICAR NO BOTÃO DO EVENTO NO CABEÇALHO) - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
       {activeTab === 'candidates' && isBottomSectionOpen && (
-        <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
+        <div className="space-y-3.5 flex-1 flex flex-col min-h-0 -mx-3 sm:-mx-4 lg:-mx-5">
           {/* Inputs ocultos para importação de arquivos */}
           <input
             ref={fileUploadAppendRef}
@@ -2401,7 +2401,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
           {/* SE A VOTAÇÃO ESTIVER EM ANDAMENTO E O ADMIN QUISER O DASHBOARD: MOSTRA O DASHBOARD DE EVOLUÇÃO */}
           {isVotingActive && adminVotingView === 'dashboard' ? (
-            <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 -mx-3 sm:-mx-4 lg:-mx-5 rounded-none p-4 sm:p-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0">
+            <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 sm:py-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0">
               {/* Header do Dashboard */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
@@ -2862,8 +2862,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           ) : (
             <>
-              {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ - LAYOUT ESTÚDIO MODERNO E SUAVE */}
-              <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
+              {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
+              <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg">
                 <div className="flex flex-col justify-between gap-3 min-w-0">
                   {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
                   <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
@@ -3069,8 +3069,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </div>
               </div>
 
-              {/* 2. NOMES CADASTRADOS - CARDS ESTÚDIO DISCRETOS */}
-              <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 shadow-lg">
+              {/* 2. NOMES CADASTRADOS - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
+              <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg flex-1">
             <div className="flex items-center justify-between mb-3">
               <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
                 <span>Nomes para escolha ({session.options.length})</span>
