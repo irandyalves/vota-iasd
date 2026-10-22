@@ -33,6 +33,7 @@ export interface VotingEventItem {
   habilitarSuplente1?: boolean;
   habilitarSuplente2?: boolean;
   resolverEmpates?: boolean;
+  totalVotersConnected?: number;
   // Estado completo preservado por votação/evento:
   status?: SessionStatus;
   tieBreak?: {

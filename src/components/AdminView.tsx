@@ -87,6 +87,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [eventFormSuplente2Enabled, setEventFormSuplente2Enabled] = useState<boolean>(session.habilitarSuplente2 === true);
   const [eventFormSuplente2Count, setEventFormSuplente2Count] = useState<number>(session.segundoSuplentesCount ?? 1);
   const [eventFormResolverEmpates, setEventFormResolverEmpates] = useState<boolean>(session.resolverEmpates !== false);
+  const [eventFormTotalVoters, setEventFormTotalVoters] = useState<number>(session.totalVotersConnected || 0);
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
@@ -367,6 +368,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormSuplente2Enabled(session.habilitarSuplente2 === true);
     setEventFormSuplente2Count(session.segundoSuplentesCount ?? 1);
     setEventFormResolverEmpates(session.resolverEmpates !== false);
+    setEventFormTotalVoters(session.totalVotersConnected || 0);
     setIsCreatingNewEvent(true);
   };
 
@@ -393,6 +395,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     const empates = isSelected
       ? (session.resolverEmpates !== false)
       : (evt.resolverEmpates !== undefined ? evt.resolverEmpates : (session.resolverEmpates !== false));
+    const totVoters = isSelected
+      ? (session.totalVotersConnected || 0)
+      : (evt.totalVotersConnected ?? session.totalVotersConnected ?? 0);
 
     setEventFormVacancies(vac || 1);
     setEventFormSuplente1Enabled(s1Enabled);
@@ -400,6 +405,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormSuplente2Enabled(s2Enabled);
     setEventFormSuplente2Count(s2Count > 0 ? s2Count : 1);
     setEventFormResolverEmpates(empates);
+    setEventFormTotalVoters(totVoters);
     setIsCreatingNewEvent(true);
   };
 
@@ -484,6 +490,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     const s1Count = eventFormSuplente1Enabled ? Math.max(1, eventFormSuplente1Count || 1) : 0;
     const s2Count = eventFormSuplente2Enabled ? Math.max(1, eventFormSuplente2Count || 1) : 0;
     const resolverEmpates = eventFormResolverEmpates;
+    const totalVoters = eventFormTotalVoters > 0 ? eventFormTotalVoters : undefined;
 
     if (editingEventId) {
       const isEditingActive = editingEventId === currentActiveEventId;
@@ -499,6 +506,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               habilitarSuplente2: eventFormSuplente2Enabled,
               segundoSuplentesCount: s2Count,
               resolverEmpates,
+              totalVotersConnected: totalVoters,
             }
           : item
       );
@@ -513,6 +521,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         habilitarSuplente2: isEditingActive ? eventFormSuplente2Enabled : session.habilitarSuplente2,
         segundoSuplentesCount: isEditingActive ? s2Count : session.segundoSuplentesCount,
         resolverEmpates: isEditingActive ? resolverEmpates : session.resolverEmpates,
+        totalVotersConnected: isEditingActive ? totalVoters : session.totalVotersConnected,
         events: updatedEvents,
       });
 
@@ -557,6 +566,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         habilitarSuplente1: eventFormSuplente1Enabled,
         habilitarSuplente2: eventFormSuplente2Enabled,
         resolverEmpates,
+        totalVotersConnected: totalVoters,
         status: 'WAITING',
         tieBreak: null,
         mainVotersCount: 0,
@@ -583,6 +593,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         habilitarSuplente2: eventFormSuplente2Enabled,
         segundoSuplentesCount: s2Count,
         resolverEmpates,
+        totalVotersConnected: totalVoters,
         events: [...syncedCurrentEvents, newEvt],
       });
 
@@ -710,25 +721,47 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </button>
           </div>
 
-          {/* Nome da Votação */}
-          <div>
-            <label className="text-xs font-normal text-slate-300 block mb-1">
-              Nome da votação:
-            </label>
-            <input
-              type="text"
-              autoFocus
-              placeholder="Digite o nome (ex: Eleição do Tesoureiro)..."
-              value={eventFormName}
-              onChange={(e) => setEventFormName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleSaveEventModal();
-                }
-              }}
-              className="w-full px-3 py-1.5 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-lg text-xs font-normal text-slate-100 outline-none placeholder-slate-500 shadow-sm"
-            />
+          {/* Título da Votação + Qdte de votantes */}
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
+            <div className="sm:col-span-3">
+              <label className="text-xs font-normal text-slate-300 block mb-1">
+                Título da votação:
+              </label>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Digite o nome (ex: Eleição do Tesoureiro)..."
+                value={eventFormName}
+                onChange={(e) => setEventFormName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSaveEventModal();
+                  }
+                }}
+                className="w-full px-3 py-1.5 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-lg text-xs font-normal text-slate-100 outline-none placeholder-slate-500 shadow-sm"
+              />
+            </div>
+
+            <div className="sm:col-span-1">
+              <label className="text-xs font-normal text-slate-300 block mb-1 whitespace-nowrap">
+                Qdte de votantes:
+              </label>
+              <input
+                type="number"
+                min={0}
+                placeholder="Ex: 50"
+                value={eventFormTotalVoters > 0 ? eventFormTotalVoters : ''}
+                onChange={(e) => setEventFormTotalVoters(Math.max(0, parseInt(e.target.value) || 0))}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSaveEventModal();
+                  }
+                }}
+                className="w-full px-3 py-1.5 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-lg text-xs font-normal text-slate-100 outline-none placeholder-slate-500 shadow-sm text-center font-mono font-medium"
+              />
+            </div>
           </div>
 
           {/* Vagas Titulares, 1º Suplente e 2º Suplente */}
