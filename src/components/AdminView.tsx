@@ -16,6 +16,7 @@ import {
   Sliders,
   ArrowDownAZ,
   Pencil,
+  Plus,
   FolderPlus,
   Building2,
   ChevronsRight,
@@ -2728,18 +2729,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             <Trash2 className="w-4 h-4" />
           </button>
 
-          {/* Botão "+ Novo evento" na frente */}
+          {/* Botão + (bold, sem fundo e sem borda) para criar novo evento geral */}
           <button
             type="button"
             onClick={() => {
               setNewGeneralEventNameInput('');
               setIsNewGeneralModalOpen(true);
             }}
-            className="px-3 py-1.5 min-h-[32px] sm:min-h-[34px] rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm shrink-0"
-            title="Criar novo Evento"
+            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-white/10 border-0 shadow-none transition cursor-pointer active:scale-90 flex items-center justify-center shrink-0 focus:outline-none"
+            title="Criar novo Evento Geral"
           >
-            <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
-            <span>+ Novo evento</span>
+            <Plus className="w-5 h-5 stroke-[3]" />
           </button>
         </div>
 
