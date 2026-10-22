@@ -442,12 +442,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                         <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
                       </div>
 
-                      {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está */}
+                      {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está (Reduzida em 40% no mobile) */}
                       {(option.votesCount || 0) > 0 && (
                         <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
-                          <div className="absolute -inset-y-2 w-5 -right-2 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[6px]" />
-                          <div className="relative w-[4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_12px_#fbbf24,0_0_24px_rgba(245,158,11,1),0_0_4px_#ffffff] rounded-r-xs" />
-                          <div className="absolute right-[-4.5px] top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_12px_4px_#f59e0b,0_0_24px_8px_rgba(251,191,36,0.9),0_0_3px_#ffffff] ring-1.5 ring-white/90" />
+                          <div className="absolute -inset-y-1.5 sm:-inset-y-2 w-3 sm:w-5 -right-1 sm:-right-2 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[3px] sm:blur-[6px]" />
+                          <div className="relative w-[2.4px] sm:w-[4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_6px_#fbbf24,0_0_12px_rgba(245,158,11,0.8),0_0_2px_#ffffff] sm:shadow-[0_0_12px_#fbbf24,0_0_24px_rgba(245,158,11,1),0_0_4px_#ffffff] rounded-r-xs" />
+                          <div className="absolute right-[-2.5px] sm:right-[-4.5px] top-1/2 -translate-y-1/2 w-2 h-2 sm:w-3.5 sm:h-3.5 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_6px_2px_#f59e0b,0_0_12px_4px_rgba(251,191,36,0.8)] sm:shadow-[0_0_12px_4px_#f59e0b,0_0_24px_8px_rgba(251,191,36,0.9),0_0_3px_#ffffff] ring-1 sm:ring-1.5 ring-white/90" />
                         </div>
                       )}
                     </motion.div>
@@ -885,21 +885,21 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
               damping: 18,
               mass: 0.85,
             }}
-            className="fixed top-5 inset-x-4 max-w-sm mx-auto p-3.5 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 border-2 border-amber-200 text-white flex items-center justify-center gap-2.5 shadow-[0_16px_36px_rgba(249,115,22,0.65),0_6px_14px_rgba(0,0,0,0.6)] cursor-pointer select-none z-[9999]"
+            className="fixed top-5 inset-x-4 max-w-sm mx-auto p-3.5 rounded-2xl bg-[#064e3b] border-2 border-white text-white flex items-center justify-center gap-2.5 shadow-[0_16px_36px_rgba(0,0,0,0.8),0_0_16px_rgba(255,255,255,0.3)] cursor-pointer select-none z-[9999]"
           >
             <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow self-center" />
             <div className="flex-1">
               {errorMessage === 'LIMIT_EXCEEDED' ? (
-                <div className="flex flex-col items-center text-center gap-0.5">
-                  <span className="font-black text-xs sm:text-sm tracking-wide uppercase drop-shadow">
-                    VOCÊ JÁ ESCOLHEU {maxVotes} {maxVotes === 1 ? 'NOME' : 'NOMES'}
+                <div className="flex flex-col items-center text-center gap-1">
+                  <span className="font-black text-sm sm:text-base tracking-wide uppercase text-white drop-shadow">
+                    VOCÊ JÁ ESCOLHEU {String(maxVotes).padStart(2, '0')}
                   </span>
-                  <span className="text-[10.5px] text-amber-100 font-medium tracking-normal normal-case">
-                    Para escolher outro candidato, desmarque um nome primeiro.
+                  <span className="text-[13px] sm:text-[14px] text-emerald-100 font-bold tracking-normal normal-case leading-snug">
+                    Para escolher outro, desmarque algum.
                   </span>
                 </div>
               ) : (
-                <span className="text-xs sm:text-sm font-black uppercase text-center block drop-shadow">
+                <span className="text-xs sm:text-sm font-black uppercase text-center block drop-shadow text-white">
                   {errorMessage}
                 </span>
               )}

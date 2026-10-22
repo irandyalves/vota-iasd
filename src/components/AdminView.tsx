@@ -131,7 +131,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     } else {
       if (selectedTieCandidateIds.length >= maxAllowed) {
         setTieWarningTrigger(Date.now());
-        setTieWarningModal(`VOCÊ JÁ ESCOLHEU ${maxAllowed} ${maxAllowed === 1 ? 'NOME' : 'NOMES'}`);
+        setTieWarningModal(`VOCÊ JÁ ESCOLHEU ${String(maxAllowed).padStart(2, '0')}`);
         return;
       }
       setSelectedTieCandidateIds((prev) => [...prev, id]);
@@ -1217,15 +1217,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               damping: 18,
               mass: 0.85,
             }}
-            className="fixed top-5 inset-x-4 max-w-sm mx-auto p-3.5 rounded-2xl bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 border-2 border-amber-200 text-white flex items-center justify-center gap-2.5 shadow-[0_16px_36px_rgba(249,115,22,0.7),0_6px_14px_rgba(0,0,0,0.6)] cursor-pointer select-none z-[9999]"
+            className="fixed top-5 inset-x-4 max-w-sm mx-auto p-3.5 rounded-2xl bg-[#064e3b] border-2 border-white text-white flex items-center justify-center gap-2.5 shadow-[0_16px_36px_rgba(0,0,0,0.8),0_0_16px_rgba(255,255,255,0.3)] cursor-pointer select-none z-[9999]"
           >
             <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow self-center" />
-            <div className="flex flex-col items-center text-center gap-0.5">
-              <span className="font-black text-xs sm:text-sm tracking-wide uppercase drop-shadow">
+            <div className="flex flex-col items-center text-center gap-1">
+              <span className="font-black text-sm sm:text-base tracking-wide uppercase text-white drop-shadow">
                 {tieWarningModal}
               </span>
-              <span className="text-[10.5px] text-amber-100 font-medium tracking-normal normal-case">
-                Para escolher outro candidato, desmarque um nome primeiro.
+              <span className="text-[13px] sm:text-[14px] text-emerald-100 font-bold tracking-normal normal-case leading-snug">
+                Para escolher outro, desmarque algum.
               </span>
             </div>
           </motion.div>
@@ -2729,8 +2729,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     <span className="text-[12px] sm:text-[13px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[14px] select-none leading-none">
                                       {percent}%
                                     </span>
-                                    <div className="absolute -inset-y-1 w-3 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[3px]" />
-                                    <div className="relative w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
+                                    <div className="absolute -inset-y-1 w-2 sm:w-3 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[1.5px] sm:blur-[3px]" />
+                                    <div className="relative w-[2.8px] sm:w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24,0_0_8px_rgba(245,158,11,0.6)] sm:shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
                                   </div>
                                 </motion.div>
                               ) : (

@@ -123,18 +123,20 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isVotingActive =
     session?.status === 'VOTING' || session?.status === 'TIE_BREAK';
 
-  const activeOptions =
-    session?.status === 'TIE_BREAK' && session?.tieBreak?.active
-      ? session.tieBreak.options || []
-      : session?.options || [];
-
-  const totalVotesCast = activeOptions.reduce(
-    (acc, curr) => acc + (curr.votesCount || 0),
-    0
+  const totalExpectedVoters = Math.max(
+    connectedVoters.length,
+    session?.allowedVoterIds?.length || 0,
+    session?.totalVotersConnected || 0
   );
 
-  // Enquanto estiver girando (votação em andamento) e já houver voto(s) registrado(s), muda o caption para APURAÇÃO
-  const showApuracaoCaption = isVotingActive && totalVotesCast > 0;
+  const totalVotersVoted =
+    session?.status === 'TIE_BREAK'
+      ? session?.tieBreakVotersCount || 0
+      : session?.mainVotersCount || 0;
+
+  // APURAÇÃO só é exibido quando TODOS os votantes conectados tiverem votado, ou quando a votação for encerrada
+  const allHaveVoted = totalExpectedVoters > 0 && totalVotersVoted >= totalExpectedVoters;
+  const showApuracaoCaption = (isVotingActive && allHaveVoted) || session?.status === 'CLOSED';
 
   const handleCancelVoting = () => {
     if (!session || !onSaveSession) return;
@@ -398,10 +400,93 @@ export const Navbar: React.FC<NavbarProps> = ({
             })()}
           </button>
 
-          {/* SLOT DIREITO: VU METER (Ancorado à direita do botão central) */}
+          {/* SLOT DIREITO: VU METER (EM VOTAÇÃO) OU MÃOZINHA ESCREVENDO/CONTANDO (EM APURAÇÃO) */}
           <div className="absolute left-full ml-3 flex items-center justify-start pointer-events-none">
-            <AnimatePresence>
-              {isVotingActive && (
+            <AnimatePresence mode="wait">
+              {showApuracaoCaption ? (
+                /* MÃOZINHA ESCREVENDO / APURANDO CÉDULA */
+                <motion.div
+                  key="apuracao-writing-hand"
+                  initial={{ opacity: 0, x: -20, scale: 0.9 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -20, scale: 0.9 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  className="pointer-events-auto flex items-center shrink-0 pl-1 select-none"
+                >
+                  <div
+                    title="Apuração em andamento: mãozinha registrando os votos na ata"
+                    className="flex items-center gap-2 px-2.5 py-1 bg-[#09152b]/95 border border-amber-400/50 rounded-xl shadow-[0_0_14px_rgba(251,191,36,0.35)] shrink-0"
+                  >
+                    {/* Prancheta com linhas de apuração preenchendo */}
+                    <div className="relative w-5 h-6 bg-[#0f172a] rounded-[3px] border border-amber-300/70 p-0.5 flex flex-col justify-around shadow-inner overflow-hidden shrink-0">
+                      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-[2px] bg-amber-400 rounded-b-xs" />
+                      <motion.div
+                        className="h-[1.5px] bg-amber-300 rounded-full"
+                        animate={{ width: ['20%', '90%', '45%', '100%'] }}
+                        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+                      />
+                      <motion.div
+                        className="h-[1.5px] bg-amber-300 rounded-full"
+                        animate={{ width: ['45%', '100%', '30%', '90%'] }}
+                        transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
+                      />
+                      <motion.div
+                        className="h-[1.5px] bg-emerald-400 rounded-full"
+                        animate={{ width: ['10%', '75%', '40%', '100%'] }}
+                        transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+                      />
+                    </div>
+
+                    {/* Mãozinha segurando a caneta escrevendo com ritmo caligráfico */}
+                    <motion.div
+                      className="relative w-6 h-6 flex items-center justify-center text-amber-300 origin-bottom-left shrink-0"
+                      animate={{
+                        x: [0, 3.5, 1, 4.5, 1.5, 0],
+                        y: [0, -2, 1, -1, 1, 0],
+                        rotate: [-10, 8, -6, 10, -4, -10],
+                      }}
+                      transition={{
+                        duration: 0.85,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                    >
+                      <svg viewBox="0 0 28 28" fill="none" className="w-6 h-6 drop-shadow-[0_0_5px_rgba(251,191,36,0.9)]">
+                        {/* Corpo da Caneta */}
+                        <path
+                          d="M6 22l3-1 12-12-3-3L6 18l-1 4 1 0z"
+                          fill="#f59e0b"
+                          stroke="#ffffff"
+                          strokeWidth="1.2"
+                          strokeLinejoin="round"
+                        />
+                        {/* Ponta da Caneta */}
+                        <polygon points="5,22 8,21 6,19" fill="#0f172a" />
+                        <circle cx="5" cy="22" r="1.2" fill="#ffffff" />
+                        {/* Dedos da mão segurando */}
+                        <path
+                          d="M10 17c0-2 1.5-3 3-2s2 2 1 4-3 1-4-2z"
+                          fill="#fed7aa"
+                          stroke="#ea580c"
+                          strokeWidth="1"
+                        />
+                        <circle cx="12" cy="16" r="2.2" fill="#fed7aa" stroke="#ea580c" strokeWidth="0.8" />
+                      </svg>
+                    </motion.div>
+
+                    {/* Texto informativo com contagem */}
+                    <div className="flex flex-col leading-tight select-none">
+                      <span className="font-mono font-black text-[10px] text-amber-300 tracking-wider uppercase animate-pulse">
+                        APURANDO
+                      </span>
+                      <span className="text-[8.5px] text-emerald-300 font-bold tracking-tight uppercase whitespace-nowrap">
+                        {totalVotersVoted} {totalVotersVoted === 1 ? 'VOTO' : 'VOTOS'}
+                      </span>
+                    </div>
+                  </div>
+                </motion.div>
+              ) : isVotingActive ? (
+                /* VU METER NORMAL DURANTE A VOTAÇÃO */
                 <motion.div
                   key="vumeter-navbar"
                   initial={{ opacity: 0, x: -30, scale: 0.95 }}
@@ -440,7 +525,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ))}
                   </div>
                 </motion.div>
-              )}
+              ) : null}
             </AnimatePresence>
           </div>
         </div>

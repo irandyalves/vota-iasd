@@ -794,8 +794,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 <span className="text-[12px] sm:text-[13px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[14px] select-none leading-none">
                                   {percentage}%
                                 </span>
-                                <div className="absolute -inset-y-1 w-3.5 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[3px]" />
-                                <div className="relative w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
+                                <div className="absolute -inset-y-1 w-2 sm:w-3.5 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[1.5px] sm:blur-[3px]" />
+                                <div className="relative w-[2.8px] sm:w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24,0_0_8px_rgba(245,158,11,0.6)] sm:shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
                               </div>
                             </motion.div>
                           ) : (
