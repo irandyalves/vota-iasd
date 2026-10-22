@@ -2402,57 +2402,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         </div>
       )}
 
-      {/* CARDZÃO: EVENTOS GERAIS ONLINE (IDENTIFICAÇÃO À ESQUERDA, LISTBOX E NOVO EVENTO À DIREITA) */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2.5 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex flex-wrap items-center justify-between gap-3 relative z-30">
-        {/* Esquerda: Identificação do Evento Geral com Lapizinho Âmbar e Duplo Clique */}
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
-            <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
+      {/* CARD: EVENTOS GERAIS ONLINE (LISTBOX + NOVO EVENTO À ESQUERDA, HISTÓRICO + ENGRENAGEM SEM FUNDO À DIREITA) */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative z-30">
+        {/* Esquerda: Ícone do Prédio + Listbox dos Eventos (substitui o texto Comissão) + Lapizinho de Renomear + Botão Novo Evento */}
+        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-wrap">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+            <Building2 className="w-4 h-4 text-amber-400" />
           </div>
 
-          <div className="min-w-0">
-            {/* O caption acima do título foi retirado conforme solicitado */}
-            <div
-              className="flex items-center gap-2 group cursor-pointer"
-              onDoubleClick={() => {
-                setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
-                setIsEditingGeneralModalOpen(true);
-              }}
-              title="Duplo clique ou clique no lápis para renomear este Evento Geral"
-            >
-              {/* Título sem bold e com cor âmbar (laranja suave) */}
-              <h2 className="text-sm sm:text-base font-normal text-amber-400 tracking-wide truncate">
-                {session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte'}
-              </h2>
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
-                  setIsEditingGeneralModalOpen(true);
-                }}
-                className="p-1 rounded-md text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 transition cursor-pointer shrink-0"
-                title="Renomear Evento Geral"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Direita: "Eventos" em laranja + listbox com os existentes + botão "Novo evento" em verde estilo print 2 */}
-        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 ml-auto flex-wrap">
-          <span className="text-xs sm:text-sm font-semibold text-amber-500 uppercase tracking-wider shrink-0">
-            Eventos
-          </span>
-
-          {/* Listbox com os eventos existentes */}
+          {/* Listbox dos Eventos Existentes (substitui o título comissão para evitar duplicidade) */}
           <div className="relative shrink-0">
             <select
               value={currentGeneralEventId}
               onChange={(e) => handleSwitchGeneralEvent(e.target.value)}
-              className="bg-[#0b172a] hover:bg-[#0f1f38] text-amber-100 text-xs font-medium pl-3 pr-8 py-2 rounded-lg border border-amber-500/40 hover:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 shadow-inner cursor-pointer appearance-none min-w-[170px] max-w-[240px] sm:max-w-[320px] truncate transition-colors"
-              title="Selecione um Evento existente na lista"
+              className="bg-[#0b172a] hover:bg-[#0f1f38] text-amber-300 text-xs sm:text-sm font-normal pl-3 pr-8 py-1.5 sm:py-2 rounded-lg border border-amber-500/40 hover:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 shadow-inner cursor-pointer appearance-none min-w-[200px] max-w-[260px] sm:max-w-[340px] truncate transition-colors"
+              title="Selecione o Evento Geral"
             >
               {generalEventsList.map((gev) => (
                 <option key={gev.id} value={gev.id} className="bg-[#0b172a] text-slate-100 py-1">
@@ -2463,18 +2427,130 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             <ChevronDown className="w-3.5 h-3.5 text-amber-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Botão Novo evento (estilo print 2, mas em laranja) */}
+          {/* Botão de Renomear o Evento Geral Selecionado */}
+          <button
+            type="button"
+            onClick={() => {
+              setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
+              setIsEditingGeneralModalOpen(true);
+            }}
+            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 border border-amber-500/30 transition cursor-pointer shrink-0"
+            title="Renomear este Evento Geral"
+          >
+            <Pencil className="w-3.5 h-3.5" />
+          </button>
+
+          {/* Botão "+ Novo evento" na frente */}
           <button
             type="button"
             onClick={() => {
               setNewGeneralEventNameInput('');
               setIsNewGeneralModalOpen(true);
             }}
-            className="px-3 py-1.5 min-h-[34px] rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm shrink-0"
+            className="px-3 py-1.5 min-h-[32px] sm:min-h-[34px] rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm shrink-0"
             title="Criar novo Evento"
           >
             <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
             <span>+ Novo evento</span>
+          </button>
+        </div>
+
+        {/* Direita: Histórico à esquerda da Engrenagem, e Engrenagem sem fundo lá na ponta */}
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+          {/* Atalho para Histórico de Votações */}
+          <div className="relative group">
+            <button
+              type="button"
+              onClick={() => {
+                setIsGearOpen(true);
+                setTimeout(() => {
+                  document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
+                }, 200);
+              }}
+              className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 ${
+                session.history && session.history.length > 0
+                  ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
+                  : 'bg-transparent hover:bg-white/10 text-slate-400 hover:text-slate-200 border-0 shadow-none'
+              }`}
+              title="Ver Histórico de Votações Encerradas"
+              aria-label="Ver Histórico de Votações Encerradas"
+            >
+              <History className="w-4 h-4 sm:w-5 sm:h-5" />
+              {session.history && session.history.length > 0 && (
+                <span className="text-[10px] font-black px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono leading-none">
+                  {session.history.length}
+                </span>
+              )}
+            </button>
+            <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
+              Histórico de Votações
+            </div>
+          </div>
+
+          {/* Engrenagem sem fundo lá na ponta direita */}
+          <button
+            ref={gearButtonRef}
+            type="button"
+            onClick={() => setIsGearOpen((prev) => !prev)}
+            title="Abrir/Recolher Opções (ESC ou clique fora para recolher)"
+            className="group relative p-1.5 sm:p-2 rounded-xl transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center bg-transparent hover:bg-white/10 border-0 shadow-none"
+          >
+            <svg
+              viewBox="0 0 64 64"
+              className="w-7 h-7 sm:w-8 sm:h-8 transition-transform duration-1000 ease-in-out group-hover:rotate-[360deg] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
+            >
+              {/* 8 Dentes Cinza Claro (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°) */}
+              {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
+                <g key={angle} transform={`rotate(${angle} 32 32)`}>
+                  <rect
+                    x="26"
+                    y="3"
+                    width="12"
+                    height="13"
+                    rx="2.5"
+                    fill="#e2e8f0"
+                    stroke="#94a3b8"
+                    strokeWidth="1.5"
+                  />
+                </g>
+              ))}
+              {/* Corpo / Anel Metálico Cinza Claro da Engrenagem */}
+              <circle
+                cx="32"
+                cy="32"
+                r="21"
+                fill="#cbd5e1"
+                stroke="#94a3b8"
+                strokeWidth="2"
+              />
+              {/* Anel Interno de Acabamento */}
+              <circle
+                cx="32"
+                cy="32"
+                r="15.5"
+                fill="#94a3b8"
+                stroke="#64748b"
+                strokeWidth="1.2"
+              />
+              {/* Centro Vermelho Escuro */}
+              <circle
+                cx="32"
+                cy="32"
+                r="12.5"
+                fill="#7f1d1d"
+                stroke="#450a0a"
+                strokeWidth="2"
+              />
+              {/* Brilho Sutil no Núcleo Vermelho Escuro */}
+              <circle
+                cx="32"
+                cy="32"
+                r="6"
+                fill="#991b1b"
+                stroke="#b91c1c"
+                strokeWidth="1"
+              />
+            </svg>
           </button>
         </div>
       </div>
@@ -2685,109 +2761,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 Exibir o QR CODE no telão
               </div>
             </div>
-
-            {/* Divisor sutil */}
-            <div className="h-5 w-px bg-white/[0.1] mx-0.5" />
-
-            {/* Atalho para Histórico de Votações */}
-            <div className="relative group">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsGearOpen(true);
-                  setTimeout(() => {
-                    document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
-                  }, 200);
-                }}
-                className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 ${
-                  session.history && session.history.length > 0
-                    ? 'bg-amber-500/15 border-amber-500/40 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
-                    : 'bg-[#0b0d13] hover:bg-[#141721] border-white/[0.1] text-slate-400 hover:text-slate-200 hover:border-white/[0.2] shadow-sm'
-                }`}
-                title="Ver Histórico de Votações Encerradas"
-                aria-label="Ver Histórico de Votações Encerradas"
-              >
-                <History className="w-4 h-4" />
-                {session.history && session.history.length > 0 && (
-                  <span className="text-[10px] font-black px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono leading-none">
-                    {session.history.length}
-                  </span>
-                )}
-              </button>
-              <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
-                Histórico de Votações
-              </div>
-            </div>
-
-            {/* 3. Engrenagem */}
-            <button
-              ref={gearButtonRef}
-              type="button"
-              onClick={() => setIsGearOpen((prev) => !prev)}
-              title="Abrir/Recolher Opções (ESC ou clique fora para recolher)"
-              className={`group relative p-2 rounded-xl border transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center ${
-                isGearOpen
-                  ? 'bg-[#0b0d13] border-emerald-500/60 shadow-[0_0_16px_rgba(16,185,129,0.3)]'
-                  : 'bg-[#0b0d13] hover:bg-[#141721] border-white/[0.1] hover:border-white/[0.2] shadow-sm'
-              }`}
-            >
-              <svg
-                viewBox="0 0 64 64"
-                className="w-7 h-7 transition-transform duration-1000 ease-in-out group-hover:rotate-[360deg] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
-              >
-                {/* 8 Dentes Cinza Claro (0°, 45°, 90°, 135°, 180°, 225°, 270°, 315°) */}
-                {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => (
-                  <g key={angle} transform={`rotate(${angle} 32 32)`}>
-                    <rect
-                      x="26"
-                      y="3"
-                      width="12"
-                      height="13"
-                      rx="2.5"
-                      fill="#e2e8f0"
-                      stroke="#94a3b8"
-                      strokeWidth="1.5"
-                    />
-                  </g>
-                ))}
-                {/* Corpo / Anel Metálico Cinza Claro da Engrenagem */}
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="21"
-                  fill="#cbd5e1"
-                  stroke="#94a3b8"
-                  strokeWidth="2"
-                />
-                {/* Anel Interno de Acabamento */}
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="15.5"
-                  fill="#94a3b8"
-                  stroke="#64748b"
-                  strokeWidth="1.2"
-                />
-                {/* Centro Vermelho Escuro */}
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="12.5"
-                  fill="#7f1d1d"
-                  stroke="#450a0a"
-                  strokeWidth="2"
-                />
-                {/* Brilho Sutil no Núcleo Vermelho Escuro */}
-                <circle
-                  cx="32"
-                  cy="32"
-                  r="6"
-                  fill="#991b1b"
-                  stroke="#b91c1c"
-                  strokeWidth="1"
-                />
-              </svg>
-            </button>
           </div>
         </div>
       </div>
