@@ -16,12 +16,12 @@ export const GLOBAL_RULES_KEY = 'vota_iasd_global_rules';
 
 export const DEFAULT_GLOBAL_RULES: GlobalElectionRules = {
   totalVotersConnected: 1,
-  vacancies: 6,
-  maxVotesPerVoter: 6,
+  vacancies: 1,
+  maxVotesPerVoter: 1,
   habilitarSuplente1: true,
-  suplentesCount: 3,
-  habilitarSuplente2: true,
-  segundoSuplentesCount: 5,
+  suplentesCount: 1,
+  habilitarSuplente2: false,
+  segundoSuplentesCount: 1,
   resolverEmpates: true,
   labelTitulares: 'Titulares',
   labelSuplente1: '1º suplente',
@@ -37,9 +37,14 @@ export function getGlobalElectionRules(): GlobalElectionRules {
     const raw = localStorage.getItem(GLOBAL_RULES_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
+      // Garante titular 1 por padrão se herdou o antigo 6 padrão
+      const vacancies = parsed.vacancies === 6 ? 1 : (parsed.vacancies ?? 1);
+      const maxVotes = parsed.maxVotesPerVoter === 6 ? 1 : (parsed.maxVotesPerVoter ?? vacancies);
       return {
         ...DEFAULT_GLOBAL_RULES,
         ...parsed,
+        vacancies,
+        maxVotesPerVoter: maxVotes,
       };
     }
   } catch (e) {

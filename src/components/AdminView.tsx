@@ -8,6 +8,7 @@ import {
   Download,
   Upload,
   CheckCircle,
+  Check,
   FileSpreadsheet,
   FileText,
   QrCode,
@@ -107,6 +108,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isEditingGeneralModalOpen, setIsEditingGeneralModalOpen] = useState<boolean>(false);
   const [editingGeneralEventName, setEditingGeneralEventName] = useState<string>('');
   const [deleteConfirmGeneralEvent, setDeleteConfirmGeneralEvent] = useState<{ id: string; name: string } | null>(null);
+  const [votacoesTitle, setVotacoesTitle] = useState<string>(() => {
+    return localStorage.getItem('vota_iasd_custom_votacoes_title') || 'Votação';
+  });
+  const [isEditingVotacoesTitle, setIsEditingVotacoesTitle] = useState<boolean>(false);
+  const [tempVotacoesTitle, setTempVotacoesTitle] = useState<string>(() => {
+    return localStorage.getItem('vota_iasd_custom_votacoes_title') || 'Votação';
+  });
+
+  const handleSaveVotacoesTitle = () => {
+    const val = tempVotacoesTitle.trim() || 'Votação';
+    setVotacoesTitle(val);
+    localStorage.setItem('vota_iasd_custom_votacoes_title', val);
+    setIsEditingVotacoesTitle(false);
+  };
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
@@ -2829,19 +2844,62 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
           {/* LINHA CENTRALIZADA VERTICALMENTE: "EVENTOS" + "+ CRIAR VOTAÇÃO" À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
           <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
-            {/* FAIXA SUTIL DE "EVENTOS" ATÉ O BOTÃO "+ CRIAR VOTAÇÃO" */}
-            <div className="self-stretch flex items-center shrink-0 pr-3 sm:pr-4 py-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveTab('candidates');
-                  setIsBottomSectionOpen(true);
-                }}
-                className="text-slate-300 hover:text-white font-medium text-xs sm:text-sm tracking-wide px-4 sm:px-5 self-stretch flex items-center justify-center shrink-0 transition cursor-pointer select-none"
-                title="Mostrar seção de nomes do evento"
-              >
-                Eventos
-              </button>
+            {/* FAIXA SUTIL DE "VOTAÇÕES" (EDITÁVEL COM LAPIZINHO, SALVO NA MÁQUINA) ATÉ O BOTÃO "+ CRIAR VOTAÇÃO" */}
+            <div className="self-stretch flex items-center shrink-0 pr-1.5 sm:pr-2.5 py-2">
+              {isEditingVotacoesTitle ? (
+                <div className="flex items-center gap-1 px-2.5">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={tempVotacoesTitle}
+                    onChange={(e) => setTempVotacoesTitle(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleSaveVotacoesTitle();
+                      if (e.key === 'Escape') setIsEditingVotacoesTitle(false);
+                    }}
+                    onBlur={handleSaveVotacoesTitle}
+                    className="bg-[#0b172a] text-slate-100 border border-amber-500/60 rounded px-2 py-1 text-xs sm:text-sm font-medium outline-none max-w-[130px] shadow-inner"
+                    title="Pressione Enter para salvar"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSaveVotacoesTitle}
+                    className="p-1 rounded text-emerald-400 hover:text-emerald-300 transition cursor-pointer"
+                    title="Salvar título"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1 px-3 sm:px-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('candidates');
+                      setIsBottomSectionOpen(true);
+                    }}
+                    onDoubleClick={() => {
+                      setTempVotacoesTitle(votacoesTitle);
+                      setIsEditingVotacoesTitle(true);
+                    }}
+                    className="text-slate-300 hover:text-white font-medium text-xs sm:text-sm tracking-wide transition cursor-pointer select-none"
+                    title="Mostrar seção de nomes (duplo clique ou clique no lápis para renomear)"
+                  >
+                    {votacoesTitle}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTempVotacoesTitle(votacoesTitle);
+                      setIsEditingVotacoesTitle(true);
+                    }}
+                    className="p-1 text-slate-500 hover:text-amber-400 transition cursor-pointer shrink-0"
+                    title="Renomear título (salvo somente neste computador)"
+                  >
+                    <Pencil className="w-3 h-3" />
+                  </button>
+                </div>
+              )}
 
               {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO */}
               <div className="relative flex items-center shrink-0 pl-1 sm:pl-2">
