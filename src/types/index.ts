@@ -35,6 +35,9 @@ export interface VotingEventItem {
   resolverEmpates?: boolean;
   totalVotersConnected?: number;
   rulesConfigured?: boolean;
+  labelTitulares?: string;
+  labelSuplente1?: string;
+  labelSuplente2?: string;
   // Estado completo preservado por votação/evento:
   status?: SessionStatus;
   tieBreak?: {
@@ -54,6 +57,10 @@ export interface VotingEventItem {
 export interface VotingSession {
   id: string;
   title: string;
+  generalEventName?: string; // Nome do Evento Geral / Assembleia (Ex: "Comissão da Igreja Adventista da Asa Norte")
+  labelTitulares?: string; // Rótulo customizado para Titulares (padrão: "Titulares")
+  labelSuplente1?: string; // Rótulo customizado para 1º Suplente (padrão: "1º suplente")
+  labelSuplente2?: string; // Rótulo customizado para 2º Suplente (padrão: "2º suplente")
   category?: string; // Ex: "Anciãos", "Diáconos", "Ministério Jovem"
   pin: string; // 4-digit safety code
   status: SessionStatus;

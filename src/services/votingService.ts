@@ -166,6 +166,9 @@ export async function saveSession(session: VotingSession): Promise<void> {
               tieBreakVotersCount: session.tieBreakVotersCount || 0,
               votingIteration: session.votingIteration || 1,
               telaoMode: session.telaoMode || 'names',
+              labelTitulares: session.labelTitulares || evt.labelTitulares || 'Titulares',
+              labelSuplente1: session.labelSuplente1 || evt.labelSuplente1 || '1º suplente',
+              labelSuplente2: session.labelSuplente2 || evt.labelSuplente2 || '2º suplente',
             }
           : evt
       );

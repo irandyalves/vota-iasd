@@ -17,6 +17,8 @@ import {
   Pencil,
   FolderPlus,
   Plus,
+  Building2,
+  Sparkles,
   ChevronsRight,
   X,
   Star,
@@ -95,6 +97,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [eventFormSuplente2Count, setEventFormSuplente2Count] = useState<number>(session.segundoSuplentesCount ?? 1);
   const [eventFormResolverEmpates, setEventFormResolverEmpates] = useState<boolean>(session.resolverEmpates !== false);
   const [eventFormTotalVoters, setEventFormTotalVoters] = useState<number>(session.totalVotersConnected || 0);
+  const [eventFormLabelTitulares, setEventFormLabelTitulares] = useState<string>(session.labelTitulares || 'Titulares');
+  const [eventFormLabelSuplente1, setEventFormLabelSuplente1] = useState<string>(session.labelSuplente1 || '1º suplente');
+  const [eventFormLabelSuplente2, setEventFormLabelSuplente2] = useState<string>(session.labelSuplente2 || '2º suplente');
+  const [isEditingLabelTitulares, setIsEditingLabelTitulares] = useState<boolean>(false);
+  const [isEditingLabelSuplente1, setIsEditingLabelSuplente1] = useState<boolean>(false);
+  const [isEditingLabelSuplente2, setIsEditingLabelSuplente2] = useState<boolean>(false);
+  const [isNewGeneralModalOpen, setIsNewGeneralModalOpen] = useState<boolean>(false);
+  const [newGeneralEventNameInput, setNewGeneralEventNameInput] = useState<string>('');
+  const [isEditingGeneralModalOpen, setIsEditingGeneralModalOpen] = useState<boolean>(false);
+  const [editingGeneralEventName, setEditingGeneralEventName] = useState<string>('');
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
@@ -300,6 +312,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const gearButtonRef = useRef<HTMLButtonElement>(null);
   const eventModalRef = useRef<HTMLDivElement>(null);
   const createEventBtnRef = useRef<HTMLButtonElement>(null);
+  const eventTitleInputRef = useRef<HTMLInputElement>(null);
 
   // Fecha o painel da engrenagem, menu de importar ou o modalzinho de criar/editar evento ao pressionar ESC ou clicar fora
   useEffect(() => {
@@ -386,6 +399,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             tieBreakVotersCount: session.tieBreakVotersCount || 0,
             votingIteration: session.votingIteration || 1,
             telaoMode: session.telaoMode || 'names',
+            labelTitulares: session.labelTitulares || 'Titulares',
+            labelSuplente1: session.labelSuplente1 || '1º suplente',
+            labelSuplente2: session.labelSuplente2 || '2º suplente',
           },
         ];
 
@@ -411,8 +427,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormSuplente1Count(currentGlobal.suplentesCount ?? 1);
     setEventFormSuplente2Enabled(currentGlobal.habilitarSuplente2 === true);
     setEventFormSuplente2Count(currentGlobal.segundoSuplentesCount ?? 1);
-    setEventFormResolverEmpates(currentGlobal.resolverEmpates !== false);
-    setEventFormTotalVoters(currentGlobal.totalVotersConnected || 0);
+    setEventFormResolverEmpates(true); // Padrão: sempre marcado
+    setEventFormTotalVoters(currentGlobal.totalVotersConnected || 1);
+    setEventFormLabelTitulares(currentGlobal.labelTitulares || 'Titulares');
+    setEventFormLabelSuplente1(currentGlobal.labelSuplente1 || '1º suplente');
+    setEventFormLabelSuplente2(currentGlobal.labelSuplente2 || '2º suplente');
+    setIsEditingLabelTitulares(false);
+    setIsEditingLabelSuplente1(false);
+    setIsEditingLabelSuplente2(false);
     setIsCreatingNewEvent(true);
   };
 
@@ -438,19 +460,114 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       : (evt.segundoSuplentesCount ?? session.segundoSuplentesCount ?? 1);
     const empates = isSelected
       ? (session.resolverEmpates !== false)
-      : (evt.resolverEmpates !== undefined ? evt.resolverEmpates : (session.resolverEmpates !== false));
+      : (evt.resolverEmpates !== undefined ? evt.resolverEmpates : true);
     const totVoters = isSelected
       ? (session.totalVotersConnected || 0)
       : (evt.totalVotersConnected ?? session.totalVotersConnected ?? 0);
+
+    const lTitulares = isSelected
+      ? (session.labelTitulares || evt.labelTitulares || 'Titulares')
+      : (evt.labelTitulares || 'Titulares');
+    const lSuplente1 = isSelected
+      ? (session.labelSuplente1 || evt.labelSuplente1 || '1º suplente')
+      : (evt.labelSuplente1 || '1º suplente');
+    const lSuplente2 = isSelected
+      ? (session.labelSuplente2 || evt.labelSuplente2 || '2º suplente')
+      : (evt.labelSuplente2 || '2º suplente');
 
     setEventFormVacancies(vac || 1);
     setEventFormSuplente1Enabled(s1Enabled);
     setEventFormSuplente1Count(s1Count > 0 ? s1Count : 1);
     setEventFormSuplente2Enabled(s2Enabled);
     setEventFormSuplente2Count(s2Count > 0 ? s2Count : 1);
-    setEventFormResolverEmpates(empates);
+    setEventFormResolverEmpates(empates !== false);
     setEventFormTotalVoters(totVoters);
+    setEventFormLabelTitulares(lTitulares);
+    setEventFormLabelSuplente1(lSuplente1);
+    setEventFormLabelSuplente2(lSuplente2);
+    setIsEditingLabelTitulares(false);
+    setIsEditingLabelSuplente1(false);
+    setIsEditingLabelSuplente2(false);
     setIsCreatingNewEvent(true);
+  };
+
+  // Cria um novo Evento Geral (Assembleia Mãe) e zera completamente o sistema
+  const handleHardResetGeneralEvent = (name: string) => {
+    const cleaned = name.trim().toUpperCase() || 'COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE';
+    const initialId = 'evt_' + Date.now();
+    const defaultRules = getGlobalElectionRules();
+
+    const initialEvent: VotingEventItem = {
+      id: initialId,
+      name: 'TESOUREIRO',
+      options: [],
+      vacancies: defaultRules.vacancies || 1,
+      maxVotesPerVoter: defaultRules.vacancies || 1,
+      suplentesCount: defaultRules.suplentesCount ?? 1,
+      segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
+      habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
+      resolverEmpates: true,
+      totalVotersConnected: defaultRules.totalVotersConnected || 1,
+      rulesConfigured: false,
+      labelTitulares: defaultRules.labelTitulares || 'Titulares',
+      labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
+      labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
+      status: 'WAITING',
+      tieBreak: null,
+      mainVotersCount: 0,
+      tieBreakVotersCount: 0,
+      votingIteration: (session.votingIteration || 1) + 10,
+      telaoMode: 'names',
+    };
+
+    const newSession: VotingSession = {
+      ...session,
+      generalEventName: cleaned,
+      title: 'TESOUREIRO',
+      activeEventId: initialId,
+      status: 'WAITING',
+      options: [],
+      events: [initialEvent],
+      history: [],
+      tieBreak: null,
+      mainVotersCount: 0,
+      tieBreakVotersCount: 0,
+      votingIteration: (session.votingIteration || 1) + 10,
+      vacancies: defaultRules.vacancies || 1,
+      maxVotesPerVoter: defaultRules.vacancies || 1,
+      suplentesCount: defaultRules.suplentesCount ?? 1,
+      segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
+      habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
+      resolverEmpates: true,
+      totalVotersConnected: defaultRules.totalVotersConnected || 1,
+      rulesConfigured: false,
+      labelTitulares: defaultRules.labelTitulares || 'Titulares',
+      labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
+      labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
+    };
+
+    saveSession(newSession);
+    localStorage.removeItem('vota_iasd_backup_names');
+    setBackupNamesList([]);
+    setNewName('');
+    setEditingCandidateId(null);
+    setIsNewGeneralModalOpen(false);
+    setNewGeneralEventNameInput('');
+    showNotification('success', `Novo Evento Geral "${cleaned}" iniciado! Todo o sistema foi zerado.`);
+  };
+
+  // Renomeia o Evento Geral existente
+  const handleRenameGeneralEvent = (name: string) => {
+    const cleaned = name.trim().toUpperCase();
+    if (!cleaned) return;
+    saveSession({
+      ...session,
+      generalEventName: cleaned,
+    });
+    setIsEditingGeneralModalOpen(false);
+    showNotification('success', `Nome do Evento Geral atualizado para "${cleaned}"!`);
   };
 
   // Escuta o evento emitido pelo botão de votação cinza da Navbar para abrir as regras da eleição
@@ -500,6 +617,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             telaoMode: session.telaoMode || 'names',
             totalVotersConnected: session.totalVotersConnected,
             rulesConfigured: session.rulesConfigured,
+            labelTitulares: session.labelTitulares || 'Titulares',
+            labelSuplente1: session.labelSuplente1 || '1º suplente',
+            labelSuplente2: session.labelSuplente2 || '2º suplente',
           }
         : item
     );
@@ -536,6 +656,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       resolverEmpates: targetEvt.resolverEmpates !== undefined ? targetEvt.resolverEmpates : (session.resolverEmpates !== false),
       totalVotersConnected: targetEvt.totalVotersConnected,
       rulesConfigured: targetEvt.rulesConfigured ?? false,
+      labelTitulares: targetEvt.labelTitulares || 'Titulares',
+      labelSuplente1: targetEvt.labelSuplente1 || '1º suplente',
+      labelSuplente2: targetEvt.labelSuplente2 || '2º suplente',
       events: updatedEvents,
     });
 
@@ -558,6 +681,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     const s2Count = eventFormSuplente2Enabled ? Math.max(1, eventFormSuplente2Count || 1) : 0;
     const resolverEmpates = eventFormResolverEmpates;
     const totalVoters = eventFormTotalVoters > 0 ? eventFormTotalVoters : undefined;
+    const labelTitulares = eventFormLabelTitulares.trim() || 'Titulares';
+    const labelSuplente1 = eventFormLabelSuplente1.trim() || '1º suplente';
+    const labelSuplente2 = eventFormLabelSuplente2.trim() || '2º suplente';
 
     if (editingEventId) {
       const isEditingActive = editingEventId === currentActiveEventId;
@@ -575,6 +701,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               resolverEmpates,
               totalVotersConnected: totalVoters,
               rulesConfigured: true,
+              labelTitulares,
+              labelSuplente1,
+              labelSuplente2,
             }
           : item
       );
@@ -591,6 +720,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         resolverEmpates: isEditingActive ? resolverEmpates : session.resolverEmpates,
         totalVotersConnected: isEditingActive ? totalVoters : session.totalVotersConnected,
         rulesConfigured: true,
+        labelTitulares: isEditingActive ? labelTitulares : session.labelTitulares,
+        labelSuplente1: isEditingActive ? labelSuplente1 : session.labelSuplente1,
+        labelSuplente2: isEditingActive ? labelSuplente2 : session.labelSuplente2,
         events: updatedEvents,
       });
 
@@ -602,6 +734,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         habilitarSuplente2: eventFormSuplente2Enabled,
         segundoSuplentesCount: s2Count,
         resolverEmpates,
+        labelTitulares,
+        labelSuplente1,
+        labelSuplente2,
       });
 
       setIsCreatingNewEvent(false);
@@ -629,6 +764,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               tieBreakVotersCount: session.tieBreakVotersCount || 0,
               votingIteration: session.votingIteration || 1,
               telaoMode: session.telaoMode || 'names',
+              labelTitulares: session.labelTitulares || 'Titulares',
+              labelSuplente1: session.labelSuplente1 || '1º suplente',
+              labelSuplente2: session.labelSuplente2 || '2º suplente',
             }
           : item
       );
@@ -647,6 +785,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         resolverEmpates,
         totalVotersConnected: totalVoters,
         rulesConfigured: true,
+        labelTitulares,
+        labelSuplente1,
+        labelSuplente2,
         status: 'WAITING',
         tieBreak: null,
         mainVotersCount: 0,
@@ -675,6 +816,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         resolverEmpates,
         totalVotersConnected: totalVoters,
         rulesConfigured: true,
+        labelTitulares,
+        labelSuplente1,
+        labelSuplente2,
         events: [...syncedCurrentEvents, newEvt],
       });
 
@@ -686,6 +830,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         habilitarSuplente2: eventFormSuplente2Enabled,
         segundoSuplentesCount: s2Count,
         resolverEmpates,
+        labelTitulares,
+        labelSuplente1,
+        labelSuplente2,
       });
 
       setIsCreatingNewEvent(false);
@@ -756,10 +903,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         exit={{ opacity: 0, scale: 0.95, y: -10 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
         style={{ transformOrigin: 'top left' }}
-        className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[430px] max-w-[calc(100vw-24px)]"
+        className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[440px] max-w-[calc(100vw-24px)]"
       >
         <div className="relative bg-[#141721] rounded-xl p-4 shadow-[0_0_30px_rgba(16,185,129,0.22),0_18px_40px_rgba(0,0,0,0.9)] space-y-3.5 border border-emerald-500/40">
-          {/* Borda Designer com brilho suave */}
+          {/* Borda Designer com brilho suave (linhas superiores e laterais limpas, sem borda dupla no fundo) */}
           <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.35))' }}>
             <div
               className="absolute top-0 left-0 w-4 h-4 rounded-tl-xl pointer-events-none"
@@ -770,20 +917,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               style={{ height: '1.5px', background: 'linear-gradient(to right, #10b981 0%, rgba(16,185,129,0) 100%)' }}
             />
             <div
-              className="absolute top-4 bottom-0 left-0 pointer-events-none"
+              className="absolute top-4 bottom-2 left-0 pointer-events-none"
               style={{ width: '1.5px', background: 'linear-gradient(to bottom, #10b981 0%, rgba(16,185,129,0) 100%)' }}
-            />
-            <div
-              className="absolute bottom-0 right-0 w-4 h-4 rounded-br-xl pointer-events-none"
-              style={{ borderBottom: '1.5px solid #10b981', borderRight: '1.5px solid #10b981' }}
-            />
-            <div
-              className="absolute bottom-0 right-4 left-0 pointer-events-none"
-              style={{ height: '1.5px', background: 'linear-gradient(to left, #10b981 0%, rgba(16,185,129,0) 100%)' }}
-            />
-            <div
-              className="absolute bottom-4 top-0 right-0 pointer-events-none"
-              style={{ width: '1.5px', background: 'linear-gradient(to top, #10b981 0%, rgba(16,185,129,0) 100%)' }}
             />
           </div>
 
@@ -810,13 +945,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </button>
           </div>
 
-          {/* Linha 1: Título da Votação + Qdte de votantes (Obrigatórios) */}
+          {/* Linha 1: Título da Votação (editável duplo clique + lapizinho verde) + Qdte de votantes (desabilitado e vazio) */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
             <div className="sm:col-span-3">
-              <label className="text-xs font-semibold text-slate-200 block mb-1">
-                Título da votação: <span className="text-emerald-400">*</span>
-              </label>
+              <div className="flex items-center gap-1.5 mb-1">
+                <label
+                  onDoubleClick={() => eventTitleInputRef.current?.focus()}
+                  className="text-xs font-semibold text-slate-200 cursor-pointer select-none"
+                  title="Duplo clique ou clique no lápis para focar"
+                >
+                  Título da votação: <span className="text-emerald-400">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => eventTitleInputRef.current?.focus()}
+                  className="p-0.5 text-emerald-400 hover:text-emerald-300 rounded transition cursor-pointer"
+                  title="Editar título da votação"
+                >
+                  <Pencil className="w-3 h-3" />
+                </button>
+              </div>
               <input
+                ref={eventTitleInputRef}
                 type="text"
                 autoFocus
                 placeholder="Ex: JOVENS..."
@@ -833,38 +983,59 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
 
             <div className="sm:col-span-1">
-              <label className="text-xs font-semibold text-slate-200 block mb-1 whitespace-nowrap">
-                Qdte votantes: <span className="text-emerald-400">*</span>
+              <label className="text-xs font-semibold text-slate-400 block mb-1 whitespace-nowrap">
+                Qdte votantes:
               </label>
               <input
-                type="number"
-                min={1}
-                placeholder="1"
-                disabled={isVotingActive && isSessionLocked}
-                value={eventFormTotalVoters > 0 ? eventFormTotalVoters : ''}
-                onChange={(e) => setEventFormTotalVoters(Math.max(1, parseInt(e.target.value) || 1))}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault();
-                    handleSaveEventModal();
-                  }
-                }}
-                className={`w-full px-2 py-1.5 bg-[#0b0d13] border rounded-lg text-xs font-mono font-bold text-slate-100 outline-none text-center shadow-sm transition-colors ${
-                  isVotingActive && isSessionLocked
-                    ? 'border-rose-500/40 text-slate-400 opacity-60 cursor-not-allowed bg-rose-950/10'
-                    : 'border-white/[0.12] focus:border-emerald-500/80'
-                }`}
+                type="text"
+                disabled
+                readOnly
+                placeholder="—"
+                value=""
+                className="w-full px-2 py-1.5 bg-[#0b0d13]/50 border border-white/[0.08] rounded-lg text-xs font-mono text-slate-500 outline-none text-center shadow-sm cursor-not-allowed select-none"
+                title="Configuração automática de quórum (em breve)"
               />
             </div>
           </div>
 
-          {/* Linha 2: Vagas Titulares, 1º Suplente e 2º Suplente (Cards lado a lado como no Print 2) */}
+          {/* Linha 2: Vagas Titulares, 1º Suplente e 2º Suplente (Rótulos editáveis via lapizinho verde e duplo clique) */}
           <div className="grid grid-cols-3 gap-2">
             {/* Titulares (Obrigatório) */}
             <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
-              <span className="text-[11px] font-semibold text-slate-200 block">
-                Titulares: <span className="text-emerald-400">*</span>
-              </span>
+              {isEditingLabelTitulares ? (
+                <input
+                  autoFocus
+                  type="text"
+                  value={eventFormLabelTitulares}
+                  onChange={(e) => setEventFormLabelTitulares(e.target.value)}
+                  onBlur={() => setIsEditingLabelTitulares(false)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') setIsEditingLabelTitulares(false);
+                  }}
+                  className="w-full text-[11px] font-semibold text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
+                />
+              ) : (
+                <div
+                  className="flex items-center gap-1 group cursor-pointer min-w-0"
+                  onDoubleClick={() => setIsEditingLabelTitulares(true)}
+                  title="Duplo clique ou clique no lápis para editar rótulo"
+                >
+                  <span className="text-[11px] font-semibold text-slate-200 truncate">
+                    {eventFormLabelTitulares || 'Titulares'}: <span className="text-emerald-400">*</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsEditingLabelTitulares(true);
+                    }}
+                    className="p-0.5 text-emerald-400 hover:text-emerald-300 rounded transition shrink-0"
+                    title="Editar nome deste cargo"
+                  >
+                    <Pencil className="w-2.5 h-2.5" />
+                  </button>
+                </div>
+              )}
               <div className="flex items-center gap-1">
                 <input
                   type="number"
@@ -880,15 +1051,46 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
             {/* 1º Suplente */}
             <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-200">
-                  1º suplente:
-                </span>
+              <div className="flex items-center justify-between gap-1">
+                {isEditingLabelSuplente1 ? (
+                  <input
+                    autoFocus
+                    type="text"
+                    value={eventFormLabelSuplente1}
+                    onChange={(e) => setEventFormLabelSuplente1(e.target.value)}
+                    onBlur={() => setIsEditingLabelSuplente1(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setIsEditingLabelSuplente1(false);
+                    }}
+                    className="w-20 text-[11px] font-semibold text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
+                  />
+                ) : (
+                  <div
+                    className="flex items-center gap-1 group cursor-pointer min-w-0"
+                    onDoubleClick={() => setIsEditingLabelSuplente1(true)}
+                    title="Duplo clique ou clique no lápis para editar rótulo"
+                  >
+                    <span className="text-[11px] font-semibold text-slate-200 truncate">
+                      {eventFormLabelSuplente1 || '1º suplente'}:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingLabelSuplente1(true);
+                      }}
+                      className="p-0.5 text-emerald-400 hover:text-emerald-300 rounded transition shrink-0"
+                      title="Editar nome deste cargo"
+                    >
+                      <Pencil className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                )}
                 <input
                   type="checkbox"
                   checked={eventFormSuplente1Enabled}
                   onChange={(e) => setEventFormSuplente1Enabled(e.target.checked)}
-                  className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
+                  className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5 shrink-0"
                 />
               </div>
               <div className="flex items-center gap-1">
@@ -907,15 +1109,46 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
             {/* 2º Suplente */}
             <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
-              <div className="flex items-center justify-between">
-                <span className="text-[11px] font-semibold text-slate-200">
-                  2º suplente:
-                </span>
+              <div className="flex items-center justify-between gap-1">
+                {isEditingLabelSuplente2 ? (
+                  <input
+                    autoFocus
+                    type="text"
+                    value={eventFormLabelSuplente2}
+                    onChange={(e) => setEventFormLabelSuplente2(e.target.value)}
+                    onBlur={() => setIsEditingLabelSuplente2(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') setIsEditingLabelSuplente2(false);
+                    }}
+                    className="w-20 text-[11px] font-semibold text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
+                  />
+                ) : (
+                  <div
+                    className="flex items-center gap-1 group cursor-pointer min-w-0"
+                    onDoubleClick={() => setIsEditingLabelSuplente2(true)}
+                    title="Duplo clique ou clique no lápis para editar rótulo"
+                  >
+                    <span className="text-[11px] font-semibold text-slate-200 truncate">
+                      {eventFormLabelSuplente2 || '2º suplente'}:
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsEditingLabelSuplente2(true);
+                      }}
+                      className="p-0.5 text-emerald-400 hover:text-emerald-300 rounded transition shrink-0"
+                      title="Editar nome deste cargo"
+                    >
+                      <Pencil className="w-2.5 h-2.5" />
+                    </button>
+                  </div>
+                )}
                 <input
                   type="checkbox"
                   checked={eventFormSuplente2Enabled}
                   onChange={(e) => setEventFormSuplente2Enabled(e.target.checked)}
-                  className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
+                  className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5 shrink-0"
                 />
               </div>
               <div className="flex items-center gap-1">
@@ -933,13 +1166,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Linha 3: Resolver Empates */}
+          {/* Linha 3: Critério de desempate (padrão sempre marcado) */}
           <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Star className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <div>
                 <span className="text-xs font-semibold text-slate-200 block">
-                  Resolver empates:
+                  Critério de desempate:
                 </span>
                 <span className="text-[10.5px] text-slate-400 block font-normal">
                   {eventFormResolverEmpates
@@ -1764,6 +1997,192 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         )}
       </AnimatePresence>
 
+      {/* MODAL PARA CRIAR NOVO EVENTO GERAL (COM AVISO DE HARD RESET) */}
+      <AnimatePresence>
+        {isNewGeneralModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsNewGeneralModalOpen(false)}
+            className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-lg bg-[#141721] border-2 border-emerald-500/60 rounded-2xl p-6 shadow-[0_0_35px_rgba(16,185,129,0.3),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setIsNewGeneralModalOpen(false)}
+                className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center mb-3.5">
+                  <Building2 className="w-7 h-7 text-emerald-400" />
+                </div>
+
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-1.5">
+                  Criar Novo Evento Geral
+                </h3>
+
+                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+                  O <strong>Evento Geral</strong> funciona como a assembleia mãe (ex: <em>Comissão da IASD Asa Norte 2026</em>), onde as votações de cada cargo serão criadas.
+                </p>
+
+                <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4 text-left flex items-start gap-2.5 text-xs text-amber-200">
+                  <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Atenção:</strong> Ao iniciar um novo Evento Geral, o sistema realiza um <strong>Hard Reset</strong> (limpando todos os nomes, histórico, votos anteriores e forçando a atualização do cache nos celulares dos votantes).
+                  </span>
+                </div>
+
+                <div className="w-full text-left mb-5">
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                    Nome do Evento Geral:
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    placeholder="Ex: COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE 2026"
+                    value={newGeneralEventNameInput}
+                    onChange={(e) => setNewGeneralEventNameInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (newGeneralEventNameInput.trim()) {
+                          handleHardResetGeneralEvent(newGeneralEventNameInput);
+                        }
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-[#0b0d13] border border-white/15 focus:border-emerald-500 rounded-xl text-sm font-bold text-white outline-none placeholder-slate-500 shadow-inner"
+                  />
+                </div>
+
+                <div className="flex items-center justify-center gap-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setIsNewGeneralModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 uppercase tracking-wider transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (newGeneralEventNameInput.trim()) {
+                        handleHardResetGeneralEvent(newGeneralEventNameInput);
+                      }
+                    }}
+                    disabled={!newGeneralEventNameInput.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-black uppercase tracking-wider text-white shadow-[0_0_15px_rgba(16,185,129,0.35)] transition cursor-pointer"
+                  >
+                    Criar e Resetar Sistema
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL PARA RENOMEAR EVENTO GERAL EXISTENTE (SEM RESET) */}
+      <AnimatePresence>
+        {isEditingGeneralModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={() => setIsEditingGeneralModalOpen(false)}
+            className="fixed inset-0 z-[100] bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 10 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-[#141721] border-2 border-emerald-500/60 rounded-2xl p-6 shadow-[0_0_35px_rgba(16,185,129,0.3),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
+            >
+              <button
+                type="button"
+                onClick={() => setIsEditingGeneralModalOpen(false)}
+                className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center mb-3">
+                  <Pencil className="w-6 h-6 text-emerald-400" />
+                </div>
+
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-1.5">
+                  Renomear Evento Geral
+                </h3>
+
+                <p className="text-xs text-slate-300 leading-relaxed mb-4">
+                  Altere o nome da assembleia geral. Esta alteração não afeta os votos nem os candidatos cadastrados.
+                </p>
+
+                <div className="w-full text-left mb-5">
+                  <label className="text-xs font-semibold text-slate-300 block mb-1.5">
+                    Nome do Evento Geral:
+                  </label>
+                  <input
+                    type="text"
+                    autoFocus
+                    value={editingGeneralEventName}
+                    onChange={(e) => setEditingGeneralEventName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        if (editingGeneralEventName.trim()) {
+                          handleRenameGeneralEvent(editingGeneralEventName);
+                        }
+                      }
+                    }}
+                    className="w-full px-3.5 py-2.5 bg-[#0b0d13] border border-white/15 focus:border-emerald-500 rounded-xl text-sm font-bold text-white outline-none placeholder-slate-500 shadow-inner"
+                  />
+                </div>
+
+                <div className="flex items-center justify-center gap-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingGeneralModalOpen(false)}
+                    className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-xs font-bold text-slate-300 uppercase tracking-wider transition cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (editingGeneralEventName.trim()) {
+                        handleRenameGeneralEvent(editingGeneralEventName);
+                      }
+                    }}
+                    disabled={!editingGeneralEventName.trim()}
+                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-black uppercase tracking-wider text-white shadow-[0_0_15px_rgba(16,185,129,0.35)] transition cursor-pointer"
+                  >
+                    Salvar Alteração
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Notificação Flutuante */}
       {notification && (
         <div
@@ -1797,6 +2216,65 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </button>
         </div>
       )}
+
+      {/* CARDZÃO: EVENTO GERAL (ASSEMBLEIA MÃE) COM HARD RESET E IDENTIFICAÇÃO EM DESTAQUE */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-3 bg-gradient-to-r from-[#0d213d] via-[#091b33] to-[#0d2847] border-y border-emerald-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex flex-wrap items-center justify-between gap-3 relative z-30">
+        {/* Esquerda: Identificação do Evento Geral com Lapizinho Verde e Duplo Clique */}
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-400/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
+            <Building2 className="w-5 h-5 text-emerald-400" />
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40 shadow-inner">
+                EVENTO GERAL / ASSEMBLEIA
+              </span>
+            </div>
+
+            <div
+              className="flex items-center gap-2 mt-0.5 group cursor-pointer"
+              onDoubleClick={() => {
+                setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
+                setIsEditingGeneralModalOpen(true);
+              }}
+              title="Duplo clique ou clique no lápis para renomear este evento geral"
+            >
+              <h2 className="text-sm sm:text-base font-black text-white tracking-wide truncate drop-shadow-md">
+                {session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte'}
+              </h2>
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
+                  setIsEditingGeneralModalOpen(true);
+                }}
+                className="p-1 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition cursor-pointer"
+                title="Renomear Evento Geral"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Direita: Botão '+ Novo Evento Geral' (Hard Reset com aviso) */}
+        <div className="flex items-center gap-2 shrink-0 ml-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setNewGeneralEventNameInput('');
+              setIsNewGeneralModalOpen(true);
+            }}
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider rounded-lg border border-emerald-400 shadow-[0_0_18px_rgba(16,185,129,0.4)] active:scale-95 transition-all cursor-pointer"
+            title="Criar novo Evento Geral (limpa nomes, histórico, votos e caches para iniciar do zero)"
+          >
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>+ Novo Evento Geral</span>
+          </button>
+        </div>
+      </div>
 
       {/* BARRA DE EVENTOS: LAYOUT ESTÚDIO MODERNO COM CORES SUAVES E SEM CAIXA ALTA */}
       <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative z-30">

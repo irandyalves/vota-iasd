@@ -7,6 +7,9 @@ export interface GlobalElectionRules {
   habilitarSuplente2: boolean;
   segundoSuplentesCount: number;
   resolverEmpates: boolean;
+  labelTitulares?: string;
+  labelSuplente1?: string;
+  labelSuplente2?: string;
 }
 
 export const GLOBAL_RULES_KEY = 'vota_iasd_global_rules';
@@ -20,6 +23,9 @@ export const DEFAULT_GLOBAL_RULES: GlobalElectionRules = {
   habilitarSuplente2: true,
   segundoSuplentesCount: 5,
   resolverEmpates: true,
+  labelTitulares: 'Titulares',
+  labelSuplente1: '1º suplente',
+  labelSuplente2: '2º suplente',
 };
 
 /**
