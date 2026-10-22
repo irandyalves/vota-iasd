@@ -22,7 +22,6 @@ import {
   ChevronsRight,
   X,
   Star,
-  MonitorOff,
   ExternalLink,
   BarChart3,
   TrendingUp,
@@ -44,7 +43,7 @@ import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord,
 import { saveSession, subscribeToConnectedVoters, applyBallotToSession, getLocalSession, isFirestoreQuotaExceeded, getLocalTelaoLayout } from '../services/votingService';
 import { startAdminPeerHost } from '../services/peerSyncService';
 import { parseImportFile } from '../utils/fileImporter';
-import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
+import { subscribeSecondaryScreen, openTelaoOnSecondMonitor, closeSecondaryScreen, isSecondaryScreenOpen } from '../utils/screen';
 
 interface AdminViewProps {
   session: VotingSession;
@@ -152,6 +151,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   useEffect(() => {
     const unsub = subscribeSecondaryScreen(setIsScreen2Open);
     return unsub;
+  }, []);
+
+  // Ao abrir o sistema, garante que a 2ª tela já abre projetando sempre
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (!isSecondaryScreenOpen()) {
+        openTelaoOnSecondMonitor();
+      }
+    }, 600);
+    return () => clearTimeout(timer);
   }, []);
 
   // Auto-dismiss do modalzinho laranja após 3.5 segundos
@@ -3179,29 +3188,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           {isScreen2Open ? (
                             <button
                               type="button"
-                              onClick={() => toggleSecondaryScreen()}
-                              title="Fechar / Ocultar a janela do Telão no 2º monitor"
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
+                              onClick={() => closeSecondaryScreen()}
+                              title="2ª Tela ativa / projetando. Clique para fechar a projeção."
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/50 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-[0_0_12px_rgba(16,185,129,0.25)]"
                             >
-                              <MonitorOff className="w-3.5 h-3.5 text-rose-400" />
-                              <span>Ocultar 2ª Tela</span>
-                              <X className="w-3.5 h-3.5 opacity-70" />
+                              <Tv className="w-3.5 h-3.5 text-emerald-400" />
+                              <span>Projetar 2ª Tela</span>
+                              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
                             </button>
                           ) : (
                             <button
                               type="button"
-                              onClick={() => toggleSecondaryScreen()}
-                              title="Abrir o Telão em Tela Cheia no 2º monitor ou projetor"
-                              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-300 border border-emerald-500/30 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
+                              onClick={() => openTelaoOnSecondMonitor()}
+                              title="Abrir o Telão no 2º monitor ou projetor"
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0b0d13] hover:bg-[#141721] text-slate-400 hover:text-slate-200 border border-white/10 hover:border-white/20 rounded-lg text-xs font-medium transition cursor-pointer active:scale-95 shadow-sm"
                             >
                               <Tv className="w-3.5 h-3.5" />
                               <span>Projetar 2ª Tela</span>
-                              <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                              <ExternalLink className="w-3.5 h-3.5 opacity-50" />
                             </button>
                           )}
-                          <span className="text-[10px] text-slate-500 hidden sm:inline pl-1">
-                            ESC fecha
-                          </span>
                         </div>
                       </div>
 

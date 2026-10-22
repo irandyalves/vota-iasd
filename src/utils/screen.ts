@@ -76,18 +76,50 @@ export function isSecondaryScreenOpen(): boolean {
   if (secondaryWindows.size > 0) return true;
   if (typeof window !== 'undefined') {
     const ping = Number(localStorage.getItem('vota_iasd_telao_ping') || 0);
-    if (Date.now() - ping < 6000) {
+    if (ping > 0 && Date.now() - ping < 4500) {
       return true;
     }
   }
   return false;
 }
 
+let globalWatcherTimer: ReturnType<typeof setInterval> | null = null;
+let lastKnownOpenState = false;
+
+function ensureGlobalWatcher() {
+  if (globalWatcherTimer) return;
+  lastKnownOpenState = isSecondaryScreenOpen();
+  globalWatcherTimer = setInterval(() => {
+    const current = isSecondaryScreenOpen();
+    if (current !== lastKnownOpenState) {
+      lastKnownOpenState = current;
+      notifyListeners();
+    }
+  }, 800);
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'vota_iasd_telao_ping' || e.key === 'vota_iasd_close_telao') {
+        const current = isSecondaryScreenOpen();
+        if (current !== lastKnownOpenState) {
+          lastKnownOpenState = current;
+          notifyListeners();
+        }
+      }
+    });
+  }
+}
+
 export function subscribeSecondaryScreen(callback: (isOpen: boolean) => void): () => void {
+  ensureGlobalWatcher();
   listeners.add(callback);
   callback(isSecondaryScreenOpen());
   return () => {
     listeners.delete(callback);
+    if (listeners.size === 0 && globalWatcherTimer) {
+      clearInterval(globalWatcherTimer);
+      globalWatcherTimer = null;
+    }
   };
 }
 
@@ -100,6 +132,19 @@ export function closeSecondaryScreen(): void {
     }
   }
   secondaryWindows.clear();
+
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('vota_iasd_telao_ping');
+    localStorage.setItem('vota_iasd_close_telao', Date.now().toString());
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        const channel = new BroadcastChannel('vota_iasd_telao_channel');
+        channel.postMessage('CLOSE_TELAO');
+        channel.close();
+      }
+    } catch (_) {}
+  }
+
   notifyListeners();
 }
 

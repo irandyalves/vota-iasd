@@ -59,21 +59,49 @@ function getCardColorStyles(hexColor: string, isUnclassified = false) {
 }
 
 export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
-  // Heartbeat do Telão para evitar que o Admin abra janelas duplicadas
+  // Heartbeat do Telão para evitar que o Admin abra janelas duplicadas e escuta de comando de fechamento
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const sendPing = () => {
       localStorage.setItem('vota_iasd_telao_ping', Date.now().toString());
     };
     sendPing();
-    const interval = setInterval(sendPing, 2000);
+    const interval = setInterval(sendPing, 1500);
+
     const onUnload = () => {
       localStorage.removeItem('vota_iasd_telao_ping');
     };
     window.addEventListener('beforeunload', onUnload);
+
+    // Escuta comando do Admin para fechar a 2ª tela remotamente
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === 'vota_iasd_close_telao' && e.newValue) {
+        window.close();
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      if (typeof BroadcastChannel !== 'undefined') {
+        channel = new BroadcastChannel('vota_iasd_telao_channel');
+        channel.onmessage = (msg) => {
+          if (msg.data === 'CLOSE_TELAO') {
+            window.close();
+          }
+        };
+      }
+    } catch (_) {}
+
     return () => {
       clearInterval(interval);
       window.removeEventListener('beforeunload', onUnload);
+      window.removeEventListener('storage', handleStorage);
+      if (channel) {
+        try {
+          channel.close();
+        } catch (_) {}
+      }
       localStorage.removeItem('vota_iasd_telao_ping');
     };
   }, []);
