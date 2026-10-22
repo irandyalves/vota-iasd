@@ -27,6 +27,7 @@ import {
   Activity,
   Award,
   AlertCircle,
+  ArrowLeft,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import type { VotingSession, VotingOption, VotingEventItem } from '../types';
@@ -2793,10 +2794,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       <button
                         type="button"
                         onClick={() => setAdminVotingView('dashboard')}
-                        className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium cursor-pointer transition flex items-center gap-1.5"
+                        className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white rounded-lg text-xs font-medium cursor-pointer transition flex items-center gap-1.5 shadow-sm"
                       >
-                        <BarChart3 className="w-3.5 h-3.5" />
-                        <span>Ver Evolução da Votação</span>
+                        <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                        <span>Voltar à Evolução da Votação</span>
                       </button>
                     )}
 
