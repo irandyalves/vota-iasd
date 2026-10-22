@@ -2369,20 +2369,39 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <Activity className="w-4 h-4 animate-pulse" />
                   </div>
                   <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                    <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide uppercase whitespace-nowrap">
-                      VOTAÇÃO EM TEMPO REAL
+                    <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide whitespace-nowrap">
+                      Votação em tempo real
                     </h3>
 
-                    {/* Pontinho pulsando na frente de REAL */}
+                    {/* Pontinho pulsando na frente de real */}
                     <span className="relative flex h-2.5 w-2.5 shrink-0" title="Transmissão em tempo real">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
                     </span>
 
-                    {/* Card Escolhido (ex: MULHERES) na frente do pontinho */}
-                    <span className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wide px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 whitespace-nowrap shadow-xs">
-                      {session.title || 'ELEIÇÃO'}
-                    </span>
+                    {/* Card Escolhido (ex: MULHERES) com linhas sup/inf em gradiente, platô de 30% e sem bordas laterais */}
+                    <div className="relative px-3.5 py-1 flex items-center justify-center select-none">
+                      {/* Linha superior com platô de 30% no centro e transparência para esq/dir */}
+                      <span
+                        className="absolute top-0 inset-x-0 h-[1.5px] pointer-events-none"
+                        style={{
+                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.95) 35%, rgba(251,191,36,0.95) 65%, rgba(251,191,36,0) 100%)',
+                          boxShadow: '0 0 6px rgba(251,191,36,0.45)',
+                        }}
+                      />
+                      {/* Linha inferior com platô de 30% no centro e transparência para esq/dir */}
+                      <span
+                        className="absolute bottom-0 inset-x-0 h-[1.5px] pointer-events-none"
+                        style={{
+                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.95) 35%, rgba(251,191,36,0.95) 65%, rgba(251,191,36,0) 100%)',
+                          boxShadow: '0 0 6px rgba(251,191,36,0.45)',
+                        }}
+                      />
+
+                      <span className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wider whitespace-nowrap drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]">
+                        {session.title || 'ELEIÇÃO'}
+                      </span>
+                    </div>
 
                     {/* Barra de 10 VU Meter Moderno Animado */}
                     {showVuMeter && (
