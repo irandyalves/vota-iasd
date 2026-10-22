@@ -325,7 +325,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </AnimatePresence>
 
-          {/* BOTÃO PRINCIPAL DA URNA: INICIAR VOTAÇÃO -> EM VOTAÇÃO -> APURAÇÃO */}
+          {/* BOTÃO PRINCIPAL DA URNA: TAMANHO FIXO (NÃO MUDA DE TAMANHO AO TROCAR O CAPTION) */}
           <button
             type="button"
             onClick={handleCenterVotingButtonClick}
@@ -343,10 +343,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? '0 6px 0 #94a3b8, 3px 6px 0 #64748b'
                 : '0 6px 0 #09521b, 3px 6px 0 #063b13',
             }}
-            className="px-7 pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+            className="w-[215px] min-w-[215px] max-w-[215px] pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
           >
-            <div className="flex items-center justify-center gap-2">
-              <span className="font-black text-sm sm:text-base tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap">
+            <div className="flex items-center justify-center w-full">
+              <span className="font-black text-xs sm:text-sm tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap text-center">
                 {showApuracaoCaption ? 'APURAÇÃO' : isVotingActive ? 'EM VOTAÇÃO' : 'INICIAR VOTAÇÃO'}
               </span>
             </div>
@@ -396,42 +396,45 @@ export const Navbar: React.FC<NavbarProps> = ({
             })()}
           </button>
 
-          {/* RODINHA: Revela da borda direita do botão para a direita suavemente */}
+          {/* VU METER: Revela da borda direita do botão para a direita suavemente (Substitui a rodinha) */}
           <AnimatePresence>
             {isVotingActive && (
               <motion.div
-                key="rodinha-votacao"
+                key="vumeter-navbar"
                 initial={{ width: 0, opacity: 0, x: -25, scale: 0.9 }}
                 animate={{ width: 'auto', opacity: 1, x: 0, scale: 1 }}
                 exit={{ width: 0, opacity: 0, x: -25, scale: 0.9 }}
                 transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden flex items-center shrink-0"
+                className="overflow-hidden flex items-center shrink-0 pl-1"
               >
-                <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 pointer-events-none" aria-hidden="true">
-                  {/* Halo pulsante suave */}
-                  <motion.div
-                    className="absolute inset-0 rounded-full bg-white/20"
-                    animate={{ scale: [0.85, 1.25, 0.85], opacity: [0.45, 0, 0.45] }}
-                    transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                  />
-                  {/* Anel externo girando devagar (horário) */}
-                  <motion.div
-                    className="absolute inset-1 rounded-full border-[3px] border-white/15 border-t-white border-r-amber-300/90"
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
-                  />
-                  {/* Anel interno tracejado girando ao contrário */}
-                  <motion.div
-                    className="absolute inset-[11px] rounded-full border-2 border-dashed border-white/60"
-                    animate={{ rotate: -360 }}
-                    transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-                  />
-                  {/* Núcleo pulsando */}
-                  <motion.div
-                    className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.9)]"
-                    animate={{ scale: [1, 1.5, 1], opacity: [0.8, 1, 0.8] }}
-                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                  />
+                <div
+                  title="VU Meter de Atividade em Tempo Real"
+                  className="flex items-end gap-[3px] h-6 px-1 select-none shrink-0"
+                >
+                  {[
+                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['35%', '85%', '50%', '95%', '35%'], duration: 1.1, delay: 0 },
+                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['50%', '30%', '90%', '45%', '50%'], duration: 0.9, delay: 0.15 },
+                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['25%', '95%', '60%', '40%', '25%'], duration: 1.3, delay: 0.05 },
+                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['60%', '40%', '100%', '70%', '60%'], duration: 0.85, delay: 0.2 },
+                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['40%', '90%', '35%', '85%', '40%'], duration: 1.15, delay: 0.1 },
+                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['70%', '45%', '95%', '50%', '70%'], duration: 0.95, delay: 0.25 },
+                    { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['30%', '80%', '45%', '90%', '30%'], duration: 1.25, delay: 0.18 },
+                    { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['55%', '35%', '85%', '60%', '55%'], duration: 1.05, delay: 0.08 },
+                    { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['20%', '75%', '30%', '85%', '20%'], duration: 1.35, delay: 0.22 },
+                    { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['15%', '65%', '25%', '80%', '15%'], duration: 1.0, delay: 0.12 },
+                  ].map((bar, idx) => (
+                    <motion.div
+                      key={idx}
+                      animate={{ height: bar.heights }}
+                      transition={{
+                        duration: bar.duration,
+                        delay: bar.delay,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                      className={`w-[3px] rounded-t-[1.5px] bg-gradient-to-t ${bar.color}`}
+                    />
+                  ))}
                 </div>
               </motion.div>
             )}

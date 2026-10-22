@@ -39,6 +39,40 @@ interface AdminViewProps {
   session: VotingSession;
 }
 
+// Animação Cortina / Esmagamento suave (Morph) entre Novo (Dashboard) e Antigo (Nomes)
+const morphCurtainVariants = {
+  enter: (direction: 'down' | 'up') => ({
+    y: direction === 'down' ? -45 : 45,
+    scaleY: 0.82,
+    opacity: 0,
+    transformOrigin: direction === 'down' ? 'top center' : 'bottom center',
+    transition: {
+      duration: 0.48,
+      ease: [0.16, 1, 0.3, 1] as const,
+    },
+  }),
+  center: {
+    y: 0,
+    scaleY: 1,
+    opacity: 1,
+    transformOrigin: 'center center',
+    transition: {
+      duration: 0.48,
+      ease: [0.16, 1, 0.3, 1] as const,
+    },
+  },
+  exit: (direction: 'down' | 'up') => ({
+    y: direction === 'down' ? 45 : -45,
+    scaleY: 0.55,
+    opacity: 0,
+    transformOrigin: direction === 'down' ? 'bottom center' : 'top center',
+    transition: {
+      duration: 0.38,
+      ease: [0.32, 0, 0.67, 0] as const,
+    },
+  }),
+};
+
 export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [activeTab, setActiveTab] = useState<'candidates' | 'control' | 'settings'>('candidates');
   const [isBottomSectionOpen, setIsBottomSectionOpen] = useState<boolean>(true);
@@ -2399,53 +2433,84 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             onChange={(e) => handleFileImport(e, 'replace')}
           />
 
-          {/* SE A VOTAÇÃO ESTIVER EM ANDAMENTO E O ADMIN QUISER O DASHBOARD: MOSTRA O DASHBOARD DE EVOLUÇÃO */}
-          {isVotingActive && adminVotingView === 'dashboard' ? (
-            <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 sm:py-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0">
-              {/* Header do Dashboard */}
-              <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                    <Activity className="w-4 h-4 animate-pulse" />
-                  </div>
-                  <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                    <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide whitespace-nowrap">
-                      Votação em tempo real
-                    </h3>
-
-                    {/* Pontinho pulsando na frente de real */}
-                    <span className="relative flex h-2.5 w-2.5 shrink-0" title="Transmissão em tempo real">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
-                    </span>
-
-                    {/* Card Escolhido (ex: MULHERES): linhas estendidas em 15% para dir/esq, intensidade reduzida em 25%, texto branco sem bold */}
-                    <div className="relative px-4 py-1 flex items-center justify-center select-none">
-                      {/* Linha superior com platô de 30% no centro e transparência para esq/dir */}
-                      <span
-                        className="absolute top-0 h-[1.5px] pointer-events-none"
-                        style={{
-                          left: '-15%',
-                          right: '-15%',
-                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
-                          boxShadow: '0 0 4px rgba(251,191,36,0.25)',
-                        }}
-                      />
-                      {/* Linha inferior com platô de 30% no centro e transparência para esq/dir */}
-                      <span
-                        className="absolute bottom-0 h-[1.5px] pointer-events-none"
-                        style={{
-                          left: '-15%',
-                          right: '-15%',
-                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
-                          boxShadow: '0 0 4px rgba(251,191,36,0.25)',
-                        }}
-                      />
-
-                      <span className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider whitespace-nowrap">
-                        {session.title || 'ELEIÇÃO'}
-                      </span>
+          {/* SE A VOTAÇÃO ESTIVER EM ANDAMENTO E O ADMIN QUISER O DASHBOARD: MOSTRA O DASHBOARD DE EVOLUÇÃO (ANIMAÇÃO CORTINA / MORPH SUAVE) */}
+          <AnimatePresence mode="wait" custom={isVotingActive && adminVotingView === 'dashboard' ? 'down' : 'up'}>
+            {isVotingActive && adminVotingView === 'dashboard' ? (
+              <motion.div
+                key="layout-novo-dashboard"
+                custom="down"
+                variants={morphCurtainVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 sm:py-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0"
+              >
+                {/* Header do Dashboard */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                      <Activity className="w-4 h-4 animate-pulse" />
                     </div>
+                    <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                      <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide whitespace-nowrap">
+                        Escolha de
+                      </h3>
+
+                      {/* Rodinha animada que estava no topo (giro lento suave + anéis e núcleo pulsante) */}
+                      <div className="relative w-6 h-6 sm:w-7 sm:h-7 shrink-0 pointer-events-none select-none" aria-hidden="true" title="Votação em andamento">
+                        {/* Halo pulsante suave */}
+                        <motion.div
+                          className="absolute inset-0 rounded-full bg-emerald-400/20"
+                          animate={{ scale: [0.85, 1.25, 0.85], opacity: [0.45, 0, 0.45] }}
+                          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                        {/* Anel externo girando devagar (horário) */}
+                        <motion.div
+                          className="absolute inset-0.5 rounded-full border-2 border-white/20 border-t-white border-r-amber-300"
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
+                        />
+                        {/* Anel interno tracejado girando ao contrário */}
+                        <motion.div
+                          className="absolute inset-[5px] rounded-full border border-dashed border-white/70"
+                          animate={{ rotate: -360 }}
+                          transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                        />
+                        {/* Núcleo pulsando */}
+                        <motion.div
+                          className="absolute inset-0 m-auto w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.9)]"
+                          animate={{ scale: [1, 1.4, 1], opacity: [0.8, 1, 0.8] }}
+                          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                        />
+                      </div>
+
+                      {/* Card Escolhido (ex: MULHERES): linhas estendidas em 15% para dir/esq, intensidade reduzida em 25%, texto branco sem bold */}
+                      <div className="relative px-4 py-1 flex items-center justify-center select-none">
+                        {/* Linha superior com platô de 30% no centro e transparência para esq/dir */}
+                        <span
+                          className="absolute top-0 h-[1.5px] pointer-events-none"
+                          style={{
+                            left: '-15%',
+                            right: '-15%',
+                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
+                            boxShadow: '0 0 4px rgba(251,191,36,0.25)',
+                          }}
+                        />
+                        {/* Linha inferior com platô de 30% no centro e transparência para esq/dir */}
+                        <span
+                          className="absolute bottom-0 h-[1.5px] pointer-events-none"
+                          style={{
+                            left: '-15%',
+                            right: '-15%',
+                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
+                            boxShadow: '0 0 4px rgba(251,191,36,0.25)',
+                          }}
+                        />
+
+                        <span className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider whitespace-nowrap">
+                          {session.title || 'ELEIÇÃO'}
+                        </span>
+                      </div>
 
                     {/* Barra de 10 VU Meter Moderno Animado (Sem borda e sem fundo, 4 modelos para escolha) */}
                     {showVuMeter && (
@@ -2859,9 +2924,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   </div>
                 )}
               </div>
-            </div>
+            </motion.div>
           ) : (
-            <>
+            <motion.div
+              key="layout-antigo-nomes"
+              custom="up"
+              variants={morphCurtainVariants}
+              initial="enter"
+              animate="center"
+              exit="exit"
+              className="space-y-3.5 flex-1 flex flex-col min-h-0"
+            >
               {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
               <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg">
                 <div className="flex flex-col justify-between gap-3 min-w-0">
@@ -3232,9 +3305,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
             )}
           </div>
-        </>
+        </motion.div>
       )}
-    </div>
+    </AnimatePresence>
+  </div>
   )}
 
       {/* ABA 3: CONFIGURAÇÕES E MIGRAÇÃO (REDUZIDO EM 30%) */}
