@@ -2361,7 +2361,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
           {/* SE A VOTAÇÃO ESTIVER EM ANDAMENTO E O ADMIN QUISER O DASHBOARD: MOSTRA O DASHBOARD DE EVOLUÇÃO */}
           {isVotingActive && adminVotingView === 'dashboard' ? (
-            <div className="bg-[#141721] border border-white/[0.08] rounded-xl p-4 sm:p-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0">
+            <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 -mx-3 sm:-mx-4 lg:-mx-5 rounded-none p-4 sm:p-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0">
               {/* Header do Dashboard */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
                 <div className="flex items-center gap-2.5">
@@ -2379,26 +2379,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
                     </span>
 
-                    {/* Card Escolhido (ex: MULHERES) com linhas sup/inf em gradiente, platô de 30% e sem bordas laterais */}
-                    <div className="relative px-3.5 py-1 flex items-center justify-center select-none">
+                    {/* Card Escolhido (ex: MULHERES): linhas estendidas em 15% para dir/esq, intensidade reduzida em 25%, texto branco sem bold */}
+                    <div className="relative px-4 py-1 flex items-center justify-center select-none">
                       {/* Linha superior com platô de 30% no centro e transparência para esq/dir */}
                       <span
-                        className="absolute top-0 inset-x-0 h-[1.5px] pointer-events-none"
+                        className="absolute top-0 h-[1.5px] pointer-events-none"
                         style={{
-                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.95) 35%, rgba(251,191,36,0.95) 65%, rgba(251,191,36,0) 100%)',
-                          boxShadow: '0 0 6px rgba(251,191,36,0.45)',
+                          left: '-15%',
+                          right: '-15%',
+                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
+                          boxShadow: '0 0 4px rgba(251,191,36,0.25)',
                         }}
                       />
                       {/* Linha inferior com platô de 30% no centro e transparência para esq/dir */}
                       <span
-                        className="absolute bottom-0 inset-x-0 h-[1.5px] pointer-events-none"
+                        className="absolute bottom-0 h-[1.5px] pointer-events-none"
                         style={{
-                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.95) 35%, rgba(251,191,36,0.95) 65%, rgba(251,191,36,0) 100%)',
-                          boxShadow: '0 0 6px rgba(251,191,36,0.45)',
+                          left: '-15%',
+                          right: '-15%',
+                          background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 35%, rgba(251,191,36,0.70) 65%, rgba(251,191,36,0) 100%)',
+                          boxShadow: '0 0 4px rgba(251,191,36,0.25)',
                         }}
                       />
 
-                      <span className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wider whitespace-nowrap drop-shadow-[0_0_8px_rgba(251,191,36,0.35)]">
+                      <span className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider whitespace-nowrap">
                         {session.title || 'ELEIÇÃO'}
                       </span>
                     </div>
