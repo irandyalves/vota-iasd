@@ -1,8 +1,9 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { RefreshCw, Camera, Lock, Unlock, Wand2 } from 'lucide-react';
+import { RefreshCw, Camera, Lock, Unlock, Wand2, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
 import { removeEasyBackground } from '../utils/imageUtils';
+import { detectVotingTies } from '../utils/tieDetection';
 import type { VotingSession, VotingHistoryRecord } from '../types';
 import { subscribeToConnectedVoters } from '../services/votingService';
 
@@ -142,6 +143,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const allHaveVoted = totalLimit > 0 && totalVotersVoted >= totalLimit;
   const showApuracaoCaption = (isVotingActive && allHaveVoted) || session?.status === 'CLOSED';
 
+  // Detecção de empates que afetam a classificação oficial
+  const detectedTies = session ? detectVotingTies(session) : [];
+  const hasTies = detectedTies.length > 0;
+
   const handleCancelVoting = () => {
     if (!session || !onSaveSession) return;
     const freshOptions = [...session.options].map((o) => ({
@@ -163,6 +168,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const handleCenterVotingButtonClick = () => {
     if (!session || !onSaveSession) return;
+
+    // Se ainda não salvou as regras da eleição, abre o modal de regras
+    if (!isVotingActive && !session.rulesConfigured) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-event-rules-modal'));
+      }
+      return;
+    }
 
     if (isVotingActive) {
       // Se estamos em rodada de desempate, encerra e consolida os vencedores do desempate
@@ -201,9 +214,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           tieBreak: {
             ...(session.tieBreak as any),
             active: false,
-            resolved: true,
           },
+          tieBreakVotersCount: 0,
         });
+        if (typeof window !== 'undefined') {
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('open-tie-modal'));
+          }, 150);
+        }
         return;
       }
 
@@ -216,8 +234,16 @@ export const Navbar: React.FC<NavbarProps> = ({
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('open-tie-modal'));
       }
+    } else if (session.status === 'CLOSED') {
+      // Se a votação está encerrada/em apuração: NUNCA zera sozinho!
+      // Votação só é zerada quando o administrador clicar em "ENCERRAR VOTAÇÃO"
+      const ties = detectVotingTies(session);
+      if (ties.length > 0 && typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('open-tie-modal'));
+      }
+      return;
     } else {
-      // Inicia NOVA VOTAÇÃO zerando os votos e ordenando A-Z
+      // Inicia NOVA VOTAÇÃO a partir do estado inicial WAITING mantendo os nomes em ordem A-Z
       const freshOptions = [...session.options]
         .map((o) => ({ ...o, votesCount: 0 }))
         .sort((a, b) =>
@@ -388,6 +414,16 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
+  const isRulesReady = Boolean(session?.rulesConfigured);
+  const btnBg = isVotingActive || isRulesReady ? '#159636' : '#334155';
+  const btnBorder = isVotingActive || isRulesReady ? '#24b349' : '#64748b';
+  const btnShadow = isVotingActive || isRulesReady
+    ? '0 6px 0 #09521b, 3px 6px 0 #063b13'
+    : '0 6px 0 #1e293b, 3px 6px 0 #0f172a';
+  const brailleBg = isVotingActive || isRulesReady ? '#24b84b' : '#94a3b8';
+  const brailleShadow = isVotingActive || isRulesReady ? '1px 1.5px 0 #074215' : '1px 1.5px 0 #0f172a';
+  const textColor = isVotingActive || isRulesReady ? '#1a1a1a' : '#f1f5f9';
+
   return (
     <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-4 min-h-[76px] flex items-center w-full">
       <div className="w-full grid grid-cols-1 md:grid-cols-3 items-center gap-3">
@@ -483,33 +519,39 @@ export const Navbar: React.FC<NavbarProps> = ({
             </AnimatePresence>
           </div>
 
-          {/* CENTRO: BADGE APURANDO O RESULTADO (EM APURAÇÃO) OU BOTÃO DA URNA (EM VOTAÇÃO / INICIAR VOTAÇÃO) */}
+          {/* CENTRO: BADGE APURANDO O RESULTADO / RESOLVENDO EMPATE OU BOTÃO DA URNA */}
           {showApuracaoCaption ? (
-            /* O BAGGER DA ANIMAÇÃO DE APURANDO O RESULTADO (NO LUGAR DE VOTOS) FICA NO LUGAR DO BOTÃO APURAÇÃO */
+            /* O BAGGER DA ANIMAÇÃO: RESOLVENDO EMPATE (QUANDO HOUVER EMPATE) OU APURANDO O RESULTADO (NORMAL) */
             <div
-              title="Apuração em andamento: calculando resultados da votação"
+              title={
+                hasTies
+                  ? 'Empate detectado: resolução de empate necessária'
+                  : 'Apuração em andamento: calculando resultados da votação'
+              }
               style={{
                 backgroundColor: '#09152b',
-                borderColor: 'rgba(251, 191, 36, 0.65)',
-                boxShadow: '0 0 18px rgba(251, 191, 36, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.1)',
+                borderColor: hasTies ? 'rgba(244, 63, 94, 0.75)' : 'rgba(251, 191, 36, 0.65)',
+                boxShadow: hasTies
+                  ? '0 0 20px rgba(244, 63, 94, 0.4), inset 0 1px 2px rgba(255, 255, 255, 0.1)'
+                  : '0 0 18px rgba(251, 191, 36, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.1)',
               }}
-              className="w-[215px] min-w-[215px] max-w-[215px] min-h-[54px] rounded-[14px] border-[2px] flex items-center justify-center gap-2.5 px-3 py-1.5 select-none shrink-0"
+              className="w-[220px] min-w-[220px] max-w-[220px] min-h-[76px] h-[76px] rounded-[16px] border-[2px] flex items-center justify-center gap-3 px-3.5 py-2 select-none shrink-0"
             >
               {/* Prancheta com linhas de apuração animadas preenchendo */}
-              <div className="relative w-5 h-6 bg-[#0f172a] rounded-[3px] border border-amber-300/70 p-0.5 flex flex-col justify-around shadow-inner overflow-hidden shrink-0">
-                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2.5 h-[2px] bg-amber-400 rounded-b-xs" />
+              <div className="relative w-6 h-7.5 bg-[#0f172a] rounded-[4px] border border-amber-300/70 p-0.5 flex flex-col justify-around shadow-inner overflow-hidden shrink-0">
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 w-3 h-[2px] bg-amber-400 rounded-b-xs" />
                 <motion.div
-                  className="h-[1.5px] bg-amber-300 rounded-full"
+                  className="h-[2px] bg-amber-300 rounded-full"
                   animate={{ width: ['20%', '90%', '45%', '100%'] }}
                   transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
                 />
                 <motion.div
-                  className="h-[1.5px] bg-amber-300 rounded-full"
+                  className="h-[2px] bg-amber-300 rounded-full"
                   animate={{ width: ['45%', '100%', '30%', '90%'] }}
                   transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut', delay: 0.15 }}
                 />
                 <motion.div
-                  className="h-[1.5px] bg-emerald-400 rounded-full"
+                  className={`h-[2px] rounded-full ${hasTies ? 'bg-rose-400' : 'bg-emerald-400'}`}
                   animate={{ width: ['10%', '75%', '40%', '100%'] }}
                   transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
                 />
@@ -517,10 +559,10 @@ export const Navbar: React.FC<NavbarProps> = ({
 
               {/* Mãozinha segurando a caneta escrevendo com ritmo caligráfico */}
               <motion.div
-                className="relative w-6 h-6 flex items-center justify-center text-amber-300 origin-bottom-left shrink-0"
+                className="relative w-7 h-7 flex items-center justify-center text-amber-300 origin-bottom-left shrink-0"
                 animate={{
-                  x: [0, 3.5, 1, 4.5, 1.5, 0],
-                  y: [0, -2, 1, -1, 1, 0],
+                  x: [0, 4, 1.5, 5, 2, 0],
+                  y: [0, -2.5, 1.5, -1.5, 1.5, 0],
                   rotate: [-10, 8, -6, 10, -4, -10],
                 }}
                 transition={{
@@ -529,7 +571,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ease: 'easeInOut',
                 }}
               >
-                <svg viewBox="0 0 28 28" fill="none" className="w-6 h-6 drop-shadow-[0_0_5px_rgba(251,191,36,0.9)]">
+                <svg viewBox="0 0 28 28" fill="none" className="w-7 h-7 drop-shadow-[0_0_6px_rgba(251,191,36,0.9)]">
                   {/* Corpo da Caneta */}
                   <path
                     d="M6 22l3-1 12-12-3-3L6 18l-1 4 1 0z"
@@ -552,35 +594,52 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </svg>
               </motion.div>
 
-              {/* Texto informativo: APURANDO O RESULTADO (no lugar de votos) */}
-              <div className="flex flex-col leading-tight select-none">
-                <span className="font-mono font-black text-[11px] text-amber-300 tracking-wider uppercase animate-pulse">
-                  APURANDO
-                </span>
-                <span className="text-[9.5px] text-emerald-300 font-extrabold tracking-wider uppercase whitespace-nowrap">
-                  O RESULTADO
-                </span>
-              </div>
+              {/* Texto informativo: RESOLVENDO EMPATE (se empate) ou APURANDO O RESULTADO (se normal) */}
+              {hasTies ? (
+                <div className="flex flex-col leading-tight select-none">
+                  <span className="font-mono font-black text-[12px] sm:text-[13px] text-amber-300 tracking-wider uppercase animate-pulse">
+                    RESOLVENDO
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-rose-400 font-extrabold tracking-wider uppercase whitespace-nowrap">
+                    EMPATE
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col leading-tight select-none">
+                  <span className="font-mono font-black text-[12px] sm:text-[13px] text-amber-300 tracking-wider uppercase animate-pulse">
+                    APURANDO
+                  </span>
+                  <span className="text-[10px] sm:text-[11px] text-emerald-300 font-extrabold tracking-wider uppercase whitespace-nowrap">
+                    O RESULTADO
+                  </span>
+                </div>
+              )}
             </div>
           ) : (
-            /* BOTÃO PRINCIPAL DA URNA: TAMANHO FIXO E POSIÇÃO TOTALMENTE TRAVADA NO CENTRO */
             <button
               type="button"
               onClick={handleCenterVotingButtonClick}
               title={
                 isVotingActive
                   ? 'Votação em andamento (clique para abrir a Apuração)'
-                  : 'Iniciar Votação mantendo os nomes em ordem A-Z'
+                  : isRulesReady
+                  ? 'Iniciar Votação mantendo os nomes em ordem A-Z'
+                  : 'Clique para preencher e salvar as Regras da Eleição'
               }
               style={{
-                backgroundColor: '#159636',
-                borderColor: '#24b349',
-                boxShadow: '0 6px 0 #09521b, 3px 6px 0 #063b13',
+                backgroundColor: btnBg,
+                borderColor: btnBorder,
+                boxShadow: btnShadow,
               }}
-              className="w-[215px] min-w-[215px] max-w-[215px] pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+              className={`w-[215px] min-w-[215px] max-w-[215px] pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0 ${
+                !isVotingActive && !isRulesReady ? 'opacity-90 hover:opacity-100' : ''
+              }`}
             >
               <div className="flex items-center justify-center w-full">
-                <span className="font-black text-xs sm:text-sm tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap text-center">
+                <span
+                  style={{ color: textColor }}
+                  className="font-black text-xs sm:text-sm tracking-wider uppercase font-sans leading-none whitespace-nowrap text-center"
+                >
                   {isVotingActive ? 'EM VOTAÇÃO' : 'INICIAR VOTAÇÃO'}
                 </span>
               </div>
@@ -589,33 +648,33 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex flex-col items-center gap-[2.5px] mt-1.5 pointer-events-none">
                 {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
                   <span className="w-2.5" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
                 </div>
                 {/* Linha 2 */}
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 opacity-0" />
                   <span className="w-2 h-2 opacity-0" />
                   <span className="w-2 h-2 opacity-0" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
                   <span className="w-2 h-2 opacity-0" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
                   <span className="w-2 h-2 opacity-0" />
                 </div>
                 {/* Linha 3 */}
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 opacity-0" />
                   <span className="w-2 h-2 opacity-0" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
                   <span className="w-2.5" />
-                  <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: brailleBg, boxShadow: brailleShadow }} />
                   <span className="w-2 h-2 opacity-0" />
                   <span className="w-2 h-2 opacity-0" />
                   <span className="w-2 h-2 opacity-0" />
@@ -628,39 +687,71 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="absolute left-full ml-3 flex items-center justify-start pointer-events-none">
             <AnimatePresence mode="wait">
               {showApuracaoCaption ? (
-                /* BOTÃO ENCERRAR VOTAÇÃO: MENOR NO LADO DIREITO (GARANTIDO) */
+                /* BOTÃO À DIREITA: DESEMPATAR (SE HOUVER EMPATE) OU ENCERRAR VOTAÇÃO (NORMAL) */
                 <motion.div
-                  key="btn-encerrar-apuracao"
+                  key={hasTies ? 'btn-desempatar-navbar' : 'btn-encerrar-apuracao'}
                   initial={{ opacity: 0, x: -20, scale: 0.95 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -20, scale: 0.95 }}
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   className="pointer-events-auto flex items-center shrink-0 pl-1 select-none"
                 >
-                  <button
-                    type="button"
-                    onClick={handleEndVoting}
-                    title="Encerrar votação, registrar histórico em configurações e ficar pronto para outra"
-                    style={{
-                      backgroundColor: '#ffffff',
-                      borderColor: '#e2e8f0',
-                      boxShadow: '0 4px 0 #94a3b8, 2px 4px 0 #64748b',
-                    }}
-                    className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
-                  >
-                    <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap">
-                      ENCERRAR VOTAÇÃO
-                    </span>
-                    {/* Braille 50% menor em cinza/prata */}
-                    <div className="flex items-center gap-1 mt-1 pointer-events-none">
-                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                      <span className="w-1.5" />
-                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                    </div>
-                  </button>
+                  {hasTies ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (typeof window !== 'undefined') {
+                          window.dispatchEvent(new CustomEvent('open-tie-modal'));
+                        }
+                      }}
+                      title="Empate detectado! Clique para abrir a votação de desempate"
+                      style={{
+                        backgroundColor: '#ea580c',
+                        borderColor: '#fb923c',
+                        boxShadow: '0 4px 0 #9a3412, 2px 4px 0 #7c2d12',
+                      }}
+                      className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+                    >
+                      <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-white leading-none whitespace-nowrap flex items-center gap-1">
+                        <Flame className="w-3.5 h-3.5 text-yellow-300 animate-bounce" />
+                        DESEMPATAR
+                      </span>
+                      {/* Pontos em Braille 50% menor em tom contrastante */}
+                      <div className="flex items-center gap-1 mt-1 pointer-events-none">
+                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
+                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
+                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
+                        <span className="w-1.5" />
+                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
+                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
+                      </div>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleEndVoting}
+                      title="Encerrar votação, registrar histórico em configurações e ficar pronto para outra"
+                      style={{
+                        backgroundColor: '#ffffff',
+                        borderColor: '#e2e8f0',
+                        boxShadow: '0 4px 0 #94a3b8, 2px 4px 0 #64748b',
+                      }}
+                      className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+                    >
+                      <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap">
+                        ENCERRAR VOTAÇÃO
+                      </span>
+                      {/* Braille 50% menor em cinza/prata */}
+                      <div className="flex items-center gap-1 mt-1 pointer-events-none">
+                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                        <span className="w-1.5" />
+                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      </div>
+                    </button>
+                  )}
                 </motion.div>
               ) : isVotingActive ? (
                 /* VU METER NORMAL DURANTE A VOTAÇÃO */
@@ -714,11 +805,17 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               type="button"
               onClick={handleToggleLock}
-              className={`px-2 py-0.5 rounded-lg transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-1.5 border shadow-sm ${
-                isLocked
-                  ? 'bg-rose-950/80 border-rose-500/70 text-rose-300 shadow-[0_0_10px_rgba(244,63,94,0.35)] hover:bg-rose-900/90'
-                  : 'bg-emerald-950/60 border-emerald-500/60 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.25)] hover:bg-emerald-900/80'
+              className={`px-2.5 py-0.5 rounded-lg transition-all duration-200 cursor-pointer active:scale-95 flex items-center gap-1.5 hover:brightness-110 shadow-sm ${
+                isLocked ? 'text-rose-300' : 'text-emerald-300'
               }`}
+              style={{
+                border: '1px solid transparent',
+                background: isLocked
+                  ? `linear-gradient(to left, rgba(76, 5, 25, 0.9) 0%, rgba(76, 5, 25, 0.45) 55%, transparent 100%) padding-box,
+                     linear-gradient(to left, rgba(244, 63, 94, 0.85) 0%, rgba(244, 63, 94, 0.35) 65%, transparent 100%) border-box`
+                  : `linear-gradient(to left, rgba(6, 78, 59, 0.8) 0%, rgba(6, 78, 59, 0.35) 55%, transparent 100%) padding-box,
+                     linear-gradient(to left, rgba(16, 185, 129, 0.85) 0%, rgba(16, 185, 129, 0.35) 65%, transparent 100%) border-box`,
+              }}
             >
               {isLocked ? (
                 <>
@@ -768,7 +865,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* 2. VISÃO DE: */}
-          <div className="flex items-center gap-1.5 bg-[#07132a] px-2.5 py-1 rounded-lg border border-blue-800/80 shadow-inner">
+          <div
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+            style={{
+              border: '1px solid transparent',
+              background: `
+                linear-gradient(to left, rgba(7, 19, 42, 0.95) 0%, rgba(7, 19, 42, 0.45) 55%, transparent 100%) padding-box,
+                linear-gradient(to left, rgba(59, 130, 246, 0.85) 0%, rgba(37, 99, 235, 0.35) 65%, transparent 100%) border-box
+              `,
+            }}
+          >
             <label
               htmlFor="navbar-view-select"
               className="text-[10px] font-bold text-blue-300 uppercase tracking-wider whitespace-nowrap select-none"
@@ -796,7 +902,16 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* 3. SENHA: XXX (DEBAIXO DE VISÃO DE) */}
-          <div className="flex items-center gap-1 bg-[#07132a]/90 px-2 py-0.5 rounded-lg border border-blue-800/60 shadow-inner">
+          <div
+            className="flex items-center gap-1 px-2 py-0.5 rounded-lg"
+            style={{
+              border: '1px solid transparent',
+              background: `
+                linear-gradient(to left, rgba(7, 19, 42, 0.92) 0%, rgba(7, 19, 42, 0.4) 55%, transparent 100%) padding-box,
+                linear-gradient(to left, rgba(59, 130, 246, 0.8) 0%, rgba(37, 99, 235, 0.3) 65%, transparent 100%) border-box
+              `,
+            }}
+          >
             <label
               htmlFor="navbar-pin-input"
               className="text-[10px] text-blue-300 font-bold uppercase tracking-wider cursor-pointer select-none"

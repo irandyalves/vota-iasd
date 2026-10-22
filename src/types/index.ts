@@ -34,6 +34,7 @@ export interface VotingEventItem {
   habilitarSuplente2?: boolean;
   resolverEmpates?: boolean;
   totalVotersConnected?: number;
+  rulesConfigured?: boolean;
   // Estado completo preservado por votação/evento:
   status?: SessionStatus;
   tieBreak?: {
@@ -88,6 +89,7 @@ export interface VotingSession {
   accessLocked?: boolean;
   allowedVoterIds?: string[];
   history?: VotingHistoryRecord[];
+  rulesConfigured?: boolean; // Se as regras da eleição foram salvas para a votação ativa
   createdAt?: number;
   updatedAt?: number;
 }

@@ -1,6 +1,7 @@
 import { doc, onSnapshot, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
 import type { VotingSession, VoterBallot } from '../types';
+import { getGlobalElectionRules } from '../utils/globalRules';
 import { sendBallotViaP2P, broadcastSessionP2P } from './peerSyncService';
 
 const STORAGE_SESSION_KEY = 'vota_iasd_active_session';
@@ -104,7 +105,18 @@ export function getLocalSession(): VotingSession {
   } catch (e) {
     console.error('Erro ao ler sessão local:', e);
   }
-  return DEFAULT_INITIAL_SESSION;
+  const rules = getGlobalElectionRules();
+  return {
+    ...DEFAULT_INITIAL_SESSION,
+    totalVotersConnected: rules.totalVotersConnected,
+    vacancies: rules.vacancies,
+    maxVotesPerVoter: rules.maxVotesPerVoter,
+    habilitarSuplente1: rules.habilitarSuplente1,
+    suplentesCount: rules.suplentesCount,
+    habilitarSuplente2: rules.habilitarSuplente2,
+    segundoSuplentesCount: rules.segundoSuplentesCount,
+    resolverEmpates: rules.resolverEmpates,
+  };
 }
 
 export function setLocalSession(session: VotingSession) {
@@ -126,30 +138,37 @@ let firestoreDebounceTimer: any = null;
 export async function saveSession(session: VotingSession): Promise<void> {
   session.updatedAt = Date.now();
 
-  // Sincroniza automaticamente o evento ativo dentro de session.events com todo o seu estado
-  if (Array.isArray(session.events) && session.events.length > 0 && session.activeEventId) {
-    session.events = session.events.map((evt) =>
-      evt.id === session.activeEventId
-        ? {
-            ...evt,
-            name: session.title || evt.name,
-            options: session.options,
-            vacancies: session.vacancies,
-            maxVotesPerVoter: session.maxVotesPerVoter,
-            suplentesCount: session.suplentesCount,
-            segundoSuplentesCount: session.segundoSuplentesCount,
-            habilitarSuplente1: session.habilitarSuplente1,
-            habilitarSuplente2: session.habilitarSuplente2,
-            resolverEmpates: session.resolverEmpates,
-            status: session.status,
-            tieBreak: session.tieBreak || null,
-            mainVotersCount: session.mainVotersCount || 0,
-            tieBreakVotersCount: session.tieBreakVotersCount || 0,
-            votingIteration: session.votingIteration || 1,
-            telaoMode: session.telaoMode || 'names',
-          }
-        : evt
-    );
+  // Sincroniza automaticamente o evento ativo dentro de session.events com todo o seu estado (e remove duplicatas)
+  if (Array.isArray(session.events) && session.events.length > 0) {
+    const seenIds = new Set<string>();
+    session.events = session.events
+      .filter((evt) => {
+        if (!evt || !evt.id || seenIds.has(evt.id)) return false;
+        seenIds.add(evt.id);
+        return true;
+      })
+      .map((evt) =>
+        evt.id === session.activeEventId
+          ? {
+              ...evt,
+              name: session.title || evt.name,
+              options: session.options,
+              vacancies: session.vacancies,
+              maxVotesPerVoter: session.maxVotesPerVoter,
+              suplentesCount: session.suplentesCount,
+              segundoSuplentesCount: session.segundoSuplentesCount,
+              habilitarSuplente1: session.habilitarSuplente1,
+              habilitarSuplente2: session.habilitarSuplente2,
+              resolverEmpates: session.resolverEmpates,
+              status: session.status,
+              tieBreak: session.tieBreak || null,
+              mainVotersCount: session.mainVotersCount || 0,
+              tieBreakVotersCount: session.tieBreakVotersCount || 0,
+              votingIteration: session.votingIteration || 1,
+              telaoMode: session.telaoMode || 'names',
+            }
+          : evt
+      );
   }
 
   // Limpa campos undefined para total compatibilidade com Firestore
@@ -330,8 +349,12 @@ export function applyBallotToSession(
       }
 
       updated.options = (updated.options || []).map((opt) => {
-        if (winnerIds.includes(opt.id)) {
-          return { ...opt, votesCount: (opt.votesCount || 0) + 0.01 };
+        const tieOptIndex = sortedTieOptions.findIndex((t) => t.id === opt.id);
+        if (tieOptIndex !== -1) {
+          const tieVotes = sortedTieOptions[tieOptIndex].votesCount || 0;
+          const isWinner = winnerIds.includes(opt.id);
+          const bonus = (tieVotes * 0.01) + (isWinner ? 0.005 : 0) + ((sortedTieOptions.length - tieOptIndex) * 0.0001);
+          return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + bonus };
         }
         return opt;
       });
@@ -339,7 +362,7 @@ export function applyBallotToSession(
       updated.status = 'CLOSED';
       updated.telaoMode = 'voting';
       updated.tieBreak.active = false;
-      (updated.tieBreak as any).resolved = true;
+      (updated as any).tieBreakVotersCount = 0;
     }
   }
 
@@ -464,8 +487,12 @@ export async function submitBallot(
             }
 
             const updatedMainOptions = liveOptions.map((opt) => {
-              if (winnerIds.includes(opt.id)) {
-                return { ...opt, votesCount: (opt.votesCount || 0) + 0.01 };
+              const tieOptIndex = sortedTieOptions.findIndex((t) => t.id === opt.id);
+              if (tieOptIndex !== -1) {
+                const tieVotes = sortedTieOptions[tieOptIndex].votesCount || 0;
+                const isWinner = winnerIds.includes(opt.id);
+                const bonus = (tieVotes * 0.01) + (isWinner ? 0.005 : 0) + ((sortedTieOptions.length - tieOptIndex) * 0.0001);
+                return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + bonus };
               }
               return opt;
             });
@@ -476,8 +503,7 @@ export async function submitBallot(
               telaoMode: 'voting',
               'tieBreak.options': updatedTieOptions,
               'tieBreak.active': false,
-              'tieBreak.resolved': true,
-              tieBreakVotersCount: newTieVotersCount,
+              tieBreakVotersCount: 0,
               updatedAt: Date.now(),
             });
           } else {

@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   CheckCircle2,
   Lock,
-  Sparkles,
   AlertCircle,
   Flame,
   Trophy,
   Star,
+  Loader2,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import {
@@ -98,7 +98,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     session.status !== 'CLOSED' &&
     hasVoted(session.id, currentRound, session.votingIteration || 1);
 
-  // Após votar, mostra "SEU VOTO FOI COMPUTADO" por 5s e depois os resultados em tempo real
+  // Após votar, mostra "SEU VOTO FOI COMPUTADO" por 2.5s e depois os resultados em tempo real
   const [showLiveResults, setShowLiveResults] = useState(false);
   const hasVotedNow = alreadyVoted || submitSuccess;
 
@@ -125,9 +125,26 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       setShowLiveResults(false);
       return;
     }
-    const timer = setTimeout(() => setShowLiveResults(true), 5000);
+    const timer = setTimeout(() => setShowLiveResults(true), 2500);
     return () => clearTimeout(timer);
   }, [hasVotedNow]);
+
+  // Se todos já votaram e houver empate, avança imediatamente para exibir o alerta de empate no celular
+  useEffect(() => {
+    if (hasVotedNow && session.resolverEmpates !== false && detectVotingTies(session).length > 0) {
+      const totalLimit =
+        session?.totalVotersConnected && session.totalVotersConnected > 0
+          ? session.totalVotersConnected
+          : (session?.allowedVoterIds?.length || 0);
+      const totalVoted =
+        session?.status === 'TIE_BREAK'
+          ? session?.tieBreakVotersCount || 0
+          : session?.mainVotersCount || 0;
+      if (totalLimit > 0 && totalVoted >= totalLimit) {
+        setShowLiveResults(true);
+      }
+    }
+  }, [hasVotedNow, session]);
 
   const myDeviceId = getDeviceId();
   const isLocked = Boolean(session.accessLocked);
@@ -279,7 +296,19 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     const vacancies = liveTie ? (session.tieBreak?.vacancies || 1) : (session.vacancies || 1);
     const suplentesCount = liveTie ? 0 : s1Count;
     const segundoSuplentesCount = liveTie ? 0 : s2Count;
-    const detectedTies = live ? [] : detectVotingTies(session);
+    const totalLimit =
+      session?.totalVotersConnected && session.totalVotersConnected > 0
+        ? session.totalVotersConnected
+        : (session?.allowedVoterIds?.length || 0);
+    const totalVotersVoted =
+      session?.status === 'TIE_BREAK'
+        ? session?.tieBreakVotersCount || 0
+        : session?.mainVotersCount || 0;
+    const allHaveVoted = (totalLimit > 0 && totalVotersVoted >= totalLimit) || session.status === 'CLOSED';
+
+    const detectedTies = (session.resolverEmpates !== false && (!live || allHaveVoted))
+      ? detectVotingTies(session)
+      : [];
     const hasTies = detectedTies.length > 0;
 
     const sortedOptions = [...resultOptions].sort((a, b) => {
@@ -299,14 +328,14 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         >
           {/* Cabeçalho de Resultados (compacto) */}
           <div className="text-center pb-1.5 pt-0.5 border-b border-blue-900/80 relative min-h-[44px] flex flex-col justify-center overflow-hidden">
-            {/* A(menor) e A(maior) separados e sem borda com espaço de 2 caracteres (z-30 sempre clicáveis) */}
-            <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center gap-2 select-none">
+            {/* A(menor) e A(maior) bem mais juntos e sem borda (z-30 sempre clicáveis) */}
+            <div className="absolute right-0 top-1/2 -translate-y-1/2 z-30 flex items-center gap-0.5 select-none">
               <button
                 type="button"
                 onClick={decreaseFont}
                 disabled={fontScalePercent === 0}
                 title="Reduzir fonte dos cards (mínimo)"
-                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
                   fontScalePercent === 0
                     ? 'opacity-25 cursor-not-allowed text-slate-400'
                     : 'text-white hover:text-amber-300'
@@ -319,7 +348,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                 onClick={increaseFont}
                 disabled={fontScalePercent === 24}
                 title="Aumentar fonte dos cards (limite +24%)"
-                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
                   fontScalePercent === 24
                     ? 'opacity-25 cursor-not-allowed text-slate-400'
                     : 'text-white hover:text-amber-300'
@@ -349,36 +378,30 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
               {/* SEPARADOR VERTICAL */}
               <span className="text-white/30 font-light text-xs shrink-0 select-none">|</span>
 
-              {/* 2. MULHERES (negrito fonte branca) */}
+              {/* 2. Título da votação (negrito fonte branca) */}
               <h2 className="text-sm sm:text-base font-black text-white uppercase tracking-tight shrink-0 drop-shadow-sm">
                 {session.title}
               </h2>
-
-              {/* SEPARADOR VERTICAL + 3. VOTO (ICONE CHECK) SEM FUNDO */}
-              {live && (
-                <>
-                  <span className="text-white/30 font-light text-xs shrink-0 select-none">|</span>
-                  <div className="inline-flex items-center gap-1 text-[10px] sm:text-[11px] text-emerald-400 font-black uppercase tracking-wider shrink-0">
-                    <CheckCircle2 className="w-3.5 h-3.5 stroke-[2.75] text-emerald-400" />
-                    <span>VOTO</span>
-                  </div>
-                </>
-              )}
             </div>
 
-            {/* SE HOUVER EMPATE: MODALZINHO DESCE SUAVE EM 1.5s COBRINDO O CABEÇALHO */}
+            {/* SE HOUVER EMPATE: MODALZINHO DESCE SUAVE COBRINDO O CABEÇALHO */}
             {hasTies && (
               <motion.div
                 initial={{ y: '-100%', opacity: 0 }}
                 animate={{ y: '0%', opacity: 1 }}
-                transition={{ duration: 1.5, ease: [0.16, 1, 0.3, 1] }}
-                className="absolute inset-0 z-20 bg-rose-950 border border-rose-500/90 rounded-xl flex items-center justify-center p-2.5 shadow-2xl backdrop-blur-sm"
+                transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute inset-0 z-20 bg-gradient-to-r from-orange-600 via-amber-600 to-orange-600 border-2 border-orange-300 rounded-xl flex items-center justify-center p-2 shadow-2xl backdrop-blur-sm"
               >
                 <div className="flex items-center justify-center gap-2 text-center w-full pr-14 pl-2">
-                  <Star className="w-4 h-4 text-rose-400 fill-rose-400 shrink-0" />
-                  <h4 className="font-black text-xs sm:text-sm uppercase tracking-wider text-white text-center">
-                    EMPATE DETECTADO ENTRE CANDIDATOS.
-                  </h4>
+                  <Flame className="w-5 h-5 text-white animate-bounce shrink-0 drop-shadow" />
+                  <div className="flex flex-col items-center">
+                    <h4 className="font-black text-xs sm:text-sm uppercase tracking-wider text-white text-center leading-tight drop-shadow-sm">
+                      EMPATE ENTRE CANDIDATOS
+                    </h4>
+                    <span className="text-[10px] sm:text-[11px] text-amber-100 font-bold leading-tight drop-shadow-sm">
+                      Aguarde a rodada de desempate
+                    </span>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -442,12 +465,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                         <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
                       </div>
 
-                      {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está (Reduzida em 40%) */}
+                      {/* Ponteira Dourada estilo Telão/Admin (sem a bolinha no centro) */}
                       {(option.votesCount || 0) > 0 && (
-                        <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
-                          <div className="absolute -inset-y-1 sm:-inset-y-1.5 w-2 sm:w-3 -right-0.5 sm:-right-1 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-80 blur-[2px] sm:blur-[3.5px]" />
-                          <div className="relative w-[1.5px] sm:w-[2.4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_4px_#fbbf24,0_0_8px_rgba(245,158,11,0.7)] sm:shadow-[0_0_6px_#fbbf24,0_0_12px_rgba(245,158,11,0.8),0_0_2px_#ffffff] rounded-r-xs" />
-                          <div className="absolute right-[-2.5px] sm:right-[-4px] top-1/2 -translate-y-1/2 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_4px_1px_#f59e0b,0_0_7px_2px_rgba(251,191,36,0.7)] sm:shadow-[0_0_6px_2px_#f59e0b,0_0_12px_3px_rgba(251,191,36,0.8),0_0_2px_#ffffff] ring-1 ring-white/80" />
+                        <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20">
+                          <div className="absolute -inset-y-1 w-2 sm:w-3 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[1.5px] sm:blur-[3px]" />
+                          <div className="relative w-[2.8px] sm:w-[4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24,0_0_8px_rgba(245,158,11,0.6)] sm:shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
                         </div>
                       )}
                     </motion.div>
@@ -687,17 +709,45 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             </div>
           </div>
 
-          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-950/60 text-amber-300 border border-amber-600/40 mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-spin" />
-            Conectado • Aguarde o Início
-          </span>
+          {/* Badge Conectado: sem bordas laterais, com gradiente e transparência suave para o final de cada lado */}
+          <div className="relative inline-flex items-center justify-center mb-3.5 select-none max-w-full">
+            {/* Linha superior com transparência para o final de cada lado */}
+            <div
+              className="absolute top-0 inset-x-0 h-px pointer-events-none"
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.45) 20%, rgba(245, 158, 11, 0.75) 50%, rgba(245, 158, 11, 0.45) 80%, transparent 100%)',
+              }}
+            />
+
+            {/* Fundo do badge com transparência suave no final de cada lado (sem bordas esq/dir) */}
+            <div
+              className="inline-flex items-center gap-2 px-6 py-1 text-xs font-semibold text-amber-300"
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent 0%, rgba(120, 53, 15, 0.45) 18%, rgba(120, 53, 15, 0.65) 50%, rgba(120, 53, 15, 0.45) 82%, transparent 100%)',
+              }}
+            >
+              <Loader2 className="w-3.5 h-3.5 text-amber-400 animate-spin shrink-0" />
+              <span>Conectado • Aguarde o Início</span>
+            </div>
+
+            {/* Linha inferior com transparência para o final de cada lado */}
+            <div
+              className="absolute bottom-0 inset-x-0 h-px pointer-events-none"
+              style={{
+                background:
+                  'linear-gradient(90deg, transparent 0%, rgba(245, 158, 11, 0.45) 20%, rgba(245, 158, 11, 0.75) 50%, rgba(245, 158, 11, 0.45) 80%, transparent 100%)',
+              }}
+            />
+          </div>
 
           <h2 className="text-2xl font-bold text-white mb-3 font-serif">
-            A votação já irá começar
+            A votação já vai começar!
           </h2>
 
           <p className="text-sm text-blue-200/90 mb-6 leading-relaxed">
-            Em instantes o coordenador irá iniciar a votação.
+            Em instantes o coordenador dará o comando
           </p>
         </motion.div>
       </div>
@@ -750,12 +800,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             Abrindo os resultados em tempo real...
           </p>
 
-          {/* Barra de progresso de 5 segundos */}
+          {/* Barra de progresso reduzida pela metade (2.5 segundos) */}
           <div className="mt-3 h-1.5 w-full bg-blue-950 rounded-full overflow-hidden">
             <motion.div
               initial={{ width: '0%' }}
               animate={{ width: '100%' }}
-              transition={{ duration: 5, ease: 'linear' }}
+              transition={{ duration: 2.5, ease: 'linear' }}
               className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300"
             />
           </div>
@@ -770,20 +820,24 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
   return (
     <div className="max-w-xl mx-auto px-4 py-5 pb-36">
-      {/* Alerta de Desempate (se aplicável) */}
+      {/* Alerta de Desempate (se aplicável) - Fica em cima do título verde com altura e fontes ampliadas */}
       {isTieBreak && (
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-4 p-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 shadow-lg text-amber-100 flex items-center gap-3"
+          className="mb-4 py-4 px-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 shadow-lg text-amber-100 flex items-center gap-3.5 min-h-[76px]"
         >
-          <Flame className="w-7 h-7 text-amber-400 shrink-0 animate-bounce" />
-          <div>
-            <h3 className="font-bold text-sm text-amber-300 uppercase tracking-wide">
+          <Flame className="w-8 h-8 text-amber-400 shrink-0 animate-bounce" />
+          <div className="space-y-0.5">
+            <h3 className="font-bold text-sm sm:text-base text-amber-300 uppercase tracking-wide">
               Rodada de Desempate!
             </h3>
-            <p className="text-xs text-amber-200/90">
-              Escolha apenas <strong className="text-white underline">{maxVotes} {maxVotes === 1 ? 'nome' : 'nomes'}</strong> entre os candidatos abaixo.
+            <p className="text-[13px] sm:text-sm text-amber-200/90 leading-snug">
+              Escolha apenas{' '}
+              <strong className="text-white font-black text-base sm:text-lg underline decoration-amber-400 decoration-2 px-0.5">
+                {maxVotes}
+              </strong>{' '}
+              {maxVotes === 1 ? 'nome' : 'nomes'} entre os candidatos abaixo.
             </p>
           </div>
         </motion.div>
@@ -792,7 +846,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       {/* CABEÇALHO: FONTE BONITA E MENOR, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ */}
       {/* Formato: Escolha xx nomes (decrescente) | eleição do tesoureiro | A A */}
       <div
-        className={`${isTieBreak ? 'rounded-xl' : '-mx-4 -mt-5'} mb-4 px-3.5 py-2.5 border-b-[3px] border-[#e6d3a8] shadow-lg`}
+        className={`${isTieBreak ? 'rounded-xl' : '-mx-4 -mt-5'} mb-4 px-3.5 py-3.5 border-b-[3px] border-[#e6d3a8] shadow-lg`}
         style={{
           fontFamily: '"Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif',
           backgroundColor: '#0b4a4a',
@@ -800,18 +854,18 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 5px), linear-gradient(180deg, #0f5c5a 0%, #083b3c 100%)',
         }}
       >
-        <div className="flex items-center justify-between gap-2 text-xs sm:text-sm text-white">
-          {/* Esquerda: Escolha xx nomes (diminui conforme vai escolhendo) */}
+        <div className="flex items-center justify-between gap-2 text-sm sm:text-base text-white">
+          {/* Esquerda: Escolha xx nomes (diminui conforme vai escolhendo) - Fonte da linha +20% e número bold e +20% maior */}
           <div className="flex items-center gap-1.5 font-semibold shrink-0">
             <span>Escolha</span>
-            <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs shadow-sm leading-none">
+            <span className="inline-flex items-center justify-center px-0.5 text-yellow-300 font-mono font-black text-lg sm:text-xl leading-none">
               <motion.span
                 key={remainingVotes}
                 initial={{ scale: 1.3, opacity: 0.5 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ duration: 0.2 }}
               >
-                {String(remainingVotes).padStart(2, '0')}
+                {remainingVotes}
               </motion.span>
             </span>
             <span>{remainingVotes === 1 ? 'nome' : 'nomes'}</span>
@@ -879,8 +933,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             <div className="flex-1">
               {errorMessage === 'LIMIT_EXCEEDED' ? (
                 <div className="flex flex-col items-center text-center gap-1">
-                  <span className="font-black text-sm sm:text-base tracking-wide uppercase text-white drop-shadow">
-                    VOCÊ JÁ ESCOLHEU {String(maxVotes).padStart(2, '0')}
+                  <span className="font-black text-sm sm:text-base tracking-wide uppercase text-white drop-shadow flex items-center justify-center gap-1.5 flex-wrap">
+                    <span>VOCÊ JÁ ESCOLHEU</span>
+                    <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-xl sm:text-2xl leading-none">
+                      {String(maxVotes).padStart(2, '0')}
+                    </span>
                   </span>
                   <span className="text-[13px] sm:text-[14px] text-emerald-100 font-bold tracking-normal normal-case leading-snug">
                     Para escolher outro, desmarque algum.

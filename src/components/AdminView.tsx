@@ -16,6 +16,7 @@ import {
   ArrowDownAZ,
   Pencil,
   FolderPlus,
+  Plus,
   ChevronsRight,
   X,
   Star,
@@ -31,8 +32,11 @@ import {
   History,
   Calendar,
   Copy,
+  FileDown,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
+import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
+import { generateAtaPdf } from '../utils/ataPdfGenerator';
 import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord } from '../types';
 import { saveSession, subscribeToConnectedVoters, applyBallotToSession, getLocalSession, isFirestoreQuotaExceeded } from '../services/votingService';
 import { startAdminPeerHost } from '../services/peerSyncService';
@@ -142,7 +146,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       setSelectedTieCandidateIds((prev) => [...prev, id]);
     }
   };
-  const detectedTies = session.status === 'CLOSED' ? detectVotingTies(session) : [];
+  const detectedTies = session.resolverEmpates !== false ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
 
   const isVotingActive = session.status === 'VOTING' || session.status === 'TIE_BREAK';
@@ -203,6 +207,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const isSessionLocked = Boolean(session.accessLocked);
   const currentVotersVoted = session.status === 'TIE_BREAK' ? (session.tieBreakVotersCount || 0) : (session.mainVotersCount || 0);
   const displayVotersCount = Math.max(session.mainVotersCount || 0, connectedVotersCount);
+  const totalVotersLimit =
+    session?.totalVotersConnected && session.totalVotersConnected > 0
+      ? session.totalVotersConnected
+      : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0);
+  const allHaveVoted = (totalVotersLimit > 0 && currentVotersVoted >= totalVotersLimit) || session.status === 'CLOSED';
 
   // Escuta o evento emitido pelo botão branco ("APURAÇÃO") da Navbar
   useEffect(() => {
@@ -216,17 +225,35 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     return () => window.removeEventListener('open-tie-modal', handleOpenTieModal);
   }, [session]);
 
-  // Se a votação encerrar e houver empate, abre o modal automaticamente
+  // Se todos tiverem votado (ou a votação encerrar) e houver empate, abre o modal automaticamente
+  const prevAllVotedRef = useRef(false);
   const prevStatusRef = useRef(session.status);
   useEffect(() => {
-    if (prevStatusRef.current !== 'CLOSED' && session.status === 'CLOSED') {
-      const ties = detectVotingTies(session);
-      if (ties.length > 0) {
+    const ties = detectVotingTies(session);
+    const totalLimit =
+      session?.totalVotersConnected && session.totalVotersConnected > 0
+        ? session.totalVotersConnected
+        : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0);
+    const totalVoted =
+      session.status === 'TIE_BREAK'
+        ? session.tieBreakVotersCount || 0
+        : session.mainVotersCount || 0;
+    const allVotedNow = totalLimit > 0 && totalVoted >= totalLimit;
+
+    if (ties.length > 0) {
+      const justAllVoted = !prevAllVotedRef.current && allVotedNow;
+      const justClosed = prevStatusRef.current !== 'CLOSED' && session.status === 'CLOSED';
+      const justTieBreakEnded = prevStatusRef.current === 'TIE_BREAK' && session.status === 'CLOSED';
+      if (justAllVoted || justClosed || justTieBreakEnded) {
         setIsTieModalOpen(true);
       }
+    } else if (session.status === 'CLOSED') {
+      // Quando todos os empates foram solucionados, fecha o modal
+      setIsTieModalOpen(false);
     }
+    prevAllVotedRef.current = allVotedNow;
     prevStatusRef.current = session.status;
-  }, [session.status, session]);
+  }, [session, connectedVotersCount]);
 
   const handleStartTieBreak = (tie: TieInfo) => {
     // Critério próprio do admin: se clicou em candidatos (ex: CARLA e SIONEIDE), desempata entre eles
@@ -337,8 +364,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Garante lista de eventos (inicializando com o evento atual caso ainda não exista)
-  const eventsList: VotingEventItem[] =
+// Garante lista de eventos (inicializando com o evento atual caso ainda não exista e eliminando duplicatas)
+  const rawEventsList: VotingEventItem[] =
     Array.isArray(session.events) && session.events.length > 0
       ? session.events
       : [
@@ -361,19 +388,31 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             telaoMode: session.telaoMode || 'names',
           },
         ];
-  const currentActiveEventId = session.activeEventId || eventsList[0].id;
 
-  // Abrir modal de criação de nova votação (puxa as configurações gerais da engrenagem por padrão)
+  // Garante que cada evento tenha ID exclusivo e não existam modais duplicados
+  const eventsList: VotingEventItem[] = rawEventsList.reduce<VotingEventItem[]>((acc, item) => {
+    if (!item) return acc;
+    const safeId = item.id || `evt_${acc.length + 1}`;
+    if (!acc.some((x) => x.id === safeId)) {
+      acc.push({ ...item, id: safeId });
+    }
+    return acc;
+  }, []);
+
+  const currentActiveEventId = session.activeEventId || eventsList[0]?.id || 'evt_principal';
+
+  // Abrir modal de criação de nova votação (puxa as regras globais salvas localmente no PC por padrão)
   const openCreateEventModal = () => {
+    const currentGlobal = getGlobalElectionRules();
     setEditingEventId(null);
     setEventFormName('');
-    setEventFormVacancies(session.vacancies || 1);
-    setEventFormSuplente1Enabled(session.habilitarSuplente1 !== false);
-    setEventFormSuplente1Count(session.suplentesCount ?? 1);
-    setEventFormSuplente2Enabled(session.habilitarSuplente2 === true);
-    setEventFormSuplente2Count(session.segundoSuplentesCount ?? 1);
-    setEventFormResolverEmpates(session.resolverEmpates !== false);
-    setEventFormTotalVoters(session.totalVotersConnected || 0);
+    setEventFormVacancies(currentGlobal.vacancies);
+    setEventFormSuplente1Enabled(currentGlobal.habilitarSuplente1 !== false);
+    setEventFormSuplente1Count(currentGlobal.suplentesCount ?? 1);
+    setEventFormSuplente2Enabled(currentGlobal.habilitarSuplente2 === true);
+    setEventFormSuplente2Count(currentGlobal.segundoSuplentesCount ?? 1);
+    setEventFormResolverEmpates(currentGlobal.resolverEmpates !== false);
+    setEventFormTotalVoters(currentGlobal.totalVotersConnected || 0);
     setIsCreatingNewEvent(true);
   };
 
@@ -414,10 +453,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setIsCreatingNewEvent(true);
   };
 
-  // Selecionar um evento ao clicar no botão do evento no cabeçalho -> abre a parte de baixo (Print 2)
+  // Escuta o evento emitido pelo botão de votação cinza da Navbar para abrir as regras da eleição
+  useEffect(() => {
+    const handleOpenRulesModal = () => {
+      const activeEvt = eventsList.find((e) => e.id === currentActiveEventId) || eventsList[0];
+      if (activeEvt) {
+        openEditEventModal(activeEvt);
+      }
+    };
+    window.addEventListener('open-event-rules-modal', handleOpenRulesModal);
+    return () => window.removeEventListener('open-event-rules-modal', handleOpenRulesModal);
+  }, [eventsList, currentActiveEventId]);
+
+  // Selecionar um evento ao clicar no botão do evento no cabeçalho -> abre modal de regras (Print 2)
   const handleSelectEventButton = (evt: VotingEventItem) => {
-    if (evt.id === currentActiveEventId && activeTab === 'candidates') {
-      setIsBottomSectionOpen(true);
+    // Se clicou no evento já ativo, alterna ou abre o modal
+    if (evt.id === currentActiveEventId) {
+      if (isCreatingNewEvent && editingEventId === evt.id) {
+        setIsCreatingNewEvent(false);
+        setEditingEventId(null);
+      } else {
+        openEditEventModal(evt);
+      }
       return;
     }
 
@@ -441,6 +498,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             tieBreakVotersCount: session.tieBreakVotersCount || 0,
             votingIteration: session.votingIteration || 1,
             telaoMode: session.telaoMode || 'names',
+            totalVotersConnected: session.totalVotersConnected,
+            rulesConfigured: session.rulesConfigured,
           }
         : item
     );
@@ -475,12 +534,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       habilitarSuplente1: targetEvt.habilitarSuplente1,
       habilitarSuplente2: targetEvt.habilitarSuplente2,
       resolverEmpates: targetEvt.resolverEmpates !== undefined ? targetEvt.resolverEmpates : (session.resolverEmpates !== false),
+      totalVotersConnected: targetEvt.totalVotersConnected,
+      rulesConfigured: targetEvt.rulesConfigured ?? false,
       events: updatedEvents,
     });
 
     setActiveTab('candidates');
     setIsBottomSectionOpen(true);
-    showNotification('success', `Evento "${targetEvt.name}" selecionado!`);
+    // Revela suave para baixo o modal de REGRAS DA ELEIÇÃO para o card clicado
+    openEditEventModal(targetEvt);
   };
 
   // Salvar configurações da votação (cria nova ou edita existente)
@@ -512,6 +574,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               segundoSuplentesCount: s2Count,
               resolverEmpates,
               totalVotersConnected: totalVoters,
+              rulesConfigured: true,
             }
           : item
       );
@@ -527,12 +590,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         segundoSuplentesCount: isEditingActive ? s2Count : session.segundoSuplentesCount,
         resolverEmpates: isEditingActive ? resolverEmpates : session.resolverEmpates,
         totalVotersConnected: isEditingActive ? totalVoters : session.totalVotersConnected,
+        rulesConfigured: true,
         events: updatedEvents,
+      });
+
+      saveGlobalElectionRules({
+        totalVotersConnected: totalVoters,
+        vacancies,
+        habilitarSuplente1: eventFormSuplente1Enabled,
+        suplentesCount: s1Count,
+        habilitarSuplente2: eventFormSuplente2Enabled,
+        segundoSuplentesCount: s2Count,
+        resolverEmpates,
       });
 
       setIsCreatingNewEvent(false);
       setEditingEventId(null);
-      showNotification('success', `Configurações da votação "${cleaned}" salvas com sucesso!`);
+      showNotification('success', `Regras salvas para "${cleaned}"! Votação liberada.`);
     } else {
       const newEvtId = 'evt_' + Date.now();
 
@@ -572,6 +646,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         habilitarSuplente2: eventFormSuplente2Enabled,
         resolverEmpates,
         totalVotersConnected: totalVoters,
+        rulesConfigured: true,
         status: 'WAITING',
         tieBreak: null,
         mainVotersCount: 0,
@@ -599,7 +674,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         segundoSuplentesCount: s2Count,
         resolverEmpates,
         totalVotersConnected: totalVoters,
+        rulesConfigured: true,
         events: [...syncedCurrentEvents, newEvt],
+      });
+
+      saveGlobalElectionRules({
+        totalVotersConnected: totalVoters,
+        vacancies,
+        habilitarSuplente1: eventFormSuplente1Enabled,
+        suplentesCount: s1Count,
+        habilitarSuplente2: eventFormSuplente2Enabled,
+        segundoSuplentesCount: s2Count,
+        resolverEmpates,
       });
 
       setIsCreatingNewEvent(false);
@@ -658,84 +744,82 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     });
   };
 
-  // Renderiza o modal de configuração de votação (tanto para criar quanto para editar via lápis)
+  // Renderiza o modal de configuração de votação (REGRAS DA ELEIÇÃO)
   const renderEventConfigModal = () => {
     const isEditing = Boolean(editingEventId);
     return (
       <motion.div
         ref={eventModalRef}
         data-event-modal="true"
-        initial={{ opacity: 0, scale: 0.94, y: -6 }}
+        initial={{ opacity: 0, scale: 0.95, y: -14 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.94, y: -6 }}
-        transition={{ duration: 0.22, ease: [0.25, 0.1, 0.25, 1] }}
+        exit={{ opacity: 0, scale: 0.95, y: -10 }}
+        transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
         style={{ transformOrigin: 'top left' }}
-        className="absolute top-full left-0 mt-2 z-50 w-[350px] sm:w-[410px] max-w-[calc(100vw-24px)]"
+        className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[430px] max-w-[calc(100vw-24px)]"
       >
-        <div className="relative bg-[#141721] rounded-xl p-3.5 shadow-[0_0_24px_rgba(52,211,153,0.18),0_14px_34px_rgba(0,0,0,0.85)] space-y-3">
-          {/* Borda Designer: espessura reduzida em 30% (1.4px) com gradientes direcionais solicitados */}
-          <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ filter: 'drop-shadow(0 0 5px rgba(16,185,129,0.3))' }}>
-            {/* Canto superior esquerdo arredondado */}
+        <div className="relative bg-[#141721] rounded-xl p-4 shadow-[0_0_30px_rgba(16,185,129,0.22),0_18px_40px_rgba(0,0,0,0.9)] space-y-3.5 border border-emerald-500/40">
+          {/* Borda Designer com brilho suave */}
+          <div className="absolute inset-0 pointer-events-none rounded-xl" style={{ filter: 'drop-shadow(0 0 6px rgba(16,185,129,0.35))' }}>
             <div
               className="absolute top-0 left-0 w-4 h-4 rounded-tl-xl pointer-events-none"
-              style={{ borderTop: '1.4px solid #10b981', borderLeft: '1.4px solid #10b981' }}
+              style={{ borderTop: '1.5px solid #10b981', borderLeft: '1.5px solid #10b981' }}
             />
-            {/* Linha superior: no sentido da esquerda para a direita ficando transparente */}
             <div
               className="absolute top-0 left-4 right-0 pointer-events-none"
-              style={{ height: '1.4px', background: 'linear-gradient(to right, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+              style={{ height: '1.5px', background: 'linear-gradient(to right, #10b981 0%, rgba(16,185,129,0) 100%)' }}
             />
-            {/* Linha esquerda: no sentido descendo ficando transparente até 100% */}
             <div
               className="absolute top-4 bottom-0 left-0 pointer-events-none"
-              style={{ width: '1.4px', background: 'linear-gradient(to bottom, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+              style={{ width: '1.5px', background: 'linear-gradient(to bottom, #10b981 0%, rgba(16,185,129,0) 100%)' }}
             />
-
-            {/* Canto inferior direito arredondado */}
             <div
               className="absolute bottom-0 right-0 w-4 h-4 rounded-br-xl pointer-events-none"
-              style={{ borderBottom: '1.4px solid #10b981', borderRight: '1.4px solid #10b981' }}
+              style={{ borderBottom: '1.5px solid #10b981', borderRight: '1.5px solid #10b981' }}
             />
-            {/* Linha inferior: da direita para a esquerda ficando transparente */}
             <div
               className="absolute bottom-0 right-4 left-0 pointer-events-none"
-              style={{ height: '1.4px', background: 'linear-gradient(to left, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+              style={{ height: '1.5px', background: 'linear-gradient(to left, #10b981 0%, rgba(16,185,129,0) 100%)' }}
             />
-            {/* Linha direita: no sentido subindo ficando transparente até 100% */}
             <div
               className="absolute bottom-4 top-0 right-0 pointer-events-none"
-              style={{ width: '1.4px', background: 'linear-gradient(to top, #10b981 0%, rgba(16,185,129,0) 100%)' }}
+              style={{ width: '1.5px', background: 'linear-gradient(to top, #10b981 0%, rgba(16,185,129,0) 100%)' }}
             />
           </div>
 
-          {/* Cabeçalho */}
-          <div className="flex items-center justify-between pb-1.5 border-b border-white/[0.08]">
-            <span className="text-xs font-medium text-slate-200 tracking-wide flex items-center gap-1.5">
-              <FolderPlus className="w-3.5 h-3.5 text-slate-400" />
-              {isEditing ? 'Configurar votação' : 'Nova votação'}
-            </span>
+          {/* Cabeçalho: REGRAS DA ELEIÇÃO na frente de 'Configurar votação' */}
+          <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
+            <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-emerald-400">
+              <Sliders className="w-3.5 h-3.5 text-emerald-400" />
+              <span>REGRAS DA ELEIÇÃO</span>
+              <span className="text-slate-500 font-normal">•</span>
+              <span className="text-slate-200 font-bold normal-case text-xs">
+                {isEditing ? 'Configurar votação' : 'Nova votação'}
+              </span>
+            </div>
             <button
               type="button"
               onClick={() => {
                 setIsCreatingNewEvent(false);
                 setEditingEventId(null);
               }}
-              className="p-0.5 text-slate-400 hover:text-slate-100 rounded transition cursor-pointer"
+              className="p-1 text-slate-400 hover:text-white rounded-lg hover:bg-white/10 transition cursor-pointer"
+              title="Fechar"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
-          {/* Título da Votação + Qdte de votantes */}
+          {/* Linha 1: Título da Votação + Qdte de votantes (Obrigatórios) */}
           <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5">
             <div className="sm:col-span-3">
-              <label className="text-xs font-normal text-slate-300 block mb-1">
-                Título da votação:
+              <label className="text-xs font-semibold text-slate-200 block mb-1">
+                Título da votação: <span className="text-emerald-400">*</span>
               </label>
               <input
                 type="text"
                 autoFocus
-                placeholder="Digite o nome (ex: Eleição do Tesoureiro)..."
+                placeholder="Ex: JOVENS..."
                 value={eventFormName}
                 onChange={(e) => setEventFormName(e.target.value)}
                 onKeyDown={(e) => {
@@ -744,79 +828,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     handleSaveEventModal();
                   }
                 }}
-                className="w-full px-3 py-1.5 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-lg text-xs font-normal text-slate-100 outline-none placeholder-slate-500 shadow-sm"
+                className="w-full px-3 py-1.5 bg-[#0b0d13] border border-white/[0.12] focus:border-emerald-500/80 rounded-lg text-xs font-bold text-slate-100 outline-none placeholder-slate-500 shadow-sm transition-colors"
               />
             </div>
 
             <div className="sm:col-span-1">
-              <div className="flex items-center justify-between mb-1 gap-1">
-                <label className="text-xs font-normal text-slate-300 block whitespace-nowrap">
-                  Qdte de votantes:
-                </label>
-                {isVotingActive && (
-                  <span
-                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5 ${
-                      isSessionLocked
-                        ? 'text-rose-300 bg-rose-950/80 border border-rose-500/40'
-                        : 'text-emerald-300 bg-emerald-950/80 border border-emerald-500/40'
-                    }`}
-                    title={
-                      isSessionLocked
-                        ? 'Sessão Fechada no cadeado. Para alterar durante a votação, a sessão deve estar Aberta.'
-                        : 'Sessão Aberta. Você pode alterar a quantidade de votantes em tempo real.'
-                    }
-                  >
-                    {isSessionLocked ? '🔒 Fechada' : '🔓 Aberta'}
-                  </span>
-                )}
-              </div>
+              <label className="text-xs font-semibold text-slate-200 block mb-1 whitespace-nowrap">
+                Qdte votantes: <span className="text-emerald-400">*</span>
+              </label>
               <input
                 type="number"
-                min={0}
-                placeholder="Ex: 50"
+                min={1}
+                placeholder="1"
                 disabled={isVotingActive && isSessionLocked}
                 value={eventFormTotalVoters > 0 ? eventFormTotalVoters : ''}
-                onChange={(e) => setEventFormTotalVoters(Math.max(0, parseInt(e.target.value) || 0))}
+                onChange={(e) => setEventFormTotalVoters(Math.max(1, parseInt(e.target.value) || 1))}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
                     handleSaveEventModal();
                   }
                 }}
-                className={`w-full px-3 py-1.5 bg-[#0b0d13] border rounded-lg text-xs font-normal text-slate-100 outline-none text-center font-mono font-medium shadow-sm transition-colors ${
+                className={`w-full px-2 py-1.5 bg-[#0b0d13] border rounded-lg text-xs font-mono font-bold text-slate-100 outline-none text-center shadow-sm transition-colors ${
                   isVotingActive && isSessionLocked
                     ? 'border-rose-500/40 text-slate-400 opacity-60 cursor-not-allowed bg-rose-950/10'
-                    : 'border-white/[0.1] focus:border-emerald-500/60'
+                    : 'border-white/[0.12] focus:border-emerald-500/80'
                 }`}
-                title={
-                  isVotingActive && isSessionLocked
-                    ? 'Para alterar a quantidade de votantes com a votação em andamento, destranque a sessão no cadeado no topo.'
-                    : 'Limite oficial de votantes'
-                }
               />
-              {isVotingActive && isSessionLocked && (
-                <div className="mt-1 flex items-center justify-between gap-1 leading-tight">
-                  <span className="text-[9px] text-rose-300 block font-medium">
-                    Sessão fechada.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => saveSession({ ...session, accessLocked: false, allowedVoterIds: undefined })}
-                    className="text-[9px] text-amber-300 hover:text-amber-200 underline cursor-pointer font-bold whitespace-nowrap"
-                  >
-                    Abrir sessão agora
-                  </button>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Vagas Titulares, 1º Suplente e 2º Suplente */}
+          {/* Linha 2: Vagas Titulares, 1º Suplente e 2º Suplente (Cards lado a lado como no Print 2) */}
           <div className="grid grid-cols-3 gap-2">
-            {/* Titulares */}
-            <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
-              <span className="text-[11px] font-normal text-slate-300 block">
-                Titulares:
+            {/* Titulares (Obrigatório) */}
+            <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+              <span className="text-[11px] font-semibold text-slate-200 block">
+                Titulares: <span className="text-emerald-400">*</span>
               </span>
               <div className="flex items-center gap-1">
                 <input
@@ -825,16 +872,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   max={99}
                   value={eventFormVacancies}
                   onChange={(e) => setEventFormVacancies(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.08] focus:border-emerald-500/50 rounded text-center text-slate-200 font-medium text-xs outline-none"
+                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.1] focus:border-emerald-500/60 rounded text-center text-slate-100 font-bold text-xs outline-none"
                 />
                 <span className="text-[10px] text-slate-400 font-normal">vagas</span>
               </div>
             </div>
 
             {/* 1º Suplente */}
-            <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+            <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-normal text-slate-300">
+                <span className="text-[11px] font-semibold text-slate-200">
                   1º suplente:
                 </span>
                 <input
@@ -852,16 +899,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   disabled={!eventFormSuplente1Enabled}
                   value={eventFormSuplente1Enabled ? eventFormSuplente1Count : 0}
                   onChange={(e) => setEventFormSuplente1Count(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.08] focus:border-emerald-500/50 rounded text-center text-slate-200 font-medium text-xs outline-none disabled:opacity-30"
+                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.1] focus:border-emerald-500/60 rounded text-center text-slate-100 font-bold text-xs outline-none disabled:opacity-30"
                 />
                 <span className="text-[10px] text-slate-400 font-normal">vagas</span>
               </div>
             </div>
 
             {/* 2º Suplente */}
-            <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+            <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
               <div className="flex items-center justify-between">
-                <span className="text-[11px] font-normal text-slate-300">
+                <span className="text-[11px] font-semibold text-slate-200">
                   2º suplente:
                 </span>
                 <input
@@ -879,22 +926,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   disabled={!eventFormSuplente2Enabled}
                   value={eventFormSuplente2Enabled ? eventFormSuplente2Count : 0}
                   onChange={(e) => setEventFormSuplente2Count(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.08] focus:border-emerald-500/50 rounded text-center text-slate-200 font-medium text-xs outline-none disabled:opacity-30"
+                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.1] focus:border-emerald-500/60 rounded text-center text-slate-100 font-bold text-xs outline-none disabled:opacity-30"
                 />
                 <span className="text-[10px] text-slate-400 font-normal">vagas</span>
               </div>
             </div>
           </div>
 
-          {/* Se terá empate (Resolver Empates) */}
-          <div className="bg-[#0b0d13] border border-white/[0.08] rounded-lg px-2.5 py-2 flex items-center justify-between gap-2">
+          {/* Linha 3: Resolver Empates */}
+          <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Star className="w-3.5 h-3.5 text-amber-400/80 shrink-0" />
+              <Star className="w-3.5 h-3.5 text-amber-400 shrink-0" />
               <div>
-                <span className="text-xs font-normal text-slate-300 block">
+                <span className="text-xs font-semibold text-slate-200 block">
                   Resolver empates:
                 </span>
-                <span className="text-[10px] text-slate-400 block">
+                <span className="text-[10.5px] text-slate-400 block font-normal">
                   {eventFormResolverEmpates
                     ? 'Ativado: rodada para desempate'
                     : 'Desativado: eleição majoritária'}
@@ -908,16 +955,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 onChange={(e) => setEventFormResolverEmpates(e.target.checked)}
                 className="sr-only peer"
               />
-              <div className="w-8 h-4 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-emerald-500 shadow-inner" />
+              <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner" />
             </label>
           </div>
 
-          {/* Botão Salvar */}
-          <div className="flex items-center justify-end gap-2 pt-1.5 border-t border-white/[0.08]">
+          {/* Linha 4: Botão Salvar (Fica verde e libera a votação) */}
+          <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
             <button
               type="button"
               onClick={handleSaveEventModal}
-              className="px-4 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 font-medium text-xs rounded-lg cursor-pointer active:scale-95 transition shadow-sm"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-wider uppercase rounded-lg border border-emerald-400 cursor-pointer active:scale-95 transition-all shadow-[0_0_15px_rgba(16,185,129,0.35)]"
             >
               {isEditing ? 'Salvar' : 'Criar votação'}
             </button>
@@ -983,6 +1030,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const importFileRef = useRef<HTMLInputElement>(null);
   const fileUploadReplaceRef = useRef<HTMLInputElement>(null);
   const fileUploadAppendRef = useRef<HTMLInputElement>(null);
+  const namesTextareaRef = useRef<HTMLTextAreaElement>(null);
 
   const showNotification = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -1020,6 +1068,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       console.error(e);
     }
     showNotification('success', 'Histórico de votações limpo com sucesso.');
+  };
+
+  const handleDownloadAtaPdf = (record: VotingHistoryRecord) => {
+    try {
+      generateAtaPdf(record);
+      showNotification('success', `Ata em PDF de "${record.headerTitle}" gerada com sucesso!`);
+    } catch (err) {
+      console.error(err);
+      showNotification('error', 'Erro ao gerar o arquivo PDF da Ata.');
+    }
   };
 
   const handleCopyHistoryAta = (record: VotingHistoryRecord) => {
@@ -1374,8 +1432,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           >
             <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow self-center" />
             <div className="flex flex-col items-center text-center gap-1">
-              <span className="font-black text-sm sm:text-base tracking-wide uppercase text-white drop-shadow">
-                {tieWarningModal}
+              <span className="font-black text-sm sm:text-base tracking-wide uppercase text-white drop-shadow flex items-center justify-center gap-1.5 flex-wrap">
+                <span>VOCÊ JÁ ESCOLHEU</span>
+                <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-xl sm:text-2xl leading-none">
+                  {tieWarningModal.replace('VOCÊ JÁ ESCOLHEU ', '')}
+                </span>
               </span>
               <span className="text-[13px] sm:text-[14px] text-emerald-100 font-bold tracking-normal normal-case leading-snug">
                 Para escolher outro, desmarque algum.
@@ -1414,7 +1475,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               exit={{ opacity: 0, scale: 0.92, y: 10 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-xl bg-gradient-to-b from-[#002657] to-[#07132a] border border-rose-500/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_35px_rgba(244,63,94,0.35),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden my-auto"
+              className="relative w-full max-w-xl bg-gradient-to-b from-[#002657] to-[#07132a] border-2 border-emerald-500 rounded-2xl p-4 sm:p-6 shadow-[0_0_35px_rgba(16,185,129,0.35),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden my-auto"
             >
               {/* Botão Fechar (X) */}
               <button
@@ -1431,55 +1492,135 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </button>
 
               {/* Header do Modal (CENTRALIZADO) */}
-              <div className="text-center mb-4 pb-3 border-b border-rose-500/30">
+              <div className="text-center mb-4 pb-3 border-b border-emerald-500/30">
                 <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white">
                   VOTAÇÃO PARA DESEMPATAR
                 </h3>
               </div>
 
               {/* Lista de Grupos de Empate */}
-              <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+              <div className="space-y-3.5 max-h-[65vh] overflow-y-auto pr-1">
                 {detectedTies.map((tie, idx) => {
                   const maxAllowed = tie.vacanciesInDispute + 1;
+
+                  // Cores e estilos específicos para cada categoria (TITULAR, 1º SUPLENTE, 2º SUPLENTE)
+                  const getTieCategoryStyles = (type: string, label: string) => {
+                    if (type === 'TITULAR' || /titular/i.test(label)) {
+                      return {
+                        title: 'TITULAR',
+                        container: 'bg-[#031d15]/95 border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.18)]',
+                        headerBorder: 'border-emerald-500/30',
+                        badgeText: 'text-emerald-400',
+                        dot: 'bg-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.9)]',
+                        cardBase: 'bg-[#06241a] border border-emerald-500/50 hover:border-emerald-400 text-white',
+                        cardSelected: 'bg-emerald-950/90 border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/40 text-white',
+                        iconBoxBase: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
+                        iconBoxSelected: 'bg-emerald-500/25 border-emerald-400 text-emerald-300',
+                        starBase: 'fill-emerald-400 text-emerald-400',
+                        starSelected: 'fill-emerald-300 text-emerald-300',
+                        subTextBase: 'text-emerald-300/80',
+                        subTextSelected: 'text-emerald-200 font-bold',
+                        circleSelected: 'border-emerald-400 bg-emerald-400 text-emerald-950',
+                        btnEnviar: 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.45)] text-white',
+                      };
+                    }
+                    if (type === 'SUPLENTE_1' || /1[ºªo]?\s*suplente/i.test(label)) {
+                      return {
+                        title: '1º SUPLENTE',
+                        container: 'bg-[#06152d]/95 border-blue-500/60 shadow-[0_0_20px_rgba(59,130,246,0.18)]',
+                        headerBorder: 'border-blue-500/30',
+                        badgeText: 'text-blue-400',
+                        dot: 'bg-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.9)]',
+                        cardBase: 'bg-[#081c3b] border border-blue-500/50 hover:border-blue-400 text-white',
+                        cardSelected: 'bg-blue-950/90 border-2 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.35)] ring-2 ring-blue-400/40 text-white',
+                        iconBoxBase: 'bg-blue-500/15 border-blue-500/40 text-blue-400',
+                        iconBoxSelected: 'bg-blue-500/25 border-blue-400 text-blue-300',
+                        starBase: 'fill-blue-400 text-blue-400',
+                        starSelected: 'fill-blue-300 text-blue-300',
+                        subTextBase: 'text-blue-300/80',
+                        subTextSelected: 'text-blue-200 font-bold',
+                        circleSelected: 'border-blue-400 bg-blue-400 text-blue-950',
+                        btnEnviar: 'bg-blue-600 hover:bg-blue-500 border border-blue-400 shadow-[0_0_14px_rgba(59,130,246,0.45)] text-white',
+                      };
+                    }
+                    if (type === 'SUPLENTE_2' || /2[ºªo]?\s*suplente/i.test(label)) {
+                      return {
+                        title: '2º SUPLENTE',
+                        container: 'bg-[#0e1726]/95 border-slate-500/60 shadow-[0_0_20px_rgba(100,116,139,0.18)]',
+                        headerBorder: 'border-slate-500/30',
+                        badgeText: 'text-slate-300',
+                        dot: 'bg-slate-400 drop-shadow-[0_0_6px_rgba(148,163,184,0.9)]',
+                        cardBase: 'bg-[#131d2e] border border-slate-500/50 hover:border-slate-400 text-white',
+                        cardSelected: 'bg-slate-900/90 border-2 border-slate-300 shadow-[0_0_12px_rgba(148,163,184,0.35)] ring-2 ring-slate-400/40 text-white',
+                        iconBoxBase: 'bg-slate-500/15 border-slate-500/40 text-slate-400',
+                        iconBoxSelected: 'bg-slate-500/25 border-slate-300 text-slate-200',
+                        starBase: 'fill-slate-400 text-slate-400',
+                        starSelected: 'fill-slate-300 text-slate-300',
+                        subTextBase: 'text-slate-300/80',
+                        subTextSelected: 'text-slate-200 font-bold',
+                        circleSelected: 'border-slate-300 bg-slate-300 text-slate-950',
+                        btnEnviar: 'bg-slate-600 hover:bg-slate-500 border border-slate-400 shadow-[0_0_14px_rgba(100,116,139,0.45)] text-white',
+                      };
+                    }
+                    return {
+                      title: tie.label.replace(/^Empate para (vaga de )?/i, '').toUpperCase() || 'DESEMPATE',
+                      container: 'bg-[#1a0a10]/95 border-rose-500/60 shadow-[0_0_20px_rgba(244,63,94,0.18)]',
+                      headerBorder: 'border-rose-500/30',
+                      badgeText: 'text-rose-400',
+                      dot: 'bg-rose-400 drop-shadow-[0_0_6px_rgba(251,113,133,0.9)]',
+                      cardBase: 'bg-[#220d16] border border-rose-500/50 hover:border-rose-400 text-white',
+                      cardSelected: 'bg-rose-950/90 border-2 border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.35)] ring-2 ring-rose-400/40 text-white',
+                      iconBoxBase: 'bg-rose-500/15 border-rose-500/40 text-rose-400',
+                      iconBoxSelected: 'bg-rose-500/25 border-rose-400 text-rose-300',
+                      starBase: 'fill-rose-400 text-rose-400',
+                      starSelected: 'fill-rose-300 text-rose-300',
+                      subTextBase: 'text-rose-300/80',
+                      subTextSelected: 'text-rose-200 font-bold',
+                      circleSelected: 'border-rose-400 bg-rose-400 text-rose-950',
+                      btnEnviar: 'bg-rose-600 hover:bg-rose-500 border border-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.45)] text-white',
+                    };
+                  };
+
+                  const styles = getTieCategoryStyles(tie.type, tie.label);
+
                   return (
                     <div
                       key={idx}
-                      className="p-3.5 rounded-xl bg-[#03152d]/90 border border-rose-500/50 space-y-3 shadow-inner"
+                      className={`p-3 rounded-xl border space-y-2.5 shadow-inner transition-colors ${styles.container}`}
                     >
-                      <div className="border-b border-rose-500/20 pb-2.5">
-                        <h4 className="font-black text-xs sm:text-sm tracking-wide flex items-center flex-wrap gap-1 text-white uppercase select-none">
-                          <span>{tie.vacanciesInDispute === 1 ? 'É' : 'SÃO'}</span>
-                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
-                            {String(tie.vacanciesInDispute).padStart(2, '0')}
+                      {/* Header do Grupo com Título, Vagas e BOTÃO ENVIAR à direita (sem linha debaixo) */}
+                      <div className="flex items-center justify-between gap-3 pb-1">
+                        <div className="min-w-0 flex-1 flex items-center flex-wrap gap-1.5">
+                          <span className={`px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider ${styles.badgeText} bg-white/10 border border-white/15 shrink-0`}>
+                            {styles.title}
                           </span>
-                          <span>{tie.vacanciesInDispute === 1 ? 'VAGA, ESCOLHA' : 'VAGAS, ESCOLHA'}</span>
-                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs sm:text-sm shadow-sm leading-none mx-0.5">
-                            {String(tie.vacanciesInDispute + 1).padStart(2, '0')}
-                          </span>
-                          <span>NOMES</span>
-                        </h4>
-
-                        <div className="w-full h-px bg-emerald-800/80 my-2" />
-
-                        <div className="flex items-center gap-2 text-xs sm:text-sm font-black uppercase tracking-wider select-none">
-                          <span className="text-white font-black">
-                            {tie.type === 'TITULAR'
-                              ? 'TITULAR'
-                              : tie.type === 'SUPLENTE_1'
-                              ? '1º SUPLENTE'
-                              : tie.type === 'SUPLENTE_2'
-                              ? '2º SUPLENTE'
-                              : tie.label.replace(/^Empate para (vaga de )?/i, '').toUpperCase()}
-                          </span>
-                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse drop-shadow-[0_0_6px_rgba(52,211,153,0.9)] shrink-0 inline-block" />
-                          <span className="text-amber-300 font-mono font-black">
-                            {String(tie.votesCount).padStart(2, '0')} {tie.votesCount === 1 ? 'VOTO CADA' : 'VOTOS CADA'}
-                          </span>
+                          <h4 className="font-black text-xs sm:text-sm tracking-wide flex items-center flex-wrap gap-1 text-white uppercase select-none leading-tight">
+                            <span>ESCOLHA</span>
+                            <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-base sm:text-lg leading-none mx-0.5">
+                              {String(tie.vacanciesInDispute + 1).padStart(2, '0')}
+                            </span>
+                            <span>{tie.vacanciesInDispute + 1 === 1 ? 'NOME PARA DISPUTA' : 'NOMES PARA DISPUTA'}</span>
+                            <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-base sm:text-lg leading-none mx-0.5">
+                              {String(tie.vacanciesInDispute).padStart(2, '0')}
+                            </span>
+                            <span>{tie.vacanciesInDispute === 1 ? 'VAGA' : 'VAGAS'}</span>
+                          </h4>
                         </div>
+
+                        {/* Botão ENVIAR no lado direito com a cor da categoria */}
+                        <button
+                          type="button"
+                          onClick={() => handleStartTieBreak(tie)}
+                          title={`Iniciar votação de desempate para ${styles.title}`}
+                          className={`shrink-0 px-3.5 py-1.5 rounded-lg font-black text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-150 active:scale-95 cursor-pointer shadow-md select-none ${styles.btnEnviar}`}
+                        >
+                          <span>ENVIAR</span>
+                          <ChevronsRight className="w-4 h-4 stroke-[2.5]" />
+                        </button>
                       </div>
 
-                      {/* Cards dos Candidatos Empatados (Clicáveis para o admin selecionar quem desempata) */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {/* Cards dos Candidatos Empatados (Reduzidos em ~30%) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                         {tie.tiedCandidates.map((c) => {
                           const isSelected = selectedTieCandidateIds.includes(c.id);
 
@@ -1487,116 +1628,56 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             <div
                               key={c.id}
                               onClick={() => handleToggleTieCandidate(c.id, maxAllowed)}
-                            className={`p-2.5 rounded-xl border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
-                              isSelected
-                                ? 'bg-emerald-950/60 border-2 border-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.35)] ring-2 ring-emerald-400/40 text-white'
-                                : 'bg-[#07132a] border border-rose-500/80 hover:border-rose-400 text-white'
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              {c.photoUrl ? (
-                                <img
-                                  src={c.photoUrl}
-                                  alt={c.name}
-                                  className="w-8 h-8 rounded-lg object-cover border border-rose-400/50 shrink-0"
-                                />
-                              ) : (
-                                <div
-                                  className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border ${
-                                    isSelected
-                                      ? 'bg-emerald-500/20 border-emerald-400 text-emerald-300'
-                                      : 'bg-rose-500/15 border-rose-500/40 text-rose-400'
-                                  }`}
-                                >
-                                  <Star className={`w-4 h-4 ${isSelected ? 'fill-emerald-400 text-emerald-400' : 'fill-rose-400 text-rose-400'}`} />
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <h5 className="font-black text-xs sm:text-sm text-white uppercase truncate">
-                                  {c.name}
-                                </h5>
-                                <span className={`inline-flex items-center gap-1 text-[8.5px] font-black uppercase ${
-                                  isSelected ? 'text-emerald-300' : 'text-rose-300'
-                                }`}>
-                                  <Star className="w-2 h-2 fill-current" />
-                                  EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
-                                </span>
-                              </div>
-                            </div>
-
-                            {/* Indicador de Seleção Circular */}
-                            <div
-                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                isSelected
-                                  ? 'border-emerald-400 bg-emerald-400 text-blue-950 scale-105 shadow-sm'
-                                  : 'border-slate-600 bg-slate-900/60'
+                              className={`py-1.5 px-2.5 rounded-lg border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
+                                isSelected ? styles.cardSelected : styles.cardBase
                               }`}
                             >
-                              {isSelected && <CheckCircle className="w-3.5 h-3.5 stroke-[3]" />}
+                              <div className="flex items-center gap-2 min-w-0">
+                                {c.photoUrl ? (
+                                  <img
+                                    src={c.photoUrl}
+                                    alt={c.name}
+                                    className="w-6 h-6 rounded-md object-cover border border-white/20 shrink-0"
+                                  />
+                                ) : (
+                                  <div
+                                    className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 border ${
+                                      isSelected ? styles.iconBoxSelected : styles.iconBoxBase
+                                    }`}
+                                  >
+                                    <Star className={`w-3 h-3 ${isSelected ? styles.starSelected : styles.starBase}`} />
+                                  </div>
+                                )}
+                                <div className="min-w-0">
+                                  <h5 className="font-black text-[11px] sm:text-xs text-white uppercase truncate leading-tight">
+                                    {c.name}
+                                  </h5>
+                                  <span className={`inline-flex items-center gap-1 text-[7.5px] font-black uppercase leading-tight ${
+                                    isSelected ? styles.subTextSelected : styles.subTextBase
+                                  }`}>
+                                    <Star className="w-2 h-2 fill-current" />
+                                    EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Indicador de Seleção Circular Compacto */}
+                              <div
+                                className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                  isSelected
+                                    ? styles.circleSelected
+                                    : 'border-slate-600 bg-slate-900/60'
+                                }`}
+                              >
+                                {isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />}
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
-
-              {/* Rodapé do Modal: BOTÃO 3D URNA "CONFIRMA" VERDE COM BRAILLE (PRINT) CENTRALIZADO NO RODAPÉ */}
-              <div className="mt-4 pt-3 border-t border-slate-700/60 flex flex-col items-center justify-center w-full">
-                <button
-                  type="button"
-                  onClick={() => handleStartTieBreak(detectedTies[0])}
-                  title="Iniciar votação para desempate entre os candidatos selecionados"
-                  style={{
-                    backgroundColor: '#159636',
-                    borderColor: '#24b349',
-                    boxShadow: '0 6px 0 #09521b, 3px 6px 0 #063b13',
-                  }}
-                  className="px-10 pt-2.5 pb-3 rounded-[14px] border-[3px] transition-all duration-200 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none"
-                >
-                  <span className="font-black text-lg sm:text-xl tracking-wider uppercase font-sans text-[#1a1a1a] leading-none">
-                    CONFIRMA
-                  </span>
-
-                  {/* Pontos em Braille 3D idênticos à tecla física da Urna (Print) */}
-                  <div className="flex flex-col items-center gap-[2.5px] mt-2 pointer-events-none">
-                    {/* Linha 1: 3 pontos à esquerda, espaço, 4 pontos à direita */}
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2.5" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                    </div>
-                    {/* Linha 2 */}
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 opacity-0" />
-                    </div>
-                    {/* Linha 3 */}
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2.5" />
-                      <span className="w-2 h-2 rounded-full bg-[#24b84b] shadow-[1px_1.5px_0_#074215]" />
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 opacity-0" />
-                      <span className="w-2 h-2 opacity-0" />
-                    </div>
-                  </div>
-                </button>
+                  );
+                })}
               </div>
             </motion.div>
           </motion.div>
@@ -1771,11 +1852,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             />
 
             {/* EVENTOS CRIADOS COM BORDA DESIGNER DIRECIONAL */}
-            {eventsList.map((evt) => {
+            {eventsList.map((evt, index) => {
               const isSelected = evt.id === currentActiveEventId;
               const count = isSelected ? session.options.length : (evt.options?.length || 0);
               const displayName = isSelected ? (session.title || evt.name) : evt.name;
-              const isEditingThisEvt = isCreatingNewEvent && editingEventId === evt.id;
+              // Garante que o modal só abra em exatamente 1 card, sem sobreposição
+              const isEditingThisEvt =
+                isCreatingNewEvent &&
+                editingEventId === evt.id &&
+                index === eventsList.findIndex((e) => e.id === editingEventId);
               return (
                 <div key={evt.id} className="relative flex items-center">
                   <div
@@ -2027,7 +2112,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       </div>
 
       {/* BANNER DE AVISO DE EMPATE (50% MAIS ESTREITO, CENTRALIZADO, COM CAPTION E BOTÃO À DIREITA) */}
-      {hasTies && (
+      {hasTies && allHaveVoted && (
         <div className="mb-3 px-4 py-2.5 rounded-xl bg-[#141721] border border-rose-500/80 shadow-[0_0_20px_rgba(244,63,94,0.25)] flex items-center justify-between gap-3 w-full sm:w-[50%] min-w-[340px] max-w-[620px] mx-auto backdrop-blur-sm">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
@@ -2047,6 +2132,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </button>
         </div>
       )}
+
+
 
       {/* PAINEL REVELADO PELA ENGRENAGEM: DESLIZA SUAVEMENTE EMPURRANDO AS SEÇÕES ABAIXO, RECOLHE COM ESC / CLIQUE FORA / ENGRENAGEM */}
       <AnimatePresence initial={false}>
@@ -2101,8 +2188,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           <div className="w-6 h-6 rounded-lg bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
                             <Tv className="w-3.5 h-3.5 text-slate-300" />
                           </div>
-                          <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight">
-                            Configuração de como será exibido os elementos no Telão [público]
+                          <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight flex items-center gap-1.5 flex-wrap">
+                            <span>Configuração de como será exibido os elementos no Telão</span>
+                            <span className="font-bold text-sky-400 uppercase tracking-wide">PÚBLICO</span>
                           </span>
                         </div>
 
@@ -2456,133 +2544,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       </div>
                     </div>
 
-                    {/* CARD 2: REGRAS GERAIS DA ELEIÇÃO (PADRÕES) - COMPACTO / ESMAGADO */}
-                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3 space-y-2.5 shadow-lg">
-                      {/* Cabeçalho Compacto */}
-                      <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded bg-white/[0.05] border border-white/[0.08] flex items-center justify-center text-slate-200 shrink-0">
-                            <Sliders className="w-3.5 h-3.5 text-slate-300" />
-                          </div>
-                          <span className="font-medium text-slate-100 text-xs tracking-tight">
-                            Regras da Eleição (Padrões do Sistema)
-                          </span>
-                        </div>
-
-                        <span className="text-[10px] text-slate-400 font-normal px-2.5 py-1 rounded bg-white/[0.03] border border-white/[0.06]">
-                          Novas votações herdam estes padrões
-                        </span>
-                      </div>
-
-                      {/* Grade Compacta de 4 Módulos Estúdio em 1 Linha */}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                        {/* 1. Titulares (Geral) */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
-                          <span className="text-xs font-medium text-slate-300 shrink-0">
-                            Titulares:
-                          </span>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              min={1}
-                              max={99}
-                              value={session.vacancies || 1}
-                              onChange={(e) => {
-                                const val = Math.max(1, parseInt(e.target.value) || 1);
-                                saveSession({ ...session, vacancies: val, maxVotesPerVoter: val });
-                              }}
-                              className="w-16 px-2 py-1 bg-[#141721] border border-white/[0.08] rounded text-center text-amber-300 font-semibold text-xs outline-none focus:border-emerald-500/50"
-                            />
-                            <span className="text-[11px] text-slate-400 font-medium">vagas</span>
-                          </div>
-                        </div>
-
-                        {/* 2. 1º Suplente */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="checkbox"
-                              checked={session.habilitarSuplente1 !== false}
-                              onChange={(e) => {
-                                saveSession({ ...session, habilitarSuplente1: e.target.checked });
-                              }}
-                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
-                            />
-                            <span className="text-xs font-medium text-slate-300">
-                              1º Suplente:
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              min={1}
-                              max={99}
-                              disabled={session.habilitarSuplente1 === false}
-                              value={session.habilitarSuplente1 === false ? 0 : (session.suplentesCount ?? 1)}
-                              onChange={(e) => {
-                                const val = Math.max(1, parseInt(e.target.value) || 1);
-                                saveSession({ ...session, suplentesCount: val });
-                              }}
-                              className="w-16 px-2 py-1 bg-[#141721] border border-white/[0.08] rounded text-center text-blue-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
-                            />
-                            <span className="text-[11px] text-slate-400 font-medium">vagas</span>
-                          </div>
-                        </div>
-
-                        {/* 3. 2º Suplente */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="checkbox"
-                              checked={session.habilitarSuplente2 === true}
-                              onChange={(e) => {
-                                saveSession({ ...session, habilitarSuplente2: e.target.checked });
-                              }}
-                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
-                            />
-                            <span className="text-xs font-medium text-slate-300">
-                              2º Suplente:
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="number"
-                              min={1}
-                              max={99}
-                              disabled={session.habilitarSuplente2 !== true}
-                              value={session.habilitarSuplente2 !== true ? 0 : (session.segundoSuplentesCount ?? 1)}
-                              onChange={(e) => {
-                                const val = Math.max(1, parseInt(e.target.value) || 1);
-                                saveSession({ ...session, segundoSuplentesCount: val });
-                              }}
-                              className="w-16 px-2 py-1 bg-[#141721] border border-white/[0.08] rounded text-center text-slate-300 font-semibold text-xs outline-none focus:border-emerald-500/50 disabled:opacity-30"
-                            />
-                            <span className="text-[11px] text-slate-400 font-medium">vagas</span>
-                          </div>
-                        </div>
-
-                        {/* 4. Resolver Empates */}
-                        <div className="bg-[#0b0d13] border border-white/[0.06] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
-                          <div className="flex items-center gap-1.5">
-                            <input
-                              type="checkbox"
-                              checked={session.resolverEmpates !== false}
-                              onChange={(e) => {
-                                saveSession({ ...session, resolverEmpates: e.target.checked });
-                              }}
-                              className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5"
-                            />
-                            <span className="text-xs font-medium text-slate-300 flex items-center gap-1">
-                              <Star className="w-3 h-3 text-amber-400" />
-                              Desempate
-                            </span>
-                          </div>
-                          <span className="text-[10.5px] text-slate-400">
-                            {session.resolverEmpates !== false ? 'Rodada ativa' : 'Majoritária'}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
 
                     {/* CARD 3: HISTÓRICO DE VOTAÇÕES ENCERRADAS (EM CONFIGURAÇÕES) */}
                     <div
@@ -2658,12 +2619,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => handleCopyHistoryAta(record)}
-                                    title="Copiar ata / resultado formatado"
-                                    className="px-2 py-1 rounded bg-white/[0.06] hover:bg-white/[0.12] text-slate-200 text-[11px] font-medium transition cursor-pointer flex items-center gap-1 active:scale-95"
+                                    onClick={() => handleDownloadAtaPdf(record)}
+                                    title="Baixar Ata Oficial em PDF (A4 / ABNT)"
+                                    className="px-2.5 py-1 rounded bg-white/[0.06] hover:bg-white/[0.14] border border-white/[0.1] hover:border-amber-400/40 text-slate-200 hover:text-white text-[11px] font-semibold transition cursor-pointer flex items-center gap-1.5 active:scale-95 shadow-sm"
                                   >
-                                    <Copy className="w-3 h-3 text-amber-300" />
-                                    <span>Copiar Ata</span>
+                                    <FileDown className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>Baixar Ata</span>
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopyHistoryAta(record)}
+                                    title="Copiar texto da ata"
+                                    className="p-1 rounded bg-white/[0.04] hover:bg-white/[0.1] text-slate-400 hover:text-slate-200 text-[11px] transition cursor-pointer flex items-center active:scale-95"
+                                  >
+                                    <Copy className="w-3 h-3" />
                                   </button>
                                   <button
                                     type="button"
@@ -3242,7 +3211,198 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               exit="exit"
               className="space-y-3.5 flex-1 flex flex-col min-h-0"
             >
-              {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
+              {/* 1. NOMES PARA ESCOLHA (TÍTULO COM NÚMERO BOLD E AZUL) */}
+              <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg flex-1">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
+                    <span>
+                      Nomes para escolha (<span className="font-bold text-blue-400">{session.options.length}</span>)
+                    </span>
+                  </h3>
+                  {(session.options.length > 0 || backupNamesList.length > 0) && (
+                    <div className="flex items-center gap-2">
+                      {/* Botão Recuperar Nomes */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sourceNames =
+                            session.options.length > 0
+                              ? session.options.map((o) => o.name)
+                              : backupNamesList;
+                          if (sourceNames.length === 0) return;
+                          const commaSeparated = sourceNames.join(', ');
+                          setNewName((prev) =>
+                            prev.trim() ? `${prev.trim()}, ${commaSeparated}` : commaSeparated
+                          );
+                          showNotification(
+                            'success',
+                            `${sourceNames.length} nomes enviados para o campo de digitação abaixo (separados por vírgula)!`
+                          );
+                        }}
+                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                        title="Jogar todos os nomes na caixa de digitação abaixo separados por vírgula"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Recuperar nomes</span>
+                      </button>
+
+                      {session.options.length > 0 && (
+                        <>
+                          {/* Botão A-Z */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const sorted = [...session.options].sort((a, b) =>
+                                a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+                              );
+                              saveSession({ ...session, options: sorted });
+                              showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
+                            }}
+                            className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                            title="Ordenar nomes em ordem alfabética (A-Z)"
+                          >
+                            <ArrowDownAZ className="w-3.5 h-3.5" />
+                            <span>A-Z</span>
+                          </button>
+
+                          {/* Botão Limpar Tudo (Apenas o ícone de lixeira) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setConfirmModal({
+                                title: 'Limpar Todos os Nomes',
+                                highlight: `${session.options.length} nomes cadastrados`,
+                                description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
+                                confirmLabel: 'Sim, Limpar Tudo',
+                                onConfirm: () => {
+                                  setBackupNamesList(session.options.map((o) => o.name));
+                                  saveSession({ ...session, options: [] });
+                                  setConfirmModal(null);
+                                  showNotification('success', 'Todos os nomes foram apagados.');
+                                },
+                              });
+                            }}
+                            className="p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
+                            title="Apagar todos os nomes cadastrados"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {session.options.length === 0 ? (
+                  <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/60 flex flex-col items-center justify-center gap-3">
+                    <span>Nenhum nome cadastrado ainda. Digite ou fale no campo abaixo para começar!</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        namesTextareaRef.current?.focus();
+                        namesTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
+                      className="px-4 py-2 rounded-lg border border-emerald-500/60 hover:border-emerald-400 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-200 flex items-center gap-2 font-medium text-xs transition cursor-pointer shadow-sm active:scale-95 group"
+                    >
+                      <Plus className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      <span>+ Adicionar nome</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    <AnimatePresence mode="popLayout">
+                      {[...session.options]
+                        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
+                        .map((option) => {
+                          const isEditing = editingCandidateId === option.id;
+                          const isGlowing = Boolean(
+                            glowingIds[option.id] ||
+                              (option.createdAt && Date.now() - option.createdAt < 1500)
+                          );
+                          return (
+                            <motion.div
+                              layout
+                              key={option.id}
+                              initial={{ opacity: 0, scale: 0.82, y: -10 }}
+                              animate={{
+                                opacity: 1,
+                                scale: isGlowing ? 1.04 : 1,
+                                y: 0,
+                              }}
+                              exit={{ opacity: 0, scale: 0.85 }}
+                              transition={{
+                                layout: { type: 'spring', stiffness: 320, damping: 26 },
+                                duration: 0.35,
+                              }}
+                              className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
+                                isGlowing
+                                  ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
+                                  : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
+                              }`}
+                            >
+                              {/* Nome Editável Inline */}
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingCandidateName}
+                                  onChange={(e) => setEditingCandidateName(e.target.value)}
+                                  onBlur={() => handleSaveCandidateEdit(option.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
+                                    if (e.key === 'Escape') setEditingCandidateId(null);
+                                  }}
+                                  className="w-full min-w-0 px-2 py-0.5 bg-[#141721] border border-emerald-500/50 rounded text-xs text-slate-100 font-normal outline-none"
+                                />
+                              ) : (
+                                <span
+                                  onClick={() => {
+                                    setEditingCandidateId(option.id);
+                                    setEditingCandidateName(option.name);
+                                  }}
+                                  className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
+                                    isGlowing
+                                      ? 'text-emerald-200'
+                                      : 'text-slate-200 hover:text-white'
+                                  }`}
+                                  title={`${option.name} (Clique para editar)`}
+                                >
+                                  {option.name}
+                                </span>
+                              )}
+
+                              {/* Botão de Excluir */}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCandidate(option.id)}
+                                title="Remover nome"
+                                className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </motion.div>
+                          );
+                        })}
+                    </AnimatePresence>
+
+                    {/* Botão verde sempre após o último nome (referência Print 2) */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        namesTextareaRef.current?.focus();
+                        namesTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                      }}
+                      className="w-full px-3 py-2 rounded-lg border border-emerald-500/60 hover:border-emerald-400 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-200 flex items-center justify-center gap-1.5 font-medium text-xs transition-all duration-150 cursor-pointer shadow-sm active:scale-95 group min-h-[38px]"
+                      title="Adicionar novo nome (foca no campo Digite ou fale os nomes)"
+                    >
+                      <Plus className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
+                      <span>+ Adicionar nome</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 2. SEÇÃO DE DIGITAÇÃO / VOZ - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
               <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg">
                 <div className="flex flex-col justify-between gap-3 min-w-0">
                   {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
@@ -3385,6 +3545,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   {/* Textarea com Microfone e Botão Adicionar */}
                   <div className="flex-1 relative flex flex-col">
                     <textarea
+                      ref={namesTextareaRef}
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
                       onKeyDown={(e) => {
@@ -3395,21 +3556,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         }
                       }}
                       placeholder="Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)..."
-                      className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-14 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
+                      className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-16 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
                     />
 
-                    {/* Microfone no canto superior direito */}
+                    {/* Microfone centralizado verticalmente e 25% maior */}
                     <button
                       type="button"
                       onClick={toggleListening}
                       title={isListening ? 'Parar digitação por voz' : 'Iniciar digitação por voz'}
-                      className={`absolute right-3 top-3 w-9 h-9 rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                      className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-[45px] h-[45px] rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
                         isListening
                           ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
                           : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
                       }`}
                     >
-                      {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
+                      {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                     </button>
 
                     {/* Botão Adicionar no canto inferior direito quando houver texto */}
@@ -3449,169 +3610,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </div>
               </div>
 
-              {/* 2. NOMES CADASTRADOS - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
-              <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg flex-1">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
-                <span>Nomes para escolha ({session.options.length})</span>
-              </h3>
-              {(session.options.length > 0 || backupNamesList.length > 0) && (
-                <div className="flex items-center gap-2">
-                  {/* Botão Recuperar Nomes */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const sourceNames =
-                        session.options.length > 0
-                          ? session.options.map((o) => o.name)
-                          : backupNamesList;
-                      if (sourceNames.length === 0) return;
-                      const commaSeparated = sourceNames.join(', ');
-                      setNewName((prev) =>
-                        prev.trim() ? `${prev.trim()}, ${commaSeparated}` : commaSeparated
-                      );
-                      showNotification(
-                        'success',
-                        `${sourceNames.length} nomes enviados para o campo de digitação acima (separados por vírgula)!`
-                      );
-                    }}
-                    className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                    title="Jogar todos os nomes na caixa de digitação acima separados por vírgula"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Recuperar nomes</span>
-                  </button>
-
-                  {session.options.length > 0 && (
-                    <>
-                      {/* Botão A-Z */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sorted = [...session.options].sort((a, b) =>
-                            a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
-                          );
-                          saveSession({ ...session, options: sorted });
-                          showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
-                        }}
-                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                        title="Ordenar nomes em ordem alfabética (A-Z)"
-                      >
-                        <ArrowDownAZ className="w-3.5 h-3.5" />
-                        <span>A-Z</span>
-                      </button>
-
-                      {/* Botão Limpar Tudo (Apenas o ícone de lixeira) */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setConfirmModal({
-                            title: 'Limpar Todos os Nomes',
-                            highlight: `${session.options.length} nomes cadastrados`,
-                            description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
-                            confirmLabel: 'Sim, Limpar Tudo',
-                            onConfirm: () => {
-                              setBackupNamesList(session.options.map((o) => o.name));
-                              saveSession({ ...session, options: [] });
-                              setConfirmModal(null);
-                              showNotification('success', 'Todos os nomes foram apagados.');
-                            },
-                          });
-                        }}
-                        className="p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
-                        title="Apagar todos os nomes cadastrados"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {session.options.length === 0 ? (
-              <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/60">
-                Nenhum nome cadastrado ainda. Digite ou fale no campo acima para começar!
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                <AnimatePresence mode="popLayout">
-                  {[...session.options]
-                    .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
-                    .map((option) => {
-                      const isEditing = editingCandidateId === option.id;
-                      const isGlowing = Boolean(
-                        glowingIds[option.id] ||
-                          (option.createdAt && Date.now() - option.createdAt < 1500)
-                      );
-                      return (
-                        <motion.div
-                          layout
-                          key={option.id}
-                          initial={{ opacity: 0, scale: 0.82, y: -10 }}
-                          animate={{
-                            opacity: 1,
-                            scale: isGlowing ? 1.04 : 1,
-                            y: 0,
-                          }}
-                          exit={{ opacity: 0, scale: 0.85 }}
-                          transition={{
-                            layout: { type: 'spring', stiffness: 320, damping: 26 },
-                            duration: 0.35,
-                          }}
-                          className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
-                            isGlowing
-                              ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
-                              : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
-                          }`}
-                        >
-                          {/* Nome Editável Inline */}
-                          {isEditing ? (
-                            <input
-                              type="text"
-                              autoFocus
-                              value={editingCandidateName}
-                              onChange={(e) => setEditingCandidateName(e.target.value)}
-                              onBlur={() => handleSaveCandidateEdit(option.id)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
-                                if (e.key === 'Escape') setEditingCandidateId(null);
-                              }}
-                              className="w-full min-w-0 px-2 py-0.5 bg-[#141721] border border-emerald-500/50 rounded text-xs text-slate-100 font-normal outline-none"
-                            />
-                          ) : (
-                            <span
-                              onClick={() => {
-                                setEditingCandidateId(option.id);
-                                setEditingCandidateName(option.name);
-                              }}
-                              className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
-                                isGlowing
-                                  ? 'text-emerald-200'
-                                  : 'text-slate-200 hover:text-white'
-                              }`}
-                              title={`${option.name} (Clique para editar)`}
-                            >
-                              {option.name}
-                            </span>
-                          )}
-
-                          {/* Botão de Excluir */}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveCandidate(option.id)}
-                            title="Remover nome"
-                            className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </motion.div>
-                      );
-                    })}
-                </AnimatePresence>
-              </div>
-            )}
-          </div>
         </motion.div>
       )}
     </AnimatePresence>

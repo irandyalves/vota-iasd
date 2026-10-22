@@ -24,8 +24,8 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
   if (session.resolverEmpates === false) {
     return [];
   }
-  // Se o desempate já foi resolvido ou está em andamento, não acusa mais empate na apuração
-  if (session.tieBreak?.resolved || session.status === 'TIE_BREAK') {
+  // Se o desempate está ativamente em andamento, não acusa novo empate até terminar a rodada
+  if (session.status === 'TIE_BREAK' && session.tieBreak?.active) {
     return [];
   }
   const ties: TieInfo[] = [];
@@ -75,7 +75,7 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
       ties.push({
         type: 'SUPLENTE_1',
         label: 'Empate para 1º Suplente',
-        votesCount: cutoffVotes,
+        votesCount: Math.floor(cutoffVotes),
         tiedCandidates,
         vacanciesInDispute,
       });
@@ -89,7 +89,7 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
     const firstNonS2 = options[boundaryS2];
     const cutoffVotes = lastS2?.votesCount || 0;
 
-    const priorTie = ties.find((t) => t.votesCount === cutoffVotes);
+    const priorTie = ties.find((t) => t.votesCount === Math.floor(cutoffVotes));
     if (cutoffVotes > 0 && cutoffVotes === (firstNonS2?.votesCount || 0) && !priorTie) {
       const candidatesWithHigherVotes = options.filter((o) => (o.votesCount || 0) > cutoffVotes);
       const tiedCandidates = options.filter((o) => (o.votesCount || 0) === cutoffVotes);
@@ -98,7 +98,7 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
       ties.push({
         type: 'SUPLENTE_2',
         label: 'Empate para 2º Suplente',
-        votesCount: cutoffVotes,
+        votesCount: Math.floor(cutoffVotes),
         tiedCandidates,
         vacanciesInDispute,
       });
