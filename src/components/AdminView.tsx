@@ -197,6 +197,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     return unsub;
   }, [session?.id]);
 
+  const isSessionLocked = Boolean(session.accessLocked);
+  const currentVotersVoted = session.status === 'TIE_BREAK' ? (session.tieBreakVotersCount || 0) : (session.mainVotersCount || 0);
   const displayVotersCount = Math.max(session.mainVotersCount || 0, connectedVotersCount);
 
   // Escuta o evento emitido pelo botão branco ("APURAÇÃO") da Navbar
@@ -744,13 +746,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
 
             <div className="sm:col-span-1">
-              <label className="text-xs font-normal text-slate-300 block mb-1 whitespace-nowrap">
-                Qdte de votantes:
-              </label>
+              <div className="flex items-center justify-between mb-1 gap-1">
+                <label className="text-xs font-normal text-slate-300 block whitespace-nowrap">
+                  Qdte de votantes:
+                </label>
+                {isVotingActive && (
+                  <span
+                    className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase flex items-center gap-0.5 ${
+                      isSessionLocked
+                        ? 'text-rose-300 bg-rose-950/80 border border-rose-500/40'
+                        : 'text-emerald-300 bg-emerald-950/80 border border-emerald-500/40'
+                    }`}
+                    title={
+                      isSessionLocked
+                        ? 'Sessão Fechada no cadeado. Para alterar durante a votação, a sessão deve estar Aberta.'
+                        : 'Sessão Aberta. Você pode alterar a quantidade de votantes em tempo real.'
+                    }
+                  >
+                    {isSessionLocked ? '🔒 Fechada' : '🔓 Aberta'}
+                  </span>
+                )}
+              </div>
               <input
                 type="number"
                 min={0}
                 placeholder="Ex: 50"
+                disabled={isVotingActive && isSessionLocked}
                 value={eventFormTotalVoters > 0 ? eventFormTotalVoters : ''}
                 onChange={(e) => setEventFormTotalVoters(Math.max(0, parseInt(e.target.value) || 0))}
                 onKeyDown={(e) => {
@@ -759,8 +780,31 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     handleSaveEventModal();
                   }
                 }}
-                className="w-full px-3 py-1.5 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-lg text-xs font-normal text-slate-100 outline-none placeholder-slate-500 shadow-sm text-center font-mono font-medium"
+                className={`w-full px-3 py-1.5 bg-[#0b0d13] border rounded-lg text-xs font-normal text-slate-100 outline-none text-center font-mono font-medium shadow-sm transition-colors ${
+                  isVotingActive && isSessionLocked
+                    ? 'border-rose-500/40 text-slate-400 opacity-60 cursor-not-allowed bg-rose-950/10'
+                    : 'border-white/[0.1] focus:border-emerald-500/60'
+                }`}
+                title={
+                  isVotingActive && isSessionLocked
+                    ? 'Para alterar a quantidade de votantes com a votação em andamento, destranque a sessão no cadeado no topo.'
+                    : 'Limite oficial de votantes'
+                }
               />
+              {isVotingActive && isSessionLocked && (
+                <div className="mt-1 flex items-center justify-between gap-1 leading-tight">
+                  <span className="text-[9px] text-rose-300 block font-medium">
+                    Sessão fechada.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => saveSession({ ...session, accessLocked: false, allowedVoterIds: undefined })}
+                    className="text-[9px] text-amber-300 hover:text-amber-200 underline cursor-pointer font-bold whitespace-nowrap"
+                  >
+                    Abrir sessão agora
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -2537,19 +2581,80 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
               {/* 4 Cards de KPI / Telemetria com Fonte Grande */}
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {/* 1. Votantes (quantidade em fonte grande) */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-blue-500/30 transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
-                    <Users className="w-5 h-5" />
+                {/* 1. Votantes (quantidade em fonte grande e controle em tempo real) */}
+                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center justify-between gap-2 shadow-sm hover:border-blue-500/30 transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                          Votantes
+                        </span>
+                        {isVotingActive && (
+                          <span
+                            className={`text-[8.5px] font-bold px-1 py-0.5 rounded uppercase leading-none ${
+                              isSessionLocked
+                                ? 'text-rose-300 bg-rose-950/80 border border-rose-500/30'
+                                : 'text-emerald-300 bg-emerald-950/80 border border-emerald-500/30'
+                            }`}
+                            title={isSessionLocked ? 'Sessão Fechada no cadeado' : 'Sessão Aberta'}
+                          >
+                            {isSessionLocked ? '🔒 Fechada' : '🔓 Aberta'}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-2xl sm:text-3xl font-black text-slate-100 font-mono leading-none tracking-tight block mt-0.5">
+                        {currentVotersVoted}
+                        {session.totalVotersConnected && session.totalVotersConnected > 0 ? (
+                          <span className="text-sm sm:text-base font-normal text-slate-400 font-mono ml-1" title="Meta / Limite total de votantes">
+                            / {session.totalVotersConnected}
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                      Votantes
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-black text-slate-100 font-mono leading-none tracking-tight block mt-0.5">
-                      {displayVotersCount}
-                    </span>
-                  </div>
+
+                  {/* Controle rápido de ajuste de votantes em tempo real (para votantes atrasados com sessão aberta) */}
+                  {isVotingActive && (
+                    <div className="flex flex-col items-end shrink-0 gap-1 select-none">
+                      <div className="flex items-center gap-1 bg-[#141721] p-0.5 rounded-lg border border-white/[0.08]">
+                        <button
+                          type="button"
+                          disabled={isSessionLocked || (session.totalVotersConnected || 0) <= currentVotersVoted}
+                          onClick={() => {
+                            const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
+                            const next = Math.max(currentVotersVoted, cur - 1);
+                            saveSession({ ...session, totalVotersConnected: next });
+                          }}
+                          title={isSessionLocked ? 'Abra a sessão no cadeado para alterar' : 'Diminuir limite (-1)'}
+                          className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <span className="font-mono text-xs font-bold text-amber-300 px-1 min-w-[20px] text-center" title="Limite de votantes ativo">
+                          {session.totalVotersConnected || currentVotersVoted}
+                        </span>
+                        <button
+                          type="button"
+                          disabled={isSessionLocked}
+                          onClick={() => {
+                            const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
+                            const next = cur + 1;
+                            saveSession({ ...session, totalVotersConnected: next });
+                          }}
+                          title={isSessionLocked ? 'Abra a sessão no cadeado para alterar (votante atrasado)' : 'Adicionar votante atrasado (+1)'}
+                          className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                      <span className="text-[8.5px] text-slate-400 font-medium">
+                        {isSessionLocked ? 'Travada' : 'Ajustar limite'}
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* 2. Total de Votos (quantidade em fonte grande) */}

@@ -123,19 +123,23 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isVotingActive =
     session?.status === 'VOTING' || session?.status === 'TIE_BREAK';
 
-  const totalExpectedVoters = Math.max(
-    connectedVoters.length,
-    session?.allowedVoterIds?.length || 0,
-    session?.totalVotersConnected || 0
-  );
+  // Limite configurado pelo Admin (totalVotersConnected) é o limite oficial e soberano da votação.
+  // Caso não esteja configurado, usa a quantidade de votantes conectados.
+  const totalLimit =
+    session?.totalVotersConnected && session.totalVotersConnected > 0
+      ? session.totalVotersConnected
+      : Math.max(
+          connectedVoters.length,
+          session?.allowedVoterIds?.length || 0
+        );
 
   const totalVotersVoted =
     session?.status === 'TIE_BREAK'
       ? session?.tieBreakVotersCount || 0
       : session?.mainVotersCount || 0;
 
-  // APURAÇÃO só é exibido quando TODOS os votantes conectados tiverem votado, ou quando a votação for encerrada
-  const allHaveVoted = totalExpectedVoters > 0 && totalVotersVoted >= totalExpectedVoters;
+  // APURAÇÃO só é exibido quando TODOS os votantes atingirem o limite (ou quando a votação for encerrada)
+  const allHaveVoted = totalLimit > 0 && totalVotersVoted >= totalLimit;
   const showApuracaoCaption = (isVotingActive && allHaveVoted) || session?.status === 'CLOSED';
 
   const handleCancelVoting = () => {
