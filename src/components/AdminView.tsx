@@ -17,7 +17,6 @@ import {
   Pencil,
   FolderPlus,
   Building2,
-  Sparkles,
   ChevronsRight,
   X,
   Star,
@@ -2441,19 +2440,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </div>
         </div>
 
-        {/* Direita: "Eventos Gerais" em laranja + listbox com os existentes + botão "CRIAR NOVO EVENTO" */}
+        {/* Direita: "Eventos" em laranja + listbox com os existentes + botão "Novo evento" em verde estilo print 2 */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 ml-auto flex-wrap">
           <span className="text-xs sm:text-sm font-semibold text-amber-500 uppercase tracking-wider shrink-0">
-            Eventos Gerais
+            Eventos
           </span>
 
-          {/* Listbox com os eventos gerais existentes */}
+          {/* Listbox com os eventos existentes */}
           <div className="relative shrink-0">
             <select
               value={currentGeneralEventId}
               onChange={(e) => handleSwitchGeneralEvent(e.target.value)}
               className="bg-[#0b172a] hover:bg-[#0f1f38] text-amber-100 text-xs font-medium pl-3 pr-8 py-2 rounded-lg border border-amber-500/40 hover:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 shadow-inner cursor-pointer appearance-none min-w-[170px] max-w-[240px] sm:max-w-[320px] truncate transition-colors"
-              title="Selecione um Evento Geral existente na lista"
+              title="Selecione um Evento existente na lista"
             >
               {generalEventsList.map((gev) => (
                 <option key={gev.id} value={gev.id} className="bg-[#0b172a] text-slate-100 py-1">
@@ -2464,18 +2463,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             <ChevronDown className="w-3.5 h-3.5 text-amber-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Botão CRIAR NOVO EVENTO */}
+          {/* Botão Novo evento (em verde estilo print 2) */}
           <button
             type="button"
             onClick={() => {
               setNewGeneralEventNameInput('');
               setIsNewGeneralModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg border border-amber-400/50 shadow-[0_0_18px_rgba(245,158,11,0.35)] active:scale-95 transition-all cursor-pointer shrink-0"
-            title="Criar novo Evento Geral"
+            className="px-3 py-1.5 min-h-[34px] rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm shrink-0"
+            title="Criar novo Evento"
           >
-            <Sparkles className="w-3.5 h-3.5" />
-            <span>CRIAR NOVO EVENTO</span>
+            <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
+            <span>+ Novo evento</span>
           </button>
         </div>
       </div>
