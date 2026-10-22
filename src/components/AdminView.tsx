@@ -16,7 +16,6 @@ import {
   ArrowDownAZ,
   Pencil,
   FolderPlus,
-  Plus,
   Building2,
   Sparkles,
   ChevronsRight,
@@ -35,12 +34,13 @@ import {
   Calendar,
   Copy,
   FileDown,
+  ChevronDown,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
 import { generateAtaPdf } from '../utils/ataPdfGenerator';
-import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord } from '../types';
-import { saveSession, subscribeToConnectedVoters, applyBallotToSession, getLocalSession, isFirestoreQuotaExceeded } from '../services/votingService';
+import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord, GeneralEventRecord } from '../types';
+import { saveSession, subscribeToConnectedVoters, applyBallotToSession, getLocalSession, isFirestoreQuotaExceeded, getLocalTelaoLayout } from '../services/votingService';
 import { startAdminPeerHost } from '../services/peerSyncService';
 import { parseImportFile } from '../utils/fileImporter';
 import { toggleSecondaryScreen, subscribeSecondaryScreen } from '../utils/screen';
@@ -511,11 +511,122 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setIsCreatingNewEvent(true);
   };
 
-  // Cria um novo Evento Geral (Assembleia Mãe) e zera completamente o sistema
+  // Lista de Eventos Gerais disponíveis no banco online
+  const generalEventsList: GeneralEventRecord[] = React.useMemo(() => {
+    const currentName = (session.generalEventName || 'COMISSÃO IASD - MEMBRESIA 2026').trim();
+    const currentId = session.activeGeneralEventId || 'gen_' + currentName.replace(/\s+/g, '_');
+    const list = Array.isArray(session.generalEvents) && session.generalEvents.length > 0
+      ? [...session.generalEvents]
+      : [];
+
+    if (!list.some((g) => g.id === currentId || g.name.toUpperCase() === currentName.toUpperCase())) {
+      list.unshift({
+        id: currentId,
+        name: currentName,
+        createdAt: session.createdAt || Date.now(),
+        events: session.events,
+        activeEventId: session.activeEventId,
+        title: session.title,
+        options: session.options,
+        history: session.history,
+      });
+    }
+    return list;
+  }, [
+    session.generalEvents,
+    session.generalEventName,
+    session.activeGeneralEventId,
+    session.events,
+    session.activeEventId,
+    session.title,
+    session.options,
+    session.history,
+    session.createdAt,
+  ]);
+
+  const currentGeneralEventId =
+    session.activeGeneralEventId ||
+    generalEventsList.find((g) => g.name.toUpperCase() === (session.generalEventName || '').toUpperCase())?.id ||
+    generalEventsList[0]?.id ||
+    'gen_default';
+
+  // Alterna entre Eventos Gerais existentes salvos no banco online
+  const handleSwitchGeneralEvent = (targetId: string) => {
+    if (targetId === currentGeneralEventId) return;
+    const target = generalEventsList.find((g) => g.id === targetId);
+    if (!target) return;
+
+    const localLayout = getLocalTelaoLayout() || session.telaoLayout;
+    const defaultRules = getGlobalElectionRules();
+
+    const targetEvents = target.events && target.events.length > 0 ? target.events : [
+      {
+        id: 'evt_' + Date.now(),
+        name: target.title || 'TESOUREIRO',
+        options: target.options || [],
+        vacancies: target.vacancies ?? defaultRules.vacancies ?? 1,
+        maxVotesPerVoter: target.maxVotesPerVoter ?? defaultRules.vacancies ?? 1,
+        suplentesCount: target.suplentesCount ?? defaultRules.suplentesCount ?? 1,
+        segundoSuplentesCount: target.segundoSuplentesCount ?? defaultRules.segundoSuplentesCount ?? 0,
+        habilitarSuplente1: target.habilitarSuplente1 ?? defaultRules.habilitarSuplente1 ?? true,
+        habilitarSuplente2: target.habilitarSuplente2 ?? defaultRules.habilitarSuplente2 ?? false,
+        resolverEmpates: target.resolverEmpates ?? true,
+        totalVotersConnected: defaultRules.totalVotersConnected || 1,
+        rulesConfigured: target.rulesConfigured ?? false,
+        labelTitulares: target.labelTitulares || defaultRules.labelTitulares || 'Titulares',
+        labelSuplente1: target.labelSuplente1 || defaultRules.labelSuplente1 || '1º suplente',
+        labelSuplente2: target.labelSuplente2 || defaultRules.labelSuplente2 || '2º suplente',
+        status: target.status || 'WAITING',
+        tieBreak: target.tieBreak || null,
+        mainVotersCount: target.mainVotersCount || 0,
+        tieBreakVotersCount: target.tieBreakVotersCount || 0,
+        votingIteration: (session.votingIteration || 1) + 1,
+        telaoMode: target.telaoMode || 'names',
+      }
+    ];
+
+    const firstEvent = targetEvents.find((e) => e.id === target.activeEventId) || targetEvents[0];
+
+    const updatedSession: VotingSession = {
+      ...session,
+      activeGeneralEventId: target.id,
+      generalEventName: target.name,
+      title: firstEvent?.name || target.title || 'TESOUREIRO',
+      activeEventId: firstEvent?.id,
+      events: targetEvents,
+      options: firstEvent?.options || target.options || [],
+      history: target.history || [],
+      vacancies: firstEvent?.vacancies ?? target.vacancies ?? 1,
+      maxVotesPerVoter: firstEvent?.maxVotesPerVoter ?? target.maxVotesPerVoter ?? 1,
+      suplentesCount: firstEvent?.suplentesCount ?? target.suplentesCount ?? 1,
+      segundoSuplentesCount: firstEvent?.segundoSuplentesCount ?? target.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: firstEvent?.habilitarSuplente1 ?? target.habilitarSuplente1 ?? true,
+      habilitarSuplente2: firstEvent?.habilitarSuplente2 ?? target.habilitarSuplente2 ?? false,
+      resolverEmpates: firstEvent?.resolverEmpates ?? target.resolverEmpates ?? true,
+      rulesConfigured: firstEvent?.rulesConfigured ?? target.rulesConfigured ?? false,
+      labelTitulares: firstEvent?.labelTitulares || target.labelTitulares || 'Titulares',
+      labelSuplente1: firstEvent?.labelSuplente1 || target.labelSuplente1 || '1º suplente',
+      labelSuplente2: firstEvent?.labelSuplente2 || target.labelSuplente2 || '2º suplente',
+      status: firstEvent?.status || target.status || 'WAITING',
+      tieBreak: firstEvent?.tieBreak || target.tieBreak || null,
+      mainVotersCount: firstEvent?.mainVotersCount ?? target.mainVotersCount ?? 0,
+      tieBreakVotersCount: firstEvent?.tieBreakVotersCount ?? target.tieBreakVotersCount ?? 0,
+      votingIteration: (session.votingIteration || 1) + 1,
+      telaoMode: firstEvent?.telaoMode || target.telaoMode || 'names',
+      telaoLayout: localLayout, // Mantém tamanho do QR code, posicionamento na tela, etc.
+    };
+
+    saveSession(updatedSession);
+    showNotification('success', `Alternado para o Evento Geral: "${target.name}".`);
+  };
+
+  // Cria um novo Evento Geral (Assembleia Mãe) e inicia novo ambiente mantendo banco online
   const handleHardResetGeneralEvent = (name: string) => {
     const cleaned = name.trim().toUpperCase() || 'COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE';
+    const newGenId = 'gen_' + Date.now();
     const initialId = 'evt_' + Date.now();
     const defaultRules = getGlobalElectionRules();
+    const localLayout = getLocalTelaoLayout() || session.telaoLayout;
 
     const initialEvent: VotingEventItem = {
       id: initialId,
@@ -541,9 +652,42 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       telaoMode: 'names',
     };
 
+    const newGenRecord: GeneralEventRecord = {
+      id: newGenId,
+      name: cleaned,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      events: [initialEvent],
+      activeEventId: initialId,
+      title: 'TESOUREIRO',
+      options: [],
+      history: [],
+      vacancies: defaultRules.vacancies || 1,
+      maxVotesPerVoter: defaultRules.vacancies || 1,
+      suplentesCount: defaultRules.suplentesCount ?? 1,
+      segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
+      habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
+      habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
+      resolverEmpates: true,
+      rulesConfigured: false,
+      labelTitulares: defaultRules.labelTitulares || 'Titulares',
+      labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
+      labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
+      status: 'WAITING',
+      tieBreak: null,
+      mainVotersCount: 0,
+      tieBreakVotersCount: 0,
+      votingIteration: (session.votingIteration || 1) + 10,
+      telaoMode: 'names',
+    };
+
+    const updatedGeneralEvents = [...generalEventsList, newGenRecord];
+
     const newSession: VotingSession = {
       ...session,
+      activeGeneralEventId: newGenId,
       generalEventName: cleaned,
+      generalEvents: updatedGeneralEvents,
       title: 'TESOUREIRO',
       activeEventId: initialId,
       status: 'WAITING',
@@ -566,6 +710,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       labelTitulares: defaultRules.labelTitulares || 'Titulares',
       labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
       labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
+      telaoLayout: localLayout,
     };
 
     saveSession(newSession);
@@ -575,16 +720,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEditingCandidateId(null);
     setIsNewGeneralModalOpen(false);
     setNewGeneralEventNameInput('');
-    showNotification('success', `Novo Evento Geral "${cleaned}" iniciado! Todo o sistema foi zerado.`);
+    showNotification('success', `Novo Evento Geral "${cleaned}" criado e salvo online!`);
   };
 
   // Renomeia o Evento Geral existente
   const handleRenameGeneralEvent = (name: string) => {
     const cleaned = name.trim().toUpperCase();
     if (!cleaned) return;
+    const currentId = session.activeGeneralEventId || 'gen_' + (session.generalEventName || '').replace(/\s+/g, '_');
+    const updatedGenList = generalEventsList.map((g) =>
+      g.id === currentId || g.name.toUpperCase() === (session.generalEventName || '').toUpperCase()
+        ? { ...g, name: cleaned, updatedAt: Date.now() }
+        : g
+    );
     saveSession({
       ...session,
       generalEventName: cleaned,
+      generalEvents: updatedGenList,
     });
     setIsEditingGeneralModalOpen(false);
     showNotification('success', `Nome do Evento Geral atualizado para "${cleaned}"!`);
@@ -601,6 +753,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     window.addEventListener('open-event-rules-modal', handleOpenRulesModal);
     return () => window.removeEventListener('open-event-rules-modal', handleOpenRulesModal);
   }, [eventsList, currentActiveEventId]);
+
+  // Escuta o evento para abrir a gaveta e focar no campo de nomes para votar
+  useEffect(() => {
+    const handleFocusNames = () => {
+      setActiveTab('candidates');
+      setIsBottomSectionOpen(true);
+      setTimeout(() => {
+        namesTextareaRef.current?.focus();
+        namesTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 100);
+    };
+    window.addEventListener('focus-names-input', handleFocusNames);
+    return () => window.removeEventListener('focus-names-input', handleFocusNames);
+  }, []);
 
   // Selecionar um evento ao clicar no botão do evento no cabeçalho -> abre modal de regras (Print 2)
   const handleSelectEventButton = (evt: VotingEventItem) => {
@@ -2034,7 +2200,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               exit={{ opacity: 0, scale: 0.9, y: 10 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-lg bg-[#141721] border-2 border-emerald-500/60 rounded-2xl p-6 shadow-[0_0_35px_rgba(16,185,129,0.3),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
+              className="relative w-full max-w-lg bg-[#141721] border-2 border-amber-500/60 rounded-2xl p-6 shadow-[0_0_35px_rgba(245,158,11,0.25),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
             >
               <button
                 type="button"
@@ -2046,8 +2212,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </button>
 
               <div className="flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center mb-3.5">
-                  <Building2 className="w-7 h-7 text-emerald-400" />
+                <div className="w-14 h-14 rounded-2xl bg-amber-500/20 border-2 border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.35)] flex items-center justify-center mb-3.5">
+                  <Building2 className="w-7 h-7 text-amber-400" />
                 </div>
 
                 <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-3">
@@ -2057,7 +2223,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4 text-left flex items-start gap-2.5 text-xs text-amber-200">
                   <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                   <span>
-                    <strong>Atenção:</strong> Ao iniciar um novo Evento Geral, o sistema realiza um <strong>Hard Reset</strong> (limpando todos os nomes, histórico, votos anteriores e forçando a atualização do cache nos celulares dos votantes).
+                    <strong>Banco Online:</strong> O evento geral atual e todo o seu histórico ficam preservados online na lista de Eventos Gerais. O novo evento iniciará um ambiente limpo para novas votações.
                   </span>
                 </div>
 
@@ -2081,7 +2247,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         }
                       }
                     }}
-                    className="w-full px-3.5 py-2.5 bg-[#0b0d13] border border-white/15 focus:border-emerald-500 rounded-xl text-sm font-bold text-white outline-none placeholder-slate-500 shadow-inner"
+                    className="w-full px-3.5 py-2.5 bg-[#0b0d13] border border-white/15 focus:border-amber-500 rounded-xl text-sm font-bold text-white outline-none placeholder-slate-500 shadow-inner"
                   />
                 </div>
 
@@ -2101,9 +2267,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       }
                     }}
                     disabled={!newGeneralEventNameInput.trim()}
-                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-black uppercase tracking-wider text-white shadow-[0_0_15px_rgba(16,185,129,0.35)] transition cursor-pointer"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/40 transition cursor-pointer"
                   >
-                    Criar e Resetar Sistema
+                    Criar Novo Evento
                   </button>
                 </div>
               </div>
@@ -2129,7 +2295,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               exit={{ opacity: 0, scale: 0.9, y: 10 }}
               transition={{ type: 'spring', stiffness: 360, damping: 26 }}
               onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md bg-[#141721] border-2 border-emerald-500/60 rounded-2xl p-6 shadow-[0_0_35px_rgba(16,185,129,0.3),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
+              className="relative w-full max-w-md bg-[#141721] border-2 border-amber-500/60 rounded-2xl p-6 shadow-[0_0_35px_rgba(245,158,11,0.25),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
             >
               <button
                 type="button"
@@ -2141,8 +2307,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </button>
 
               <div className="flex flex-col items-center text-center">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500/20 border-2 border-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.4)] flex items-center justify-center mb-3">
-                  <Pencil className="w-6 h-6 text-emerald-400" />
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/20 border-2 border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.35)] flex items-center justify-center mb-3">
+                  <Pencil className="w-6 h-6 text-amber-400" />
                 </div>
 
                 <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-1.5">
@@ -2150,7 +2316,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </h3>
 
                 <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                  Altere o nome da assembleia geral. Esta alteração não afeta os votos nem os candidatos cadastrados.
+                  Altere o nome do evento geral. A alteração é salva no banco online e sincronizada com todos os dispositivos.
                 </p>
 
                 <div className="w-full text-left mb-5">
@@ -2172,7 +2338,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         }
                       }
                     }}
-                    className="w-full px-3.5 py-2.5 bg-[#0b0d13] border border-white/15 focus:border-emerald-500 rounded-xl text-sm font-bold text-white outline-none placeholder-slate-500 shadow-inner"
+                    className="w-full px-3.5 py-2.5 bg-[#0b0d13] border border-white/15 focus:border-amber-500 rounded-xl text-sm font-bold text-white outline-none placeholder-slate-500 shadow-inner"
                   />
                 </div>
 
@@ -2192,7 +2358,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       }
                     }}
                     disabled={!editingGeneralEventName.trim()}
-                    className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-xs font-black uppercase tracking-wider text-white shadow-[0_0_15px_rgba(16,185,129,0.35)] transition cursor-pointer"
+                    className="flex-1 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 text-xs font-bold uppercase tracking-wider text-white shadow-[0_0_15px_rgba(245,158,11,0.35)] border border-amber-400/40 transition cursor-pointer"
                   >
                     Salvar Alteração
                   </button>
@@ -2237,30 +2403,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         </div>
       )}
 
-      {/* CARDZÃO: EVENTO GERAL (ASSEMBLEIA MÃE) COM HARD RESET E IDENTIFICAÇÃO EM DESTAQUE */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-3 bg-gradient-to-r from-[#0d213d] via-[#091b33] to-[#0d2847] border-y border-emerald-500/40 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex flex-wrap items-center justify-between gap-3 relative z-30">
-        {/* Esquerda: Identificação do Evento Geral com Lapizinho Verde e Duplo Clique */}
+      {/* CARDZÃO: EVENTOS GERAIS ONLINE (IDENTIFICAÇÃO À ESQUERDA, LISTBOX E NOVO EVENTO À DIREITA) */}
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2.5 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex flex-wrap items-center justify-between gap-3 relative z-30">
+        {/* Esquerda: Identificação do Evento Geral com Lapizinho Âmbar e Duplo Clique */}
         <div className="flex items-center gap-3 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-400/50 flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-            <Building2 className="w-5 h-5 text-emerald-400" />
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
+            <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400" />
           </div>
 
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-widest text-emerald-300 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/40 shadow-inner">
-                EVENTO GERAL / ASSEMBLEIA
-              </span>
-            </div>
-
+            {/* O caption acima do título foi retirado conforme solicitado */}
             <div
-              className="flex items-center gap-2 mt-0.5 group cursor-pointer"
+              className="flex items-center gap-2 group cursor-pointer"
               onDoubleClick={() => {
                 setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
                 setIsEditingGeneralModalOpen(true);
               }}
-              title="Duplo clique ou clique no lápis para renomear este evento geral"
+              title="Duplo clique ou clique no lápis para renomear este Evento Geral"
             >
-              <h2 className="text-sm sm:text-base font-black text-white tracking-wide truncate drop-shadow-md">
+              {/* Título sem bold e com cor âmbar (laranja suave) */}
+              <h2 className="text-sm sm:text-base font-normal text-amber-400 tracking-wide truncate">
                 {session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte'}
               </h2>
               <button
@@ -2270,7 +2432,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
                   setIsEditingGeneralModalOpen(true);
                 }}
-                className="p-1 rounded-md text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/20 transition cursor-pointer"
+                className="p-1 rounded-md text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 transition cursor-pointer shrink-0"
                 title="Renomear Evento Geral"
               >
                 <Pencil className="w-3.5 h-3.5" />
@@ -2279,19 +2441,41 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </div>
         </div>
 
-        {/* Direita: Botão '+ Novo Evento Geral' (Hard Reset com aviso) */}
-        <div className="flex items-center gap-2 shrink-0 ml-auto">
+        {/* Direita: "Eventos Gerais" em laranja + listbox com os existentes + botão "CRIAR NOVO EVENTO" */}
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 ml-auto flex-wrap">
+          <span className="text-xs sm:text-sm font-semibold text-amber-500 uppercase tracking-wider shrink-0">
+            Eventos Gerais
+          </span>
+
+          {/* Listbox com os eventos gerais existentes */}
+          <div className="relative shrink-0">
+            <select
+              value={currentGeneralEventId}
+              onChange={(e) => handleSwitchGeneralEvent(e.target.value)}
+              className="bg-[#0b172a] hover:bg-[#0f1f38] text-amber-100 text-xs font-medium pl-3 pr-8 py-2 rounded-lg border border-amber-500/40 hover:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 shadow-inner cursor-pointer appearance-none min-w-[170px] max-w-[240px] sm:max-w-[320px] truncate transition-colors"
+              title="Selecione um Evento Geral existente na lista"
+            >
+              {generalEventsList.map((gev) => (
+                <option key={gev.id} value={gev.id} className="bg-[#0b172a] text-slate-100 py-1">
+                  {gev.name}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3.5 h-3.5 text-amber-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* Botão CRIAR NOVO EVENTO */}
           <button
             type="button"
             onClick={() => {
               setNewGeneralEventNameInput('');
               setIsNewGeneralModalOpen(true);
             }}
-            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs uppercase tracking-wider rounded-lg border border-emerald-400 shadow-[0_0_18px_rgba(16,185,129,0.4)] active:scale-95 transition-all cursor-pointer"
-            title="Criar novo Evento Geral (limpa nomes, histórico, votos e caches para iniciar do zero)"
+            className="flex items-center gap-1.5 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white font-bold text-xs uppercase tracking-wider rounded-lg border border-amber-400/50 shadow-[0_0_18px_rgba(245,158,11,0.35)] active:scale-95 transition-all cursor-pointer shrink-0"
+            title="Criar novo Evento Geral"
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span>+ Novo Evento Geral</span>
+            <span>CRIAR NOVO EVENTO</span>
           </button>
         </div>
       </div>
@@ -3043,56 +3227,44 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     </div>
 
 
-                    {/* CARD 3: HISTÓRICO DE VOTAÇÕES ENCERRADAS (EM CONFIGURAÇÕES) */}
-                    <div
-                      id="historico-votacoes-card"
-                      className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3.5 space-y-3 shadow-lg"
-                    >
-                      {/* Cabeçalho do Card */}
-                      <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0">
-                            <History className="w-3.5 h-3.5 text-amber-400" />
+                    {/* CARD 3: HISTÓRICO DE VOTAÇÕES ENCERRADAS (EXIBIDO APENAS SE HOUVER HISTÓRICO) */}
+                    {Boolean(session.history && session.history.length > 0) && (
+                      <div
+                        id="historico-votacoes-card"
+                        className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3.5 space-y-3 shadow-lg"
+                      >
+                        {/* Cabeçalho do Card */}
+                        <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <div className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0">
+                              <History className="w-3.5 h-3.5 text-amber-400" />
+                            </div>
+                            <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight flex items-center gap-2">
+                              Histórico de Votações Encerradas
+                              {session.history && session.history.length > 0 && (
+                                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
+                                  {session.history.length} {session.history.length === 1 ? 'eleição' : 'eleições'}
+                                </span>
+                              )}
+                            </span>
                           </div>
-                          <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight flex items-center gap-2">
-                            Histórico de Votações Encerradas
-                            {session.history && session.history.length > 0 && (
-                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
-                                {session.history.length} {session.history.length === 1 ? 'eleição' : 'eleições'}
-                              </span>
-                            )}
-                          </span>
+
+                          {session.history && session.history.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={handleClearHistory}
+                              title="Limpar todos os registros arquivados"
+                              className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-medium transition cursor-pointer active:scale-95 flex items-center gap-1.5"
+                            >
+                              <Trash2 className="w-3 h-3 text-rose-400" />
+                              <span>Limpar Histórico</span>
+                            </button>
+                          )}
                         </div>
 
-                        {session.history && session.history.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={handleClearHistory}
-                            title="Limpar todos os registros arquivados"
-                            className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-medium transition cursor-pointer active:scale-95 flex items-center gap-1.5"
-                          >
-                            <Trash2 className="w-3 h-3 text-rose-400" />
-                            <span>Limpar Histórico</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Lista de Registros do Histórico */}
-                      {!session.history || session.history.length === 0 ? (
-                        <div className="bg-[#0b0d13]/60 border border-dashed border-white/[0.1] rounded-lg p-5 text-center space-y-1.5">
-                          <div className="w-8 h-8 mx-auto rounded-full bg-white/[0.04] flex items-center justify-center text-slate-500">
-                            <History className="w-4 h-4" />
-                          </div>
-                          <p className="text-xs text-slate-300 font-medium">
-                            Nenhuma eleição encerrada ainda
-                          </p>
-                          <p className="text-[11px] text-slate-500 max-w-md mx-auto">
-                            Ao finalizar uma votação e clicar no botão <strong className="text-slate-300">"ENCERRAR VOTAÇÃO"</strong> na barra superior, os eleitos, suplentes e não classificados serão salvos aqui automaticamente com data e hora.
-                          </p>
-                        </div>
-                      ) : (
+                        {/* Lista de Registros do Histórico */}
                         <div className="space-y-3">
-                          {session.history.map((record, rIdx) => (
+                          {(session.history || []).map((record, rIdx) => (
                             <div
                               key={record.id || rIdx}
                               className="bg-[#0b0d13] border border-white/[0.08] hover:border-amber-400/30 rounded-xl p-3 sm:p-3.5 space-y-3 transition shadow-sm"
@@ -3274,8 +3446,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
                           ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 );
               })()}
@@ -3709,198 +3881,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               exit="exit"
               className="space-y-3.5 flex-1 flex flex-col min-h-0"
             >
-              {/* 1. NOMES PARA ESCOLHA (TÍTULO COM NÚMERO BOLD E AZUL) */}
-              <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg flex-1">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
-                    <span>
-                      Nomes para escolha (<span className="font-bold text-blue-400">{session.options.length}</span>)
-                    </span>
-                  </h3>
-                  {(session.options.length > 0 || backupNamesList.length > 0) && (
-                    <div className="flex items-center gap-2">
-                      {/* Botão Recuperar Nomes */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sourceNames =
-                            session.options.length > 0
-                              ? session.options.map((o) => o.name)
-                              : backupNamesList;
-                          if (sourceNames.length === 0) return;
-                          const commaSeparated = sourceNames.join(', ');
-                          setNewName((prev) =>
-                            prev.trim() ? `${prev.trim()}, ${commaSeparated}` : commaSeparated
-                          );
-                          showNotification(
-                            'success',
-                            `${sourceNames.length} nomes enviados para o campo de digitação abaixo (separados por vírgula)!`
-                          );
-                        }}
-                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                        title="Jogar todos os nomes na caixa de digitação abaixo separados por vírgula"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Recuperar nomes</span>
-                      </button>
-
-                      {session.options.length > 0 && (
-                        <>
-                          {/* Botão A-Z */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const sorted = [...session.options].sort((a, b) =>
-                                a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
-                              );
-                              saveSession({ ...session, options: sorted });
-                              showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
-                            }}
-                            className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                            title="Ordenar nomes em ordem alfabética (A-Z)"
-                          >
-                            <ArrowDownAZ className="w-3.5 h-3.5" />
-                            <span>A-Z</span>
-                          </button>
-
-                          {/* Botão Limpar Tudo (Apenas o ícone de lixeira) */}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setConfirmModal({
-                                title: 'Limpar Todos os Nomes',
-                                highlight: `${session.options.length} nomes cadastrados`,
-                                description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
-                                confirmLabel: 'Sim, Limpar Tudo',
-                                onConfirm: () => {
-                                  setBackupNamesList(session.options.map((o) => o.name));
-                                  saveSession({ ...session, options: [] });
-                                  setConfirmModal(null);
-                                  showNotification('success', 'Todos os nomes foram apagados.');
-                                },
-                              });
-                            }}
-                            className="p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
-                            title="Apagar todos os nomes cadastrados"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {session.options.length === 0 ? (
-                  <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/60 flex flex-col items-center justify-center gap-3">
-                    <span>Nenhum nome cadastrado ainda. Digite ou fale no campo abaixo para começar!</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        namesTextareaRef.current?.focus();
-                        namesTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }}
-                      className="px-4 py-2 rounded-lg border border-emerald-500/60 hover:border-emerald-400 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-200 flex items-center gap-2 font-medium text-xs transition cursor-pointer shadow-sm active:scale-95 group"
-                    >
-                      <Plus className="w-4 h-4 text-emerald-400 group-hover:scale-110 transition-transform" />
-                      <span>+ Adicionar nome</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                    <AnimatePresence mode="popLayout">
-                      {[...session.options]
-                        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
-                        .map((option) => {
-                          const isEditing = editingCandidateId === option.id;
-                          const isGlowing = Boolean(
-                            glowingIds[option.id] ||
-                              (option.createdAt && Date.now() - option.createdAt < 1500)
-                          );
-                          return (
-                            <motion.div
-                              layout
-                              key={option.id}
-                              initial={{ opacity: 0, scale: 0.82, y: -10 }}
-                              animate={{
-                                opacity: 1,
-                                scale: isGlowing ? 1.04 : 1,
-                                y: 0,
-                              }}
-                              exit={{ opacity: 0, scale: 0.85 }}
-                              transition={{
-                                layout: { type: 'spring', stiffness: 320, damping: 26 },
-                                duration: 0.35,
-                              }}
-                              className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
-                                isGlowing
-                                  ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
-                                  : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
-                              }`}
-                            >
-                              {/* Nome Editável Inline */}
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  value={editingCandidateName}
-                                  onChange={(e) => setEditingCandidateName(e.target.value)}
-                                  onBlur={() => handleSaveCandidateEdit(option.id)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
-                                    if (e.key === 'Escape') setEditingCandidateId(null);
-                                  }}
-                                  className="w-full min-w-0 px-2 py-0.5 bg-[#141721] border border-emerald-500/50 rounded text-xs text-slate-100 font-normal outline-none"
-                                />
-                              ) : (
-                                <span
-                                  onClick={() => {
-                                    setEditingCandidateId(option.id);
-                                    setEditingCandidateName(option.name);
-                                  }}
-                                  className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
-                                    isGlowing
-                                      ? 'text-emerald-200'
-                                      : 'text-slate-200 hover:text-white'
-                                  }`}
-                                  title={`${option.name} (Clique para editar)`}
-                                >
-                                  {option.name}
-                                </span>
-                              )}
-
-                              {/* Botão de Excluir */}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveCandidate(option.id)}
-                                title="Remover nome"
-                                className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </motion.div>
-                          );
-                        })}
-                    </AnimatePresence>
-
-                    {/* Botão verde sempre após o último nome (referência Print 2) */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        namesTextareaRef.current?.focus();
-                        namesTextareaRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                      }}
-                      className="w-full px-3 py-2 rounded-lg border border-emerald-500/60 hover:border-emerald-400 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 hover:text-emerald-200 flex items-center justify-center gap-1.5 font-medium text-xs transition-all duration-150 cursor-pointer shadow-sm active:scale-95 group min-h-[38px]"
-                      title="Adicionar novo nome (foca no campo Digite ou fale os nomes)"
-                    >
-                      <Plus className="w-3.5 h-3.5 text-emerald-400 group-hover:scale-110 transition-transform" />
-                      <span>+ Adicionar nome</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* 2. SEÇÃO DE DIGITAÇÃO / VOZ - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
+              {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ NO TOPO */}
               <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg">
                 <div className="flex flex-col justify-between gap-3 min-w-0">
                   {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
@@ -4108,11 +4089,166 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </div>
               </div>
 
-        </motion.div>
+              {/* 2. NOMES PARA ESCOLHA (EXIBIDO APENAS QUANDO HÁ NOMES CADASTRADOS) */}
+              {session.options.length > 0 && (
+                <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg flex-1">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
+                      <span>
+                        Nomes para escolha (<span className="font-bold text-blue-400">{session.options.length}</span>)
+                      </span>
+                    </h3>
+                    <div className="flex items-center gap-2">
+                      {/* Botão Recuperar Nomes */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sourceNames =
+                            session.options.length > 0
+                              ? session.options.map((o) => o.name)
+                              : backupNamesList;
+                          if (sourceNames.length === 0) return;
+                          const commaSeparated = sourceNames.join(', ');
+                          setNewName((prev) =>
+                            prev.trim() ? `${prev.trim()}, ${commaSeparated}` : commaSeparated
+                          );
+                          showNotification(
+                            'success',
+                            `${sourceNames.length} nomes enviados para o campo de digitação acima (separados por vírgula)!`
+                          );
+                        }}
+                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                        title="Jogar todos os nomes na caixa de digitação acima separados por vírgula"
+                      >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        <span>Recuperar nomes</span>
+                      </button>
+
+                      {/* Botão A-Z */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const sorted = [...session.options].sort((a, b) =>
+                            a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+                          );
+                          saveSession({ ...session, options: sorted });
+                          showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
+                        }}
+                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                        title="Ordenar nomes em ordem alfabética (A-Z)"
+                      >
+                        <ArrowDownAZ className="w-3.5 h-3.5" />
+                        <span>A-Z</span>
+                      </button>
+
+                      {/* Botão Limpar Tudo (Apenas o ícone de lixeira) */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setConfirmModal({
+                            title: 'Limpar Todos os Nomes',
+                            highlight: `${session.options.length} nomes cadastrados`,
+                            description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
+                            confirmLabel: 'Sim, Limpar Tudo',
+                            onConfirm: () => {
+                              setBackupNamesList(session.options.map((o) => o.name));
+                              saveSession({ ...session, options: [] });
+                              setConfirmModal(null);
+                              showNotification('success', 'Todos os nomes foram apagados.');
+                            },
+                          });
+                        }}
+                        className="p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
+                        title="Apagar todos os nomes cadastrados"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+                    <AnimatePresence mode="popLayout">
+                      {[...session.options]
+                        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
+                        .map((option) => {
+                          const isEditing = editingCandidateId === option.id;
+                          const isGlowing = Boolean(
+                            glowingIds[option.id] ||
+                              (option.createdAt && Date.now() - option.createdAt < 1500)
+                          );
+                          return (
+                            <motion.div
+                              layout
+                              key={option.id}
+                              initial={{ opacity: 0, scale: 0.82, y: -10 }}
+                              animate={{
+                                opacity: 1,
+                                scale: isGlowing ? 1.04 : 1,
+                                y: 0,
+                              }}
+                              exit={{ opacity: 0, scale: 0.85 }}
+                              transition={{
+                                layout: { type: 'spring', stiffness: 320, damping: 26 },
+                                duration: 0.35,
+                              }}
+                              className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
+                                isGlowing
+                                  ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
+                                  : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
+                              }`}
+                            >
+                              {/* Nome Editável Inline */}
+                              {isEditing ? (
+                                <input
+                                  type="text"
+                                  autoFocus
+                                  value={editingCandidateName}
+                                  onChange={(e) => setEditingCandidateName(e.target.value)}
+                                  onBlur={() => handleSaveCandidateEdit(option.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
+                                    if (e.key === 'Escape') setEditingCandidateId(null);
+                                  }}
+                                  className="w-full min-w-0 px-2 py-0.5 bg-[#141721] border border-emerald-500/50 rounded text-xs text-slate-100 font-normal outline-none"
+                                />
+                              ) : (
+                                <span
+                                  onClick={() => {
+                                    setEditingCandidateId(option.id);
+                                    setEditingCandidateName(option.name);
+                                  }}
+                                  className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
+                                    isGlowing
+                                      ? 'text-emerald-200'
+                                      : 'text-slate-200 hover:text-white'
+                                  }`}
+                                  title={`${option.name} (Clique para editar)`}
+                                >
+                                  {option.name}
+                                </span>
+                              )}
+
+                              {/* Botão de Excluir */}
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveCandidate(option.id)}
+                                title="Remover nome"
+                                className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </motion.div>
+                          );
+                        })}
+                    </AnimatePresence>
+                  </div>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
       )}
-    </AnimatePresence>
-  </div>
-  )}
 
       {/* ABA 3: CONFIGURAÇÕES E MIGRAÇÃO (REDUZIDO EM 30%) */}
       {activeTab === 'settings' && (

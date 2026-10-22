@@ -124,6 +124,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isVotingActive =
     session?.status === 'VOTING' || session?.status === 'TIE_BREAK';
 
+  // Um card está definido se possui nome/título válido e regras configuradas
+  const hasCardDefined = Boolean(session?.rulesConfigured && session?.title?.trim());
+  // Deve haver nomes cadastrados na lista de candidatos para poder votar
+  const hasNames = Boolean(session?.options && session.options.length > 0);
+  // O botão só fica verde e pronto se tiver card definido E nomes para votar (ou se a votação já estiver em andamento)
+  const isReadyToVote = hasCardDefined && hasNames;
+  const isGreen = isVotingActive || isReadyToVote;
+
   // Limite configurado pelo Admin (totalVotersConnected) é o limite oficial e soberano da votação.
   // Caso não esteja configurado, usa a quantidade de votantes conectados.
   const totalLimit =
@@ -169,10 +177,26 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleCenterVotingButtonClick = () => {
     if (!session || !onSaveSession) return;
 
-    // Se ainda não salvou as regras da eleição, abre o modal de regras
-    if (!isVotingActive && !session.rulesConfigured) {
+    // Se ainda não definiu o card / regras da eleição, abre o modal de regras
+    if (!isVotingActive && !hasCardDefined) {
       if (typeof window !== 'undefined') {
         window.dispatchEvent(new CustomEvent('open-event-rules-modal'));
+      }
+      return;
+    }
+
+    // Se o card está definido mas ainda não há nomes para votar, avisa e foca no campo de nomes
+    if (!isVotingActive && !hasNames) {
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('vota_iasd_notification', {
+            detail: {
+              type: 'error',
+              message: 'Cadastre os nomes para votar antes de iniciar a votação.',
+            },
+          })
+        );
+        window.dispatchEvent(new CustomEvent('focus-names-input'));
       }
       return;
     }
@@ -414,15 +438,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     }
   };
 
-  const isRulesReady = Boolean(session?.rulesConfigured);
-  const btnBg = isVotingActive || isRulesReady ? '#159636' : '#334155';
-  const btnBorder = isVotingActive || isRulesReady ? '#24b349' : '#64748b';
-  const btnShadow = isVotingActive || isRulesReady
+  const btnBg = isGreen ? '#159636' : '#334155';
+  const btnBorder = isGreen ? '#24b349' : '#64748b';
+  const btnShadow = isGreen
     ? '0 6px 0 #09521b, 3px 6px 0 #063b13'
     : '0 6px 0 #1e293b, 3px 6px 0 #0f172a';
-  const brailleBg = isVotingActive || isRulesReady ? '#24b84b' : '#94a3b8';
-  const brailleShadow = isVotingActive || isRulesReady ? '1px 1.5px 0 #074215' : '1px 1.5px 0 #0f172a';
-  const textColor = isVotingActive || isRulesReady ? '#1a1a1a' : '#f1f5f9';
+  const brailleBg = isGreen ? '#24b84b' : '#94a3b8';
+  const brailleShadow = isGreen ? '1px 1.5px 0 #074215' : '1px 1.5px 0 #0f172a';
+  const textColor = isGreen ? '#1a1a1a' : '#f1f5f9';
 
   return (
     <header className="sticky top-0 z-50 bg-[#001f47]/95 backdrop-blur-md border-b border-blue-900/60 shadow-lg px-3 sm:px-6 lg:px-8 py-4 min-h-[76px] flex items-center w-full">
@@ -622,9 +645,11 @@ export const Navbar: React.FC<NavbarProps> = ({
               title={
                 isVotingActive
                   ? 'Votação em andamento (clique para abrir a Apuração)'
-                  : isRulesReady
-                  ? 'Iniciar Votação mantendo os nomes em ordem A-Z'
-                  : 'Clique para preencher e salvar as Regras da Eleição'
+                  : !hasCardDefined
+                  ? 'Clique para definir o card e preencher as Regras da Eleição'
+                  : !hasNames
+                  ? 'Cadastre os nomes para votar antes de iniciar a votação'
+                  : 'Iniciar Votação mantendo os nomes em ordem A-Z'
               }
               style={{
                 backgroundColor: btnBg,
@@ -632,7 +657,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 boxShadow: btnShadow,
               }}
               className={`w-[215px] min-w-[215px] max-w-[215px] pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0 ${
-                !isVotingActive && !isRulesReady ? 'opacity-90 hover:opacity-100' : ''
+                !isGreen ? 'opacity-90 hover:opacity-100' : ''
               }`}
             >
               <div className="flex items-center justify-center w-full">

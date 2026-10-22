@@ -54,10 +54,48 @@ export interface VotingEventItem {
   telaoMode?: 'names' | 'voting';
 }
 
+export interface GeneralEventRecord {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt?: number;
+  events?: VotingEventItem[];
+  activeEventId?: string;
+  title?: string;
+  options?: VotingOption[];
+  history?: VotingHistoryRecord[];
+  vacancies?: number;
+  maxVotesPerVoter?: number;
+  suplentesCount?: number;
+  segundoSuplentesCount?: number;
+  habilitarSuplente1?: boolean;
+  habilitarSuplente2?: boolean;
+  resolverEmpates?: boolean;
+  rulesConfigured?: boolean;
+  labelTitulares?: string;
+  labelSuplente1?: string;
+  labelSuplente2?: string;
+  status?: SessionStatus;
+  tieBreak?: {
+    active: boolean;
+    resolved?: boolean;
+    title: string;
+    vacancies: number;
+    maxVotesPerVoter: number;
+    options: VotingOption[];
+  } | null;
+  mainVotersCount?: number;
+  tieBreakVotersCount?: number;
+  votingIteration?: number;
+  telaoMode?: 'names' | 'voting';
+}
+
 export interface VotingSession {
   id: string;
   title: string;
   generalEventName?: string; // Nome do Evento Geral / Assembleia (Ex: "Comissão da Igreja Adventista da Asa Norte")
+  generalEvents?: GeneralEventRecord[]; // Lista de todos os Eventos Gerais salvos online no banco
+  activeGeneralEventId?: string; // ID do Evento Geral atualmente ativo
   labelTitulares?: string; // Rótulo customizado para Titulares (padrão: "Titulares")
   labelSuplente1?: string; // Rótulo customizado para 1º Suplente (padrão: "1º suplente")
   labelSuplente2?: string; // Rótulo customizado para 2º Suplente (padrão: "2º suplente")

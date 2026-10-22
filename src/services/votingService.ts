@@ -1,11 +1,32 @@
 import { doc, onSnapshot, setDoc, getDoc, runTransaction } from 'firebase/firestore';
 import { db, isFirebaseConfigured } from './firebase';
-import type { VotingSession, VoterBallot } from '../types';
+import type { VotingSession, VoterBallot, TelaoLayoutConfig, GeneralEventRecord } from '../types';
 import { getGlobalElectionRules } from '../utils/globalRules';
 import { sendBallotViaP2P, broadcastSessionP2P } from './peerSyncService';
 
 const STORAGE_SESSION_KEY = 'vota_iasd_active_session';
 const STORAGE_DEVICE_KEY = 'vota_iasd_device_id';
+const STORAGE_TELAO_LAYOUT_KEY = 'vota_iasd_telao_layout';
+
+export function getLocalTelaoLayout(): TelaoLayoutConfig | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem(STORAGE_TELAO_LAYOUT_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch (e) {
+    console.error('Erro ao ler layout local do telão:', e);
+  }
+  return null;
+}
+
+export function saveLocalTelaoLayout(layout: TelaoLayoutConfig): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_TELAO_LAYOUT_KEY, JSON.stringify(layout));
+  } catch (e) {
+    console.error('Erro ao salvar layout local do telão:', e);
+  }
+}
 
 let isQuotaExceeded = false;
 
@@ -99,14 +120,21 @@ if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
 
 // Armazena sessão localmente
 export function getLocalSession(): VotingSession {
+  const localLayout = getLocalTelaoLayout();
   try {
     const raw = localStorage.getItem(STORAGE_SESSION_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (localLayout) {
+        parsed.telaoLayout = { ...(parsed.telaoLayout || {}), ...localLayout };
+      }
+      return parsed;
+    }
   } catch (e) {
     console.error('Erro ao ler sessão local:', e);
   }
   const rules = getGlobalElectionRules();
-  return {
+  const initial = {
     ...DEFAULT_INITIAL_SESSION,
     totalVotersConnected: rules.totalVotersConnected,
     vacancies: rules.vacancies,
@@ -117,6 +145,10 @@ export function getLocalSession(): VotingSession {
     segundoSuplentesCount: rules.segundoSuplentesCount,
     resolverEmpates: rules.resolverEmpates,
   };
+  if (localLayout) {
+    initial.telaoLayout = localLayout;
+  }
+  return initial;
 }
 
 export function setLocalSession(session: VotingSession) {
@@ -172,6 +204,55 @@ export async function saveSession(session: VotingSession): Promise<void> {
             }
           : evt
       );
+  }
+
+  // Sincroniza automaticamente o Evento Geral ativo dentro de session.generalEvents (preservando o banco online)
+  if (session.generalEventName) {
+    const genList: GeneralEventRecord[] = Array.isArray(session.generalEvents) ? [...session.generalEvents] : [];
+    const activeGenId = session.activeGeneralEventId || 'gen_' + session.generalEventName.replace(/\s+/g, '_');
+    session.activeGeneralEventId = activeGenId;
+
+    const existingIdx = genList.findIndex((g) => g.id === activeGenId || g.name === session.generalEventName);
+    const currentSnapshot: GeneralEventRecord = {
+      id: activeGenId,
+      name: session.generalEventName,
+      createdAt: existingIdx >= 0 ? genList[existingIdx].createdAt : Date.now(),
+      updatedAt: Date.now(),
+      events: session.events || [],
+      activeEventId: session.activeEventId,
+      title: session.title,
+      options: session.options || [],
+      history: session.history || [],
+      vacancies: session.vacancies,
+      maxVotesPerVoter: session.maxVotesPerVoter,
+      suplentesCount: session.suplentesCount,
+      segundoSuplentesCount: session.segundoSuplentesCount,
+      habilitarSuplente1: session.habilitarSuplente1,
+      habilitarSuplente2: session.habilitarSuplente2,
+      resolverEmpates: session.resolverEmpates,
+      rulesConfigured: session.rulesConfigured,
+      labelTitulares: session.labelTitulares,
+      labelSuplente1: session.labelSuplente1,
+      labelSuplente2: session.labelSuplente2,
+      status: session.status,
+      tieBreak: session.tieBreak || null,
+      mainVotersCount: session.mainVotersCount,
+      tieBreakVotersCount: session.tieBreakVotersCount,
+      votingIteration: session.votingIteration,
+      telaoMode: session.telaoMode,
+    };
+
+    if (existingIdx >= 0) {
+      genList[existingIdx] = currentSnapshot;
+    } else {
+      genList.push(currentSnapshot);
+    }
+    session.generalEvents = genList;
+  }
+
+  // Preserva localmente configurações de layout do telão (tamanho do qr code, posição na tela, etc.)
+  if (session.telaoLayout) {
+    saveLocalTelaoLayout(session.telaoLayout);
   }
 
   // Limpa campos undefined para total compatibilidade com Firestore
