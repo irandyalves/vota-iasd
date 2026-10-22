@@ -2463,17 +2463,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             <ChevronDown className="w-3.5 h-3.5 text-amber-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Botão Novo evento (em verde estilo print 2) */}
+          {/* Botão Novo evento (estilo print 2, mas em laranja) */}
           <button
             type="button"
             onClick={() => {
               setNewGeneralEventNameInput('');
               setIsNewGeneralModalOpen(true);
             }}
-            className="px-3 py-1.5 min-h-[34px] rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm shrink-0"
+            className="px-3 py-1.5 min-h-[34px] rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm shrink-0"
             title="Criar novo Evento"
           >
-            <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
+            <FolderPlus className="w-3.5 h-3.5 text-amber-400" />
             <span>+ Novo evento</span>
           </button>
         </div>
