@@ -2670,10 +2670,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
       {/* CARD: EVENTOS GERAIS ONLINE (LISTBOX + NOVO EVENTO À ESQUERDA, HISTÓRICO + ENGRENAGEM SEM FUNDO À DIREITA) */}
       <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative z-30">
-        {/* Esquerda: Ícone do Prédio + Listbox dos Eventos (substitui o texto Comissão) + Lapizinho de Renomear + Botão Novo Evento */}
+        {/* Esquerda: Ícone do Prédio (sem borda) + Listbox dos Eventos + Lapizinho (sem borda) + Lixeira (sem borda) + Botão Novo Evento */}
         <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-wrap">
-          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(245,158,11,0.2)]">
-            <Building2 className="w-4 h-4 text-amber-400" />
+          <div className="flex items-center justify-center shrink-0 p-1">
+            <Building2 className="w-5 h-5 text-amber-400" />
           </div>
 
           {/* Listbox dos Eventos Existentes (substitui o título comissão para evitar duplicidade) */}
@@ -2693,20 +2693,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             <ChevronDown className="w-3.5 h-3.5 text-amber-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
 
-          {/* Botão de Renomear o Evento Geral Selecionado */}
+          {/* Botão de Renomear o Evento Geral Selecionado (sem borda) */}
           <button
             type="button"
             onClick={() => {
               setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
               setIsEditingGeneralModalOpen(true);
             }}
-            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-amber-500/15 border border-amber-500/30 transition cursor-pointer shrink-0"
+            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-white/10 transition cursor-pointer shrink-0 border-0 shadow-none focus:outline-none"
             title="Renomear este Evento Geral"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Pencil className="w-4 h-4" />
           </button>
 
-          {/* Botão de Excluir o Evento Geral Selecionado (com confirmação duplo check) */}
+          {/* Botão de Excluir o Evento Geral Selecionado (sem borda) */}
           <button
             type="button"
             onClick={() => {
@@ -2715,10 +2715,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 name: session.generalEventName || 'Evento Geral',
               });
             }}
-            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-200 hover:bg-rose-500/20 border border-rose-500/30 transition cursor-pointer shrink-0"
+            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-200 hover:bg-white/10 transition cursor-pointer shrink-0 border-0 shadow-none focus:outline-none"
             title="Excluir este Evento Geral"
           >
-            <Trash2 className="w-3.5 h-3.5" />
+            <Trash2 className="w-4 h-4" />
           </button>
 
           {/* Botão "+ Novo evento" na frente */}
@@ -2736,9 +2736,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </button>
         </div>
 
-        {/* Direita: Histórico à esquerda da Engrenagem, e Engrenagem sem fundo lá na ponta */}
+        {/* Direita: Histórico (sem borda) à esquerda da Engrenagem, e Engrenagem (sem borda) lá na ponta */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
-          {/* Atalho para Histórico de Votações */}
+          {/* Atalho para Histórico de Votações (sem borda) */}
           <div className="relative group">
             <button
               type="button"
@@ -2748,15 +2748,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
                 }, 200);
               }}
-              className={`p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 ${
-                session.history && session.history.length > 0
-                  ? 'bg-amber-500/15 border border-amber-500/40 text-amber-300 shadow-[0_0_12px_rgba(251,191,36,0.25)]'
-                  : 'bg-transparent hover:bg-white/10 text-slate-400 hover:text-slate-200 border-0 shadow-none'
-              }`}
+              className="p-1.5 sm:p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 bg-transparent hover:bg-white/10 text-slate-300 hover:text-white border-0 shadow-none focus:outline-none"
               title="Ver Histórico de Votações Encerradas"
               aria-label="Ver Histórico de Votações Encerradas"
             >
-              <History className="w-4 h-4 sm:w-5 sm:h-5" />
+              <History className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
               {session.history && session.history.length > 0 && (
                 <span className="text-[10px] font-black px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono leading-none">
                   {session.history.length}
@@ -2768,13 +2764,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Engrenagem sem fundo lá na ponta direita */}
+          {/* Engrenagem sem borda e sem fundo lá na ponta direita */}
           <button
             ref={gearButtonRef}
             type="button"
             onClick={() => setIsGearOpen((prev) => !prev)}
             title="Abrir/Recolher Opções (ESC ou clique fora para recolher)"
-            className="group relative p-1.5 sm:p-2 rounded-xl transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center bg-transparent hover:bg-white/10 border-0 shadow-none"
+            className="group relative p-1.5 sm:p-2 rounded-xl transition-all duration-300 cursor-pointer active:scale-90 flex items-center justify-center bg-transparent hover:bg-white/10 border-0 shadow-none outline-none focus:outline-none"
           >
             <svg
               viewBox="0 0 64 64"
