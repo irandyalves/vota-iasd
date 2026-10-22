@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { RefreshCw, Camera, Lock, Unlock, Wand2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
 import { removeEasyBackground } from '../utils/imageUtils';
 import type { VotingSession } from '../types';
@@ -284,65 +284,48 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* CENTRO: BOTÃO DA URNA (3D COM RELEVO E BRAILLE). EM APURAÇÃO FICA BRANCO, COM A RODA SUAVE (PULSAR + GIRO) À ESQUERDA DO BOTÃO */}
+        {/* CENTRO: BOTÃO DA URNA COM ANIMAÇÃO DE REVELAÇÃO E RECOLHIMENTO SUAVES */}
         <div className="flex items-center justify-center justify-self-center gap-3">
-          {isVotingActive && (
-            <button
-              type="button"
-              onClick={handleCancelVoting}
-              title="Cancelar votação ativa e zerar todos os votos"
-              style={{
-                backgroundColor: '#b91c1c',
-                borderColor: '#ef4444',
-                boxShadow: '0 4px 0 #7f1d1d, 2px 4px 0 #450a0a',
-              }}
-              className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
-            >
-              <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-white leading-none">
-                CANCELAR VOTAÇÃO
-              </span>
-              {/* Braille 50% menor */}
-              <div className="flex items-center gap-1 mt-1 pointer-events-none">
-                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                <span className="w-1.5" />
-                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-              </div>
-            </button>
-          )}
+          {/* BOTÃO CANCELAR VOTAÇÃO: Revela da direita para a esquerda a partir da borda esquerda do botão iniciar */}
+          <AnimatePresence>
+            {isVotingActive && (
+              <motion.div
+                key="btn-cancelar"
+                initial={{ width: 0, opacity: 0, x: 25, scale: 0.9 }}
+                animate={{ width: 'auto', opacity: 1, x: 0, scale: 1 }}
+                exit={{ width: 0, opacity: 0, x: 25, scale: 0.9 }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden flex items-center shrink-0"
+              >
+                <button
+                  type="button"
+                  onClick={handleCancelVoting}
+                  title="Cancelar votação ativa e zerar todos os votos"
+                  style={{
+                    backgroundColor: '#b91c1c',
+                    borderColor: '#ef4444',
+                    boxShadow: '0 4px 0 #7f1d1d, 2px 4px 0 #450a0a',
+                  }}
+                  className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+                >
+                  <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-white leading-none whitespace-nowrap">
+                    CANCELAR VOTAÇÃO
+                  </span>
+                  {/* Braille 50% menor */}
+                  <div className="flex items-center gap-1 mt-1 pointer-events-none">
+                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                    <span className="w-1.5" />
+                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                  </div>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-          {isVotingActive && (
-            /* Roda à esquerda do botão: giro lento + pulsar suave */
-            <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 pointer-events-none" aria-hidden="true">
-              {/* Halo pulsante suave */}
-              <motion.div
-                className="absolute inset-0 rounded-full bg-white/20"
-                animate={{ scale: [0.85, 1.25, 0.85], opacity: [0.45, 0, 0.45] }}
-                transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-              />
-              {/* Anel externo girando devagar (horário) */}
-              <motion.div
-                className="absolute inset-1 rounded-full border-[3px] border-white/15 border-t-white border-r-amber-300/90"
-                animate={{ rotate: 360 }}
-                transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
-              />
-              {/* Anel interno tracejado girando ao contrário */}
-              <motion.div
-                className="absolute inset-[11px] rounded-full border-2 border-dashed border-white/60"
-                animate={{ rotate: -360 }}
-                transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-              />
-              {/* Núcleo pulsando */}
-              <motion.div
-                className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.9)]"
-                animate={{ scale: [1, 1.5, 1], opacity: [0.8, 1, 0.8] }}
-                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-              />
-            </div>
-          )}
-
+          {/* BOTÃO PRINCIPAL DA URNA: INICIAR VOTAÇÃO -> EM VOTAÇÃO -> APURAÇÃO */}
           <button
             type="button"
             onClick={handleCenterVotingButtonClick}
@@ -360,11 +343,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 ? '0 6px 0 #94a3b8, 3px 6px 0 #64748b'
                 : '0 6px 0 #09521b, 3px 6px 0 #063b13',
             }}
-            className="px-7 pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none"
+            className="px-7 pt-2 pb-2.5 min-h-[54px] rounded-[14px] border-[3px] transition-all duration-300 active:translate-y-[4px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
           >
             <div className="flex items-center justify-center gap-2">
-              <span className="font-black text-sm sm:text-base tracking-wider uppercase font-sans text-[#1a1a1a] leading-none">
-                {showApuracaoCaption ? 'APURAÇÃO' : 'INICIAR VOTAÇÃO'}
+              <span className="font-black text-sm sm:text-base tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap">
+                {showApuracaoCaption ? 'APURAÇÃO' : isVotingActive ? 'EM VOTAÇÃO' : 'INICIAR VOTAÇÃO'}
               </span>
             </div>
 
@@ -412,6 +395,47 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })()}
           </button>
+
+          {/* RODINHA: Revela da borda direita do botão para a direita suavemente */}
+          <AnimatePresence>
+            {isVotingActive && (
+              <motion.div
+                key="rodinha-votacao"
+                initial={{ width: 0, opacity: 0, x: -25, scale: 0.9 }}
+                animate={{ width: 'auto', opacity: 1, x: 0, scale: 1 }}
+                exit={{ width: 0, opacity: 0, x: -25, scale: 0.9 }}
+                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                className="overflow-hidden flex items-center shrink-0"
+              >
+                <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 pointer-events-none" aria-hidden="true">
+                  {/* Halo pulsante suave */}
+                  <motion.div
+                    className="absolute inset-0 rounded-full bg-white/20"
+                    animate={{ scale: [0.85, 1.25, 0.85], opacity: [0.45, 0, 0.45] }}
+                    transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  {/* Anel externo girando devagar (horário) */}
+                  <motion.div
+                    className="absolute inset-1 rounded-full border-[3px] border-white/15 border-t-white border-r-amber-300/90"
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* Anel interno tracejado girando ao contrário */}
+                  <motion.div
+                    className="absolute inset-[11px] rounded-full border-2 border-dashed border-white/60"
+                    animate={{ rotate: -360 }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                  />
+                  {/* Núcleo pulsando */}
+                  <motion.div
+                    className="absolute inset-0 m-auto w-2 h-2 rounded-full bg-amber-300 shadow-[0_0_10px_rgba(252,211,77,0.9)]"
+                    animate={{ scale: [1, 1.5, 1], opacity: [0.8, 1, 0.8] }}
+                    transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* DIREITA: CADEADO (com Hint Bonito) ACIMA DE "VISÃO DE:" + "SENHA: XXX" */}
