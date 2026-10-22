@@ -766,6 +766,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
   // 5. TELA DE VOTAÇÃO ATIVA (Cards grandes para toques precisos)
   const isReadyToConfirm = selectedIds.length === maxVotes;
+  const remainingVotes = Math.max(0, maxVotes - selectedIds.length);
 
   return (
     <div className="max-w-xl mx-auto px-4 py-5 pb-36">
@@ -789,7 +790,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       )}
 
       {/* CABEÇALHO: FONTE BONITA E MENOR, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ */}
-      {/* Formato: Escolha xx nomes | eleição do tesoureiro | 0/6 */}
+      {/* Formato: Escolha xx nomes (decrescente) | eleição do tesoureiro | A A */}
       <div
         className={`${isTieBreak ? 'rounded-xl' : '-mx-4 -mt-5'} mb-4 px-3.5 py-2.5 border-b-[3px] border-[#e6d3a8] shadow-lg`}
         style={{
@@ -800,13 +801,20 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         }}
       >
         <div className="flex items-center justify-between gap-2 text-xs sm:text-sm text-white">
-          {/* Esquerda: Escolha xx nomes */}
+          {/* Esquerda: Escolha xx nomes (diminui conforme vai escolhendo) */}
           <div className="flex items-center gap-1.5 font-semibold shrink-0">
             <span>Escolha</span>
             <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-[#064e3b] border border-amber-400 text-amber-300 font-mono font-black text-xs shadow-sm leading-none">
-              {String(maxVotes).padStart(2, '0')}
+              <motion.span
+                key={remainingVotes}
+                initial={{ scale: 1.3, opacity: 0.5 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.2 }}
+              >
+                {String(remainingVotes).padStart(2, '0')}
+              </motion.span>
             </span>
-            <span>{maxVotes === 1 ? 'nome' : 'nomes'}</span>
+            <span>{remainingVotes === 1 ? 'nome' : 'nomes'}</span>
           </div>
 
           <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
@@ -818,54 +826,34 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
           <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
 
-          {/* Direita: Contador 0/6 e Botões A(menor)  A(maior) separados e sem borda */}
-          <div className="flex items-center gap-2 shrink-0">
-            <div
-              className={`text-xs sm:text-sm font-bold tabular-nums flex items-baseline shrink-0 ${
-                isReadyToConfirm ? 'text-emerald-300' : 'text-[#e6d3a8]'
+          {/* Direita: Botões A(menor) e A(maior) bem mais juntos (espaço de apenas 1 caractere) */}
+          <div className="flex items-center gap-0.5 select-none shrink-0">
+            <button
+              type="button"
+              onClick={decreaseFont}
+              disabled={fontScalePercent === 0}
+              title="Reduzir fonte dos cards (mínimo)"
+              className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                fontScalePercent === 0
+                  ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
+                  : 'text-[#f4ead2] hover:text-amber-300'
               }`}
             >
-              <motion.span
-                key={selectedIds.length}
-                initial={{ scale: 1.5, opacity: 0.4 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ type: 'spring', damping: 12, stiffness: 300 }}
-                className="inline-block font-black"
-              >
-                {selectedIds.length}
-              </motion.span>
-              <span className="opacity-80">/{maxVotes}</span>
-            </div>
-
-            {/* A(menor) e A(maior) separados, sem borda, com espaço de 2 caracteres */}
-            <div className="flex items-center gap-2 select-none shrink-0 ml-1">
-              <button
-                type="button"
-                onClick={decreaseFont}
-                disabled={fontScalePercent === 0}
-                title="Reduzir fonte dos cards (mínimo)"
-                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
-                  fontScalePercent === 0
-                    ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
-                    : 'text-[#f4ead2] hover:text-amber-300'
-                }`}
-              >
-                <span className="text-xs font-bold leading-none pointer-events-none">A</span>
-              </button>
-              <button
-                type="button"
-                onClick={increaseFont}
-                disabled={fontScalePercent === 24}
-                title="Aumentar fonte dos cards (limite +24%)"
-                className={`min-w-[32px] min-h-[32px] p-1 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
-                  fontScalePercent === 24
-                    ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
-                    : 'text-[#f4ead2] hover:text-amber-300'
-                }`}
-              >
-                <span className="text-lg font-black leading-none pointer-events-none">A</span>
-              </button>
-            </div>
+              <span className="text-xs font-bold leading-none pointer-events-none">A</span>
+            </button>
+            <button
+              type="button"
+              onClick={increaseFont}
+              disabled={fontScalePercent === 24}
+              title="Aumentar fonte dos cards (limite +24%)"
+              className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                fontScalePercent === 24
+                  ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
+                  : 'text-[#f4ead2] hover:text-amber-300'
+              }`}
+            >
+              <span className="text-lg font-black leading-none pointer-events-none">A</span>
+            </button>
           </div>
         </div>
       </div>
