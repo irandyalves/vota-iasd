@@ -442,12 +442,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
                         <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
                       </div>
 
-                      {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está (Reduzida em 40% no mobile) */}
+                      {/* Pontinha Dourada Brilhosa na ponta indicando onde ele está (Reduzida em 40%) */}
                       {(option.votesCount || 0) > 0 && (
                         <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center pointer-events-none z-20">
-                          <div className="absolute -inset-y-1.5 sm:-inset-y-2 w-3 sm:w-5 -right-1 sm:-right-2 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-90 blur-[3px] sm:blur-[6px]" />
-                          <div className="relative w-[2.4px] sm:w-[4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_6px_#fbbf24,0_0_12px_rgba(245,158,11,0.8),0_0_2px_#ffffff] sm:shadow-[0_0_12px_#fbbf24,0_0_24px_rgba(245,158,11,1),0_0_4px_#ffffff] rounded-r-xs" />
-                          <div className="absolute right-[-2.5px] sm:right-[-4.5px] top-1/2 -translate-y-1/2 w-2 h-2 sm:w-3.5 sm:h-3.5 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_6px_2px_#f59e0b,0_0_12px_4px_rgba(251,191,36,0.8)] sm:shadow-[0_0_12px_4px_#f59e0b,0_0_24px_8px_rgba(251,191,36,0.9),0_0_3px_#ffffff] ring-1 sm:ring-1.5 ring-white/90" />
+                          <div className="absolute -inset-y-1 sm:-inset-y-1.5 w-2 sm:w-3 -right-0.5 sm:-right-1 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-80 blur-[2px] sm:blur-[3.5px]" />
+                          <div className="relative w-[1.5px] sm:w-[2.4px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_4px_#fbbf24,0_0_8px_rgba(245,158,11,0.7)] sm:shadow-[0_0_6px_#fbbf24,0_0_12px_rgba(245,158,11,0.8),0_0_2px_#ffffff] rounded-r-xs" />
+                          <div className="absolute right-[-2.5px] sm:right-[-4px] top-1/2 -translate-y-1/2 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-gradient-to-tr from-amber-300 via-yellow-100 to-white shadow-[0_0_4px_1px_#f59e0b,0_0_7px_2px_rgba(251,191,36,0.7)] sm:shadow-[0_0_6px_2px_#f59e0b,0_0_12px_3px_rgba(251,191,36,0.8),0_0_2px_#ffffff] ring-1 ring-white/80" />
                         </div>
                       )}
                     </motion.div>
