@@ -313,6 +313,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const eventModalRef = useRef<HTMLDivElement>(null);
   const createEventBtnRef = useRef<HTMLButtonElement>(null);
   const eventTitleInputRef = useRef<HTMLInputElement>(null);
+  const newGeneralInputRef = useRef<HTMLInputElement>(null);
+  const editingGeneralInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (isNewGeneralModalOpen) {
+      setTimeout(() => {
+        newGeneralInputRef.current?.focus();
+        newGeneralInputRef.current?.select();
+      }, 50);
+    }
+  }, [isNewGeneralModalOpen]);
+
+  useEffect(() => {
+    if (isEditingGeneralModalOpen) {
+      setTimeout(() => {
+        editingGeneralInputRef.current?.focus();
+        editingGeneralInputRef.current?.select();
+      }, 50);
+    }
+  }, [isEditingGeneralModalOpen]);
 
   // Fecha o painel da engrenagem, menu de importar ou o modalzinho de criar/editar evento ao pressionar ESC ou clicar fora
   useEffect(() => {
@@ -2030,13 +2050,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <Building2 className="w-7 h-7 text-emerald-400" />
                 </div>
 
-                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-1.5">
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-3">
                   Criar Novo Evento Geral
                 </h3>
-
-                <p className="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
-                  O <strong>Evento Geral</strong> funciona como a assembleia mãe (ex: <em>Comissão da IASD Asa Norte 2026</em>), onde as votações de cada cargo serão criadas.
-                </p>
 
                 <div className="w-full bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 mb-4 text-left flex items-start gap-2.5 text-xs text-amber-200">
                   <AlertCircle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
@@ -2050,10 +2066,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     Nome do Evento Geral:
                   </label>
                   <input
+                    ref={newGeneralInputRef}
                     type="text"
                     autoFocus
                     placeholder="Ex: COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE 2026"
                     value={newGeneralEventNameInput}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setNewGeneralEventNameInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
@@ -2140,9 +2158,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     Nome do Evento Geral:
                   </label>
                   <input
+                    ref={editingGeneralInputRef}
                     type="text"
                     autoFocus
                     value={editingGeneralEventName}
+                    onFocus={(e) => e.target.select()}
                     onChange={(e) => setEditingGeneralEventName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') {
