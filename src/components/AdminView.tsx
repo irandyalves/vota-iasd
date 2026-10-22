@@ -112,12 +112,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     localStorage.setItem('vota_iasd_vu_meter_model', model);
   };
 
-  const handleCycleVuModel = () => {
-    const models = ['estudio', 'neon-wave', 'led-matrix', 'gold-pulse'];
-    const next = models[(models.indexOf(vuMeterModel) + 1) % models.length];
-    handleSelectVuModel(next);
-  };
-
   useEffect(() => {
     const unsub = subscribeSecondaryScreen(setIsScreen2Open);
     return unsub;
@@ -2456,34 +2450,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         Escolha de
                       </h3>
 
-                      {/* Rodinha animada que estava no topo (giro lento suave + anéis e núcleo pulsante) */}
-                      <div className="relative w-6 h-6 sm:w-7 sm:h-7 shrink-0 pointer-events-none select-none" aria-hidden="true" title="Votação em andamento">
-                        {/* Halo pulsante suave */}
-                        <motion.div
-                          className="absolute inset-0 rounded-full bg-emerald-400/20"
-                          animate={{ scale: [0.85, 1.25, 0.85], opacity: [0.45, 0, 0.45] }}
-                          transition={{ duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                        {/* Anel externo girando devagar (horário) */}
-                        <motion.div
-                          className="absolute inset-0.5 rounded-full border-2 border-white/20 border-t-white border-r-amber-300"
-                          animate={{ rotate: 360 }}
-                          transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
-                        />
-                        {/* Anel interno tracejado girando ao contrário */}
-                        <motion.div
-                          className="absolute inset-[5px] rounded-full border border-dashed border-white/70"
-                          animate={{ rotate: -360 }}
-                          transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
-                        />
-                        {/* Núcleo pulsando */}
-                        <motion.div
-                          className="absolute inset-0 m-auto w-1.5 h-1.5 rounded-full bg-amber-300 shadow-[0_0_8px_rgba(252,211,77,0.9)]"
-                          animate={{ scale: [1, 1.4, 1], opacity: [0.8, 1, 0.8] }}
-                          transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-                        />
-                      </div>
-
                       {/* Card Escolhido (ex: MULHERES): linhas estendidas em 15% para dir/esq, intensidade reduzida em 25%, texto branco sem bold */}
                       <div className="relative px-4 py-1 flex items-center justify-center select-none">
                         {/* Linha superior com platô de 30% no centro e transparência para esq/dir */}
@@ -2512,135 +2478,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         </span>
                       </div>
 
-                    {/* Barra de 10 VU Meter Moderno Animado (Sem borda e sem fundo, 4 modelos para escolha) */}
-                    {showVuMeter && (
-                      <div
-                        onClick={handleCycleVuModel}
-                        title={`VU Meter: ${
-                          vuMeterModel === 'neon-wave'
-                            ? 'Onda Neon'
-                            : vuMeterModel === 'led-matrix'
-                            ? 'LED Matrix'
-                            : vuMeterModel === 'gold-pulse'
-                            ? 'Dourado'
-                            : 'Estúdio'
-                        } (Clique para alternar modelo)`}
-                        className="flex items-end gap-[3px] h-6 px-1 select-none shrink-0 cursor-pointer transition-transform active:scale-95"
-                      >
-                        {/* MODELO 1: ESTÚDIO BROADCAST (Verde -> Amarelo -> Vermelho) */}
-                        {vuMeterModel === 'estudio' &&
-                          [
-                            { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['35%', '85%', '50%', '95%', '35%'], duration: 1.1, delay: 0 },
-                            { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['50%', '30%', '90%', '45%', '50%'], duration: 0.9, delay: 0.15 },
-                            { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['25%', '95%', '60%', '40%', '25%'], duration: 1.3, delay: 0.05 },
-                            { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['60%', '40%', '100%', '70%', '60%'], duration: 0.85, delay: 0.2 },
-                            { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['40%', '90%', '35%', '85%', '40%'], duration: 1.15, delay: 0.1 },
-                            { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['70%', '45%', '95%', '50%', '70%'], duration: 0.95, delay: 0.25 },
-                            { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['30%', '80%', '45%', '90%', '30%'], duration: 1.25, delay: 0.18 },
-                            { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['55%', '35%', '85%', '60%', '55%'], duration: 1.05, delay: 0.08 },
-                            { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['20%', '75%', '30%', '85%', '20%'], duration: 1.35, delay: 0.22 },
-                            { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['15%', '65%', '25%', '80%', '15%'], duration: 1.0, delay: 0.12 },
-                          ].map((bar, idx) => (
-                            <motion.div
-                              key={idx}
-                              animate={{ height: bar.heights }}
-                              transition={{
-                                duration: bar.duration,
-                                delay: bar.delay,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                              }}
-                              className={`w-[3.5px] rounded-t-[1.5px] bg-gradient-to-t ${bar.color}`}
-                            />
-                          ))}
-
-                        {/* MODELO 2: ONDA NEON CIANO / AZUL FUTURISTA */}
-                        {vuMeterModel === 'neon-wave' &&
-                          [
-                            { heights: ['25%', '70%', '40%', '85%', '25%'], duration: 1.0, delay: 0 },
-                            { heights: ['40%', '85%', '55%', '95%', '40%'], duration: 1.0, delay: 0.1 },
-                            { heights: ['60%', '95%', '70%', '100%', '60%'], duration: 1.0, delay: 0.2 },
-                            { heights: ['75%', '100%', '80%', '90%', '75%'], duration: 1.0, delay: 0.3 },
-                            { heights: ['85%', '90%', '90%', '75%', '85%'], duration: 1.0, delay: 0.4 },
-                            { heights: ['85%', '75%', '90%', '90%', '85%'], duration: 1.0, delay: 0.5 },
-                            { heights: ['75%', '90%', '80%', '100%', '75%'], duration: 1.0, delay: 0.6 },
-                            { heights: ['60%', '100%', '70%', '95%', '60%'], duration: 1.0, delay: 0.7 },
-                            { heights: ['40%', '95%', '55%', '85%', '40%'], duration: 1.0, delay: 0.8 },
-                            { heights: ['25%', '85%', '40%', '70%', '25%'], duration: 1.0, delay: 0.9 },
-                          ].map((bar, idx) => (
-                            <motion.div
-                              key={idx}
-                              animate={{ height: bar.heights }}
-                              transition={{
-                                duration: bar.duration,
-                                delay: bar.delay,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                              }}
-                              className="w-[3.5px] rounded-full bg-gradient-to-t from-blue-600 via-cyan-400 to-teal-200 shadow-[0_0_8px_rgba(6,182,212,0.85)]"
-                            />
-                          ))}
-
-                        {/* MODELO 3: LED MATRIX DIGITAL SEGMENTADO (Estilo Rack Físico) */}
-                        {vuMeterModel === 'led-matrix' &&
-                          [
-                            { color: '#10b981', heights: ['40%', '80%', '60%', '100%', '40%'], duration: 1.0, delay: 0 },
-                            { color: '#10b981', heights: ['60%', '40%', '100%', '60%', '60%'], duration: 0.9, delay: 0.12 },
-                            { color: '#10b981', heights: ['40%', '100%', '60%', '80%', '40%'], duration: 1.2, delay: 0.05 },
-                            { color: '#10b981', heights: ['80%', '60%', '100%', '40%', '80%'], duration: 0.85, delay: 0.18 },
-                            { color: '#10b981', heights: ['60%', '100%', '40%', '80%', '60%'], duration: 1.1, delay: 0.08 },
-                            { color: '#10b981', heights: ['100%', '60%', '80%', '40%', '100%'], duration: 0.95, delay: 0.22 },
-                            { color: '#f59e0b', heights: ['40%', '80%', '60%', '100%', '40%'], duration: 1.15, delay: 0.15 },
-                            { color: '#f59e0b', heights: ['80%', '40%', '100%', '60%', '80%'], duration: 1.0, delay: 0.1 },
-                            { color: '#f43f5e', heights: ['40%', '80%', '40%', '100%', '40%'], duration: 1.25, delay: 0.25 },
-                            { color: '#f43f5e', heights: ['20%', '80%', '40%', '60%', '20%'], duration: 1.05, delay: 0.18 },
-                          ].map((bar, idx) => (
-                            <motion.div
-                              key={idx}
-                              animate={{ height: bar.heights }}
-                              transition={{
-                                duration: bar.duration,
-                                delay: bar.delay,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                              }}
-                              style={{
-                                color: bar.color,
-                                background: `repeating-linear-gradient(to top, ${bar.color} 0px, ${bar.color} 3px, transparent 3px, transparent 4.5px)`,
-                                boxShadow: `0 0 5px ${bar.color}88`,
-                              }}
-                              className="w-[3.5px] rounded-[1px]"
-                            />
-                          ))}
-
-                        {/* MODELO 4: DOURADO & ÂMBAR LUXO (Harmoniza com o tema) */}
-                        {vuMeterModel === 'gold-pulse' &&
-                          [
-                            { heights: ['30%', '75%', '45%', '90%', '30%'], duration: 1.1, delay: 0 },
-                            { heights: ['55%', '35%', '85%', '60%', '55%'], duration: 0.95, delay: 0.12 },
-                            { heights: ['25%', '90%', '55%', '40%', '25%'], duration: 1.25, delay: 0.05 },
-                            { heights: ['70%', '45%', '100%', '65%', '70%'], duration: 0.85, delay: 0.2 },
-                            { heights: ['40%', '95%', '35%', '85%', '40%'], duration: 1.15, delay: 0.1 },
-                            { heights: ['85%', '50%', '90%', '45%', '85%'], duration: 0.9, delay: 0.25 },
-                            { heights: ['35%', '85%', '50%', '95%', '35%'], duration: 1.2, delay: 0.18 },
-                            { heights: ['60%', '40%', '90%', '70%', '60%'], duration: 1.05, delay: 0.08 },
-                            { heights: ['45%', '80%', '30%', '95%', '45%'], duration: 1.3, delay: 0.22 },
-                            { heights: ['20%', '70%', '35%', '85%', '20%'], duration: 1.0, delay: 0.15 },
-                          ].map((bar, idx) => (
-                            <motion.div
-                              key={idx}
-                              animate={{ height: bar.heights }}
-                              transition={{
-                                duration: bar.duration,
-                                delay: bar.delay,
-                                repeat: Infinity,
-                                ease: 'easeInOut',
-                              }}
-                              className="w-[3.5px] rounded-t-[1.5px] bg-gradient-to-t from-amber-700 via-amber-400 to-amber-100 shadow-[0_0_6px_rgba(251,191,36,0.85)]"
-                            />
-                          ))}
-                      </div>
-                    )}
                   </div>
                 </div>
 

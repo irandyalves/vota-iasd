@@ -284,48 +284,50 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* CENTRO: BOTÃO DA URNA COM ANIMAÇÃO DE REVELAÇÃO E RECOLHIMENTO SUAVES */}
-        <div className="flex items-center justify-center justify-self-center gap-3">
-          {/* BOTÃO CANCELAR VOTAÇÃO: Revela da direita para a esquerda a partir da borda esquerda do botão iniciar */}
-          <AnimatePresence>
-            {isVotingActive && (
-              <motion.div
-                key="btn-cancelar"
-                initial={{ width: 0, opacity: 0, x: 25, scale: 0.9 }}
-                animate={{ width: 'auto', opacity: 1, x: 0, scale: 1 }}
-                exit={{ width: 0, opacity: 0, x: 25, scale: 0.9 }}
-                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden flex items-center shrink-0"
-              >
-                <button
-                  type="button"
-                  onClick={handleCancelVoting}
-                  title="Cancelar votação ativa e zerar todos os votos"
-                  style={{
-                    backgroundColor: '#b91c1c',
-                    borderColor: '#ef4444',
-                    boxShadow: '0 4px 0 #7f1d1d, 2px 4px 0 #450a0a',
-                  }}
-                  className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+        {/* CENTRO: BOTÃO DA URNA TOTALMENTE TRAVADO NO CENTRO (ÂNCORA IMÓVEL, NUNCA SE MEXE) */}
+        <div className="relative flex items-center justify-center justify-self-center">
+          {/* SLOT ESQUERDO: BOTÃO CANCELAR VOTAÇÃO (Ancorado à esquerda do botão central) */}
+          <div className="absolute right-full mr-3 flex items-center justify-end pointer-events-none">
+            <AnimatePresence>
+              {isVotingActive && (
+                <motion.div
+                  key="btn-cancelar"
+                  initial={{ opacity: 0, x: 30, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 30, scale: 0.95 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  className="pointer-events-auto flex items-center shrink-0"
                 >
-                  <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-white leading-none whitespace-nowrap">
-                    CANCELAR VOTAÇÃO
-                  </span>
-                  {/* Braille 50% menor */}
-                  <div className="flex items-center gap-1 mt-1 pointer-events-none">
-                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                    <span className="w-1.5" />
-                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                    <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
-                  </div>
-                </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <button
+                    type="button"
+                    onClick={handleCancelVoting}
+                    title="Cancelar votação ativa e zerar todos os votos"
+                    style={{
+                      backgroundColor: '#b91c1c',
+                      borderColor: '#ef4444',
+                      boxShadow: '0 4px 0 #7f1d1d, 2px 4px 0 #450a0a',
+                    }}
+                    className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+                  >
+                    <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-white leading-none whitespace-nowrap">
+                      CANCELAR VOTAÇÃO
+                    </span>
+                    {/* Braille 50% menor */}
+                    <div className="flex items-center gap-1 mt-1 pointer-events-none">
+                      <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                      <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                      <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                      <span className="w-1.5" />
+                      <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                      <span className="w-1 h-1 rounded-full bg-[#fca5a5] shadow-[0.5px_0.5px_0_#7f1d1d]" />
+                    </div>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
 
-          {/* BOTÃO PRINCIPAL DA URNA: TAMANHO FIXO (NÃO MUDA DE TAMANHO AO TROCAR O CAPTION) */}
+          {/* BOTÃO PRINCIPAL DA URNA: TAMANHO FIXO E POSIÇÃO TOTALMENTE TRAVADA NO CENTRO */}
           <button
             type="button"
             onClick={handleCenterVotingButtonClick}
@@ -396,49 +398,51 @@ export const Navbar: React.FC<NavbarProps> = ({
             })()}
           </button>
 
-          {/* VU METER: Revela da borda direita do botão para a direita suavemente (Substitui a rodinha) */}
-          <AnimatePresence>
-            {isVotingActive && (
-              <motion.div
-                key="vumeter-navbar"
-                initial={{ width: 0, opacity: 0, x: -25, scale: 0.9 }}
-                animate={{ width: 'auto', opacity: 1, x: 0, scale: 1 }}
-                exit={{ width: 0, opacity: 0, x: -25, scale: 0.9 }}
-                transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-                className="overflow-hidden flex items-center shrink-0 pl-1"
-              >
-                <div
-                  title="VU Meter de Atividade em Tempo Real"
-                  className="flex items-end gap-[3px] h-6 px-1 select-none shrink-0"
+          {/* SLOT DIREITO: VU METER (Ancorado à direita do botão central) */}
+          <div className="absolute left-full ml-3 flex items-center justify-start pointer-events-none">
+            <AnimatePresence>
+              {isVotingActive && (
+                <motion.div
+                  key="vumeter-navbar"
+                  initial={{ opacity: 0, x: -30, scale: 0.95 }}
+                  animate={{ opacity: 1, x: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: -30, scale: 0.95 }}
+                  transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                  className="pointer-events-auto flex items-center shrink-0 pl-1"
                 >
-                  {[
-                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['35%', '85%', '50%', '95%', '35%'], duration: 1.1, delay: 0 },
-                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['50%', '30%', '90%', '45%', '50%'], duration: 0.9, delay: 0.15 },
-                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['25%', '95%', '60%', '40%', '25%'], duration: 1.3, delay: 0.05 },
-                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['60%', '40%', '100%', '70%', '60%'], duration: 0.85, delay: 0.2 },
-                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['40%', '90%', '35%', '85%', '40%'], duration: 1.15, delay: 0.1 },
-                    { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['70%', '45%', '95%', '50%', '70%'], duration: 0.95, delay: 0.25 },
-                    { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['30%', '80%', '45%', '90%', '30%'], duration: 1.25, delay: 0.18 },
-                    { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['55%', '35%', '85%', '60%', '55%'], duration: 1.05, delay: 0.08 },
-                    { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['20%', '75%', '30%', '85%', '20%'], duration: 1.35, delay: 0.22 },
-                    { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['15%', '65%', '25%', '80%', '15%'], duration: 1.0, delay: 0.12 },
-                  ].map((bar, idx) => (
-                    <motion.div
-                      key={idx}
-                      animate={{ height: bar.heights }}
-                      transition={{
-                        duration: bar.duration,
-                        delay: bar.delay,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                      }}
-                      className={`w-[3px] rounded-t-[1.5px] bg-gradient-to-t ${bar.color}`}
-                    />
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                  <div
+                    title="VU Meter de Atividade em Tempo Real"
+                    className="flex items-end gap-[3px] h-6 px-1 select-none shrink-0"
+                  >
+                    {[
+                      { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['35%', '85%', '50%', '95%', '35%'], duration: 1.1, delay: 0 },
+                      { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['50%', '30%', '90%', '45%', '50%'], duration: 0.9, delay: 0.15 },
+                      { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['25%', '95%', '60%', '40%', '25%'], duration: 1.3, delay: 0.05 },
+                      { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['60%', '40%', '100%', '70%', '60%'], duration: 0.85, delay: 0.2 },
+                      { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['40%', '90%', '35%', '85%', '40%'], duration: 1.15, delay: 0.1 },
+                      { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['70%', '45%', '95%', '50%', '70%'], duration: 0.95, delay: 0.25 },
+                      { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['30%', '80%', '45%', '90%', '30%'], duration: 1.25, delay: 0.18 },
+                      { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['55%', '35%', '85%', '60%', '55%'], duration: 1.05, delay: 0.08 },
+                      { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['20%', '75%', '30%', '85%', '20%'], duration: 1.35, delay: 0.22 },
+                      { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['15%', '65%', '25%', '80%', '15%'], duration: 1.0, delay: 0.12 },
+                    ].map((bar, idx) => (
+                      <motion.div
+                        key={idx}
+                        animate={{ height: bar.heights }}
+                        transition={{
+                          duration: bar.duration,
+                          delay: bar.delay,
+                          repeat: Infinity,
+                          ease: 'easeInOut',
+                        }}
+                        className={`w-[3px] rounded-t-[1.5px] bg-gradient-to-t ${bar.color}`}
+                      />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
 
         {/* DIREITA: CADEADO (com Hint Bonito) ACIMA DE "VISÃO DE:" + "SENHA: XXX" */}
