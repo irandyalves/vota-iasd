@@ -59,6 +59,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [tieWarningModal, setTieWarningModal] = useState<string | null>(null);
   const [tieWarningTrigger, setTieWarningTrigger] = useState<number>(0);
   const [isScreen2Open, setIsScreen2Open] = useState<boolean>(false);
+  const [showVuMeter, setShowVuMeter] = useState<boolean>(() => {
+    const saved = localStorage.getItem('vota_iasd_show_vu_meter');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const handleToggleVuMeter = (val: boolean) => {
+    setShowVuMeter(val);
+    localStorage.setItem('vota_iasd_show_vu_meter', String(val));
+  };
 
   useEffect(() => {
     const unsub = subscribeSecondaryScreen(setIsScreen2Open);
@@ -2057,6 +2066,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               {gap}px
                             </span>
                           </div>
+
+                          {/* 6. Switch VU Meter no Dashboard (Chavinha Slide) */}
+                          <div className="flex items-center gap-2 bg-[#0b0d13] px-3 py-2.5 rounded-lg border border-white/[0.08] min-h-[38px]">
+                            <span className="text-[11px] font-medium text-slate-400 uppercase tracking-wider">VU Meter:</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleVuMeter(!showVuMeter)}
+                              className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                                showVuMeter ? 'bg-emerald-500' : 'bg-slate-700'
+                              }`}
+                              title={showVuMeter ? 'Ocultar VU Meter' : 'Exibir VU Meter'}
+                            >
+                              <span
+                                className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                                  showVuMeter ? 'translate-x-4' : 'translate-x-0'
+                                }`}
+                              />
+                            </button>
+                            <span className="text-[10px] font-semibold text-slate-300">
+                              {showVuMeter ? 'ON' : 'OFF'}
+                            </span>
+                          </div>
                         </div>
 
                         {/* GRUPO DIREITA: CORES ESMAGADAS (Titulares, 1º Supl, 2º Supl, Não Classif) */}
@@ -2337,21 +2368,54 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
                     <Activity className="w-4 h-4 animate-pulse" />
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide uppercase">
-                        VOTAÇÃO EM TEMPO REAL
-                      </h3>
-                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
-                        Ao vivo
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400">
-                      {session.title || 'Votação em Andamento'} • {vacancies} {vacancies === 1 ? 'Titular' : 'Titulares'}
-                      {s1Count > 0 && ` • ${s1Count} 1º Supl.`}
-                      {s2Count > 0 && ` • ${s2Count} 2º Supl.`}
-                    </p>
+                  <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
+                    <h3 className="font-black text-slate-100 text-sm sm:text-base tracking-wide uppercase whitespace-nowrap">
+                      VOTAÇÃO EM TEMPO REAL
+                    </h3>
+
+                    {/* Pontinho pulsando na frente de REAL */}
+                    <span className="relative flex h-2.5 w-2.5 shrink-0" title="Transmissão em tempo real">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.9)]" />
+                    </span>
+
+                    {/* Card Escolhido (ex: MULHERES) na frente do pontinho */}
+                    <span className="text-xs sm:text-sm font-black text-amber-300 uppercase tracking-wide px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30 whitespace-nowrap shadow-xs">
+                      {session.title || 'ELEIÇÃO'}
+                    </span>
+
+                    {/* Barra de 10 VU Meter Moderno Animado */}
+                    {showVuMeter && (
+                      <div
+                        title="VU Meter de Atividade em Tempo Real"
+                        className="flex items-end gap-[3px] h-6 px-2 py-1 rounded-lg bg-[#070b14] border border-white/[0.12] shadow-inner select-none shrink-0"
+                      >
+                        {[
+                          { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['35%', '85%', '50%', '95%', '35%'], duration: 1.1, delay: 0 },
+                          { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['50%', '30%', '90%', '45%', '50%'], duration: 0.9, delay: 0.15 },
+                          { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['25%', '95%', '60%', '40%', '25%'], duration: 1.3, delay: 0.05 },
+                          { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['60%', '40%', '100%', '70%', '60%'], duration: 0.85, delay: 0.2 },
+                          { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['40%', '90%', '35%', '85%', '40%'], duration: 1.15, delay: 0.1 },
+                          { color: 'from-emerald-600 to-emerald-400 shadow-[0_0_5px_rgba(52,211,153,0.7)]', heights: ['70%', '45%', '95%', '50%', '70%'], duration: 0.95, delay: 0.25 },
+                          { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['30%', '80%', '45%', '90%', '30%'], duration: 1.25, delay: 0.18 },
+                          { color: 'from-amber-600 to-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.8)]', heights: ['55%', '35%', '85%', '60%', '55%'], duration: 1.05, delay: 0.08 },
+                          { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['20%', '75%', '30%', '85%', '20%'], duration: 1.35, delay: 0.22 },
+                          { color: 'from-rose-600 to-rose-400 shadow-[0_0_6px_rgba(244,63,94,0.8)]', heights: ['15%', '65%', '25%', '80%', '15%'], duration: 1.0, delay: 0.12 },
+                        ].map((bar, idx) => (
+                          <motion.div
+                            key={idx}
+                            animate={{ height: bar.heights }}
+                            transition={{
+                              duration: bar.duration,
+                              delay: bar.delay,
+                              repeat: Infinity,
+                              ease: 'easeInOut',
+                            }}
+                            className={`w-[3.5px] rounded-t-[1.5px] bg-gradient-to-t ${bar.color}`}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
