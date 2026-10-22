@@ -2687,43 +2687,43 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
       {/* CARD: EVENTOS GERAIS ONLINE (LISTBOX + NOVO EVENTO À ESQUERDA, HISTÓRICO + ENGRENAGEM SEM FUNDO À DIREITA) */}
       <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative z-30">
-        {/* Esquerda: Ícone do Prédio (sem borda) + Listbox dos Eventos + Lapizinho (sem borda) + Lixeira (sem borda) + Botão Novo Evento */}
-        <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-wrap">
+        {/* Esquerda: Grupo Comissão (sem borda, fica bold no hover) + Lápis, Excluir e Add esmaecidos que voltam à vida da esq para a dir em cores */}
+        <div className="group flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
           <div className="flex items-center justify-center shrink-0 p-1">
             <Building2 className="w-5 h-5 text-amber-400" />
           </div>
 
-          {/* Listbox dos Eventos Existentes (substitui o título comissão para evitar duplicidade) */}
+          {/* Listbox dos Eventos Existentes (SEM BORDA, fica bold ao passar o mouse) */}
           <div className="relative shrink-0">
             <select
               value={currentGeneralEventId}
               onChange={(e) => handleSwitchGeneralEvent(e.target.value)}
-              className="bg-[#0b172a] hover:bg-[#0f1f38] text-amber-300 text-xs sm:text-sm font-normal pl-3 pr-8 py-1.5 sm:py-2 rounded-lg border border-amber-500/40 hover:border-amber-400 focus:outline-none focus:ring-1 focus:ring-amber-400 shadow-inner cursor-pointer appearance-none min-w-[200px] max-w-[260px] sm:max-w-[340px] truncate transition-colors"
+              className="bg-transparent hover:bg-white/5 text-amber-300 text-xs sm:text-sm font-normal group-hover:font-bold hover:font-bold pl-1.5 pr-7 py-1.5 rounded-lg border-0 outline-none focus:outline-none focus:ring-0 shadow-none cursor-pointer appearance-none min-w-[200px] max-w-[280px] sm:max-w-[380px] truncate transition-all duration-200"
               title="Selecione o Evento Geral"
             >
               {generalEventsList.map((gev) => (
-                <option key={gev.id} value={gev.id} className="bg-[#0b172a] text-slate-100 py-1">
+                <option key={gev.id} value={gev.id} className="bg-[#0b172a] text-slate-100 py-1 font-normal">
                   {gev.name}
                 </option>
               ))}
             </select>
-            <ChevronDown className="w-3.5 h-3.5 text-amber-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+            <ChevronDown className="w-3.5 h-3.5 text-amber-400/80 group-hover:text-amber-300 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" />
           </div>
 
-          {/* Botão de Renomear o Evento Geral Selecionado (sem borda) */}
+          {/* 1. Lápis (da esq para a dir: delay 0ms) - esmaecido em repouso, ganha vida e cor âmbar */}
           <button
             type="button"
             onClick={() => {
               setEditingGeneralEventName(session.generalEventName || 'Comissão da Igreja Adventista da Asa Norte');
               setIsEditingGeneralModalOpen(true);
             }}
-            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-white/10 transition cursor-pointer shrink-0 border-0 shadow-none focus:outline-none"
+            className="p-1.5 rounded-lg opacity-20 group-hover:opacity-100 hover:opacity-100 text-amber-400 hover:text-amber-300 hover:bg-white/10 transition-all duration-300 delay-0 cursor-pointer shrink-0 border-0 shadow-none focus:outline-none active:scale-95 hover:scale-110"
             title="Renomear este Evento Geral"
           >
             <Pencil className="w-4 h-4" />
           </button>
 
-          {/* Botão de Excluir o Evento Geral Selecionado (sem borda) */}
+          {/* 2. Excluir / Lixeira (da esq para a dir: delay 100ms) - esmaecido em repouso, ganha vida e cor vermelha/rose */}
           <button
             type="button"
             onClick={() => {
@@ -2732,20 +2732,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 name: session.generalEventName || 'Evento Geral',
               });
             }}
-            className="p-1.5 rounded-lg text-rose-400 hover:text-rose-200 hover:bg-white/10 transition cursor-pointer shrink-0 border-0 shadow-none focus:outline-none"
+            className="p-1.5 rounded-lg opacity-20 group-hover:opacity-100 hover:opacity-100 text-rose-400 hover:text-rose-300 hover:bg-white/10 transition-all duration-300 delay-100 cursor-pointer shrink-0 border-0 shadow-none focus:outline-none active:scale-95 hover:scale-110"
             title="Excluir este Evento Geral"
           >
             <Trash2 className="w-4 h-4" />
           </button>
 
-          {/* Botão + (bold, sem fundo e sem borda) para criar novo evento geral */}
+          {/* 3. Add / + (da esq para a dir: delay 200ms) - esmaecido em repouso, ganha vida e cor verde esmeralda */}
           <button
             type="button"
             onClick={() => {
               setNewGeneralEventNameInput('');
               setIsNewGeneralModalOpen(true);
             }}
-            className="p-1.5 rounded-lg text-amber-400 hover:text-amber-300 hover:bg-white/10 border-0 shadow-none transition cursor-pointer active:scale-90 flex items-center justify-center shrink-0 focus:outline-none"
+            className="p-1.5 rounded-lg opacity-20 group-hover:opacity-100 hover:opacity-100 text-emerald-400 hover:text-emerald-300 hover:bg-white/10 transition-all duration-300 delay-200 cursor-pointer shrink-0 border-0 shadow-none focus:outline-none active:scale-95 hover:scale-110 flex items-center justify-center"
             title="Criar novo Evento Geral"
           >
             <Plus className="w-5 h-5 stroke-[3]" />
