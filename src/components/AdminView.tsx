@@ -233,6 +233,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const detectedTies = session.resolverEmpates !== false ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
 
+  const [isTieAlertDismissed, setIsTieAlertDismissed] = useState(false);
   const prevDetectedTiesRef = useRef<TieInfo[]>([]);
 
   useEffect(() => {
@@ -329,9 +330,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   }, [session.status, session.tieBreak, session.options]);
 
   const isVotingActive = session.status === 'VOTING' || session.status === 'TIE_BREAK';
-  // Bloqueio de edição de candidatos enquanto um desempate estiver sendo resolvido
+  // Bloqueio de edição de candidatos enquanto um desempate estiver sendo ativamente resolvido
   const isResolvingTie =
-    (hasTies && (isTieModalOpen || session.status === 'CLOSED')) ||
+    (hasTies && isTieModalOpen && !isTieAlertDismissed) ||
     session.status === 'TIE_BREAK' ||
     Boolean(session.tieBreak?.active);
   // Apuração em Tempo Real SEMPRE exibe todos os candidatos (JAMAIS somem!)
@@ -407,6 +408,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     const handleOpenTieModal = () => {
       const ties = detectVotingTies(session);
       if (ties.length > 0) {
+        setIsTieAlertDismissed(false);
         setIsTieModalOpen(true);
       }
     };
@@ -434,6 +436,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       const justClosed = prevStatusRef.current !== 'CLOSED' && session.status === 'CLOSED';
       const justTieBreakEnded = prevStatusRef.current === 'TIE_BREAK' && session.status === 'CLOSED';
       if (justAllVoted || justClosed || justTieBreakEnded) {
+        setIsTieAlertDismissed(false);
         setIsTieModalOpen(true);
       }
     } else if (session.status === 'CLOSED') {
@@ -4183,6 +4186,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         // Seção Inline de Resolução de Empates (Nasce diretamente na coluna de nomes sem modal)
         const renderTieResolutionSection = (isSplit: boolean) => {
           if (!shouldRenderTieResolution || activeTiesToRender.length === 0) return null;
+          if (!isTieModalOpen && isTieAlertDismissed) return null;
 
           return (
             <div className="space-y-2 relative z-20">
@@ -4472,31 +4476,47 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
-                    className={`bg-[#141721] border border-rose-500/80 ${
+                    className={`relative bg-[#141721] border border-rose-500/80 ${
                       isSplit ? 'rounded-l-xl rounded-r-none border-r-0' : 'rounded-xl'
                     } p-3 sm:p-4 shadow-[0_0_20px_rgba(244,63,94,0.25)] flex items-center justify-between gap-3`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    {/* Botão de X no canto direito superior: clicou fechou fica do jeito que está, empatado */}
+                    <button
+                      type="button"
+                      onClick={() => setIsTieAlertDismissed(true)}
+                      className="absolute top-1.5 right-1.5 sm:top-2 sm:right-2 p-1 rounded-md text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer z-10"
+                      title="Fechar (manter empatado)"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+
+                    <div className="flex items-center gap-2.5 min-w-0 pr-2">
                       <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
                         <Star className="w-4 h-4 text-rose-400 fill-rose-400 animate-pulse" />
                       </div>
-                      <div>
+                      <div className="min-w-0">
                         <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wide truncate">
-                          Temos Empates Para Resolver
+                          TEMOS EMPATE!
                         </h4>
                         <p className="text-[11px] text-rose-200/80">
                           {activeTiesToRender.length} {activeTiesToRender.length === 1 ? 'grupo em disputa' : 'grupos em disputa'} na linha de corte.
                         </p>
                       </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => setIsTieModalOpen(true)}
-                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)] shrink-0"
-                    >
-                      <Star className="w-3.5 h-3.5 fill-white" />
-                      <span>Resolver Empate</span>
-                    </button>
+
+                    <div className="flex items-center gap-2 shrink-0 pr-5 sm:pr-6">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsTieModalOpen(true);
+                          setIsTieAlertDismissed(false);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-white" />
+                        <span>RESOLVER</span>
+                      </button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
