@@ -148,9 +148,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   const isGreen = isVotingActive || isReadyToVote;
 
   // Limite configurado pelo Admin (totalVotersConnected) é o limite oficial e soberano da votação.
-  // Caso não esteja configurado, usa a quantidade de votantes conectados.
+  // Durante TIE_BREAK: o limite é soberanamente a quantidade de votantes que participaram da rodada principal.
   const totalLimit =
-    session?.totalVotersConnected && session.totalVotersConnected > 0
+    session?.status === 'TIE_BREAK' && session?.mainVotersCount && session.mainVotersCount > 0
+      ? session.mainVotersCount
+      : session?.totalVotersConnected && session.totalVotersConnected > 0
       ? session.totalVotersConnected
       : Math.max(
           connectedVoters.length,
@@ -219,25 +221,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (isVotingActive) {
       // Se estamos em rodada de desempate, encerra e consolida os vencedores do desempate
       if (session.status === 'TIE_BREAK') {
-        const tieOptions = session.tieBreak?.options || [];
-        const sortedTie = [...tieOptions].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
-        const vacancies = session.tieBreak?.vacancies || 1;
-        const winnerIds: string[] = [];
-
-        if (sortedTie.length > vacancies) {
-          const cutoff = sortedTie[vacancies - 1]?.votesCount || 0;
-          const next = sortedTie[vacancies]?.votesCount || 0;
-          if (cutoff > next) {
-            sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-          }
-        } else if (sortedTie.length > 0) {
-          sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-        }
-
+        const tieVotesMap = new Map(session.tieBreak?.options?.map((t) => [t.id, Math.floor(t.votesCount || 0)]) || []);
         const updatedOptions = session.options.map((opt) => {
-          const isWinner = winnerIds.includes(opt.id);
-          const extraVote = isWinner ? 1 : 0;
-          return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extraVote };
+          const extra = tieVotesMap.get(opt.id) || 0;
+          return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extra };
         });
 
         onSaveSession({
@@ -304,25 +291,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     // Se estiver em rodada de desempate, consolida os vencedores
     let optionsToClassify = [...session.options];
     if (session.status === 'TIE_BREAK' && session.tieBreak?.options) {
-      const tieOptions = session.tieBreak.options || [];
-      const sortedTie = [...tieOptions].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
-      const vacancies = session.tieBreak.vacancies || 1;
-      const winnerIds: string[] = [];
-
-      if (sortedTie.length > vacancies) {
-        const cutoff = sortedTie[vacancies - 1]?.votesCount || 0;
-        const next = sortedTie[vacancies]?.votesCount || 0;
-        if (cutoff > next) {
-          sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-        }
-      } else if (sortedTie.length > 0) {
-        sortedTie.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-      }
-
+      const tieVotesMap = new Map(session.tieBreak.options.map((t) => [t.id, Math.floor(t.votesCount || 0)]));
       optionsToClassify = session.options.map((opt) => {
-        const isWinner = winnerIds.includes(opt.id);
-        const extraVote = isWinner ? 1 : 0;
-        return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extraVote };
+        const extra = tieVotesMap.get(opt.id) || 0;
+        return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extra };
       });
     }
 

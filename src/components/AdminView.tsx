@@ -431,19 +431,134 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   }, [session]);
 
   // Se todos tiverem votado (ou a votação encerrar) e houver empate, abre o modal automaticamente
+  // Durante TIE_BREAK: conclui automaticamente a rodada de desempate quando todos votaram
   const prevAllVotedRef = useRef(false);
   const prevStatusRef = useRef(session.status);
+  const autoConcludingTieBreakRef = useRef(false);
+  const prevTieBreakVotersRef = useRef(session.tieBreakVotersCount || 0);
+
+  // Função reutilizável: conclui a rodada de desempate (consolida votos e verifica empates restantes)
+  const concludeTieBreakRound = React.useCallback(() => {
+    if (!session.tieBreak?.active || session.status !== 'TIE_BREAK') return;
+
+    const tieVotesMap = new Map(session.tieBreak?.options?.map((t) => [t.id, Math.floor(t.votesCount || 0)]) || []);
+    const updatedOptions = (session.options || []).map((opt) => {
+      const extra = tieVotesMap.get(opt.id) || 0;
+      return {
+        ...opt,
+        votesCount: Math.floor(opt.votesCount || 0) + extra,
+      };
+    });
+
+    const updatedEvents = (session.events || []).map((evt) => {
+      if (evt.id === session.activeEventId) {
+        return {
+          ...evt,
+          options: updatedOptions,
+          status: 'CLOSED' as const,
+          tieBreak: null,
+          tieBreakVotersCount: 0,
+        };
+      }
+      return evt;
+    });
+
+    const updatedSession: VotingSession = {
+      ...session,
+      options: updatedOptions,
+      events: updatedEvents,
+      status: 'CLOSED' as const,
+      telaoMode: 'voting' as const,
+      tieBreak: {
+        ...(session.tieBreak as any),
+        active: false,
+      },
+      tieBreakVotersCount: 0,
+      updatedAt: Date.now(),
+    };
+
+    saveSession(updatedSession);
+    setSelectedTieCandidateIds([]);
+
+    const remainingTies = detectVotingTies(updatedSession);
+    if (remainingTies.length > 0) {
+      setIsTieAlertDismissed(false);
+      setIsTieModalOpen(true);
+      showNotification('success', `Rodada de desempate concluída! Resta resolver: ${remainingTies[0].label}.`);
+    } else {
+      setIsTieAlertDismissed(true);
+      setIsTieModalOpen(false);
+      showNotification('success', 'Desempate finalizado com sucesso! Todos os empates foram resolvidos.');
+    }
+
+    return { updatedSession, remainingTies };
+  }, [session]);
+
   useEffect(() => {
-    const ties = detectVotingTies(session);
+    // Para TIE_BREAK: o limite de votantes é a quantidade de votantes que participaram da rodada principal (mainVotersCount).
+    // Se 2 pessoas votaram na principal, o desempate conclui automaticamente assim que essas 2 pessoas votarem.
     const totalLimit =
-      session?.totalVotersConnected && session.totalVotersConnected > 0
-        ? session.totalVotersConnected
-        : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0);
+      session.status === 'TIE_BREAK'
+        ? (session.mainVotersCount && session.mainVotersCount > 0
+            ? session.mainVotersCount
+            : (session?.totalVotersConnected && session.totalVotersConnected > 0
+                ? session.totalVotersConnected
+                : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0, 1)))
+        : (session?.totalVotersConnected && session.totalVotersConnected > 0
+            ? session.totalVotersConnected
+            : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0));
+
     const totalVoted =
       session.status === 'TIE_BREAK'
         ? session.tieBreakVotersCount || 0
         : session.mainVotersCount || 0;
+
     const allVotedNow = totalLimit > 0 && totalVoted >= totalLimit;
+
+    // DEBUG: Log para diagnóstico do auto-conclude
+    if (session.status === 'TIE_BREAK' && session.tieBreak?.active) {
+      console.log('[TIE_BREAK MONITOR]', {
+        totalVoted,
+        totalLimit,
+        allVotedNow,
+        tieBreakVotersCount: session.tieBreakVotersCount,
+        totalVotersConnected: session.totalVotersConnected,
+        connectedVotersCount,
+        mainVotersCount: session.mainVotersCount,
+        autoConcluding: autoConcludingTieBreakRef.current,
+      });
+    }
+
+    // AUTO-CONCLUSÃO DO TIE_BREAK: Quando todos votaram durante um desempate,
+    // conclui automaticamente a rodada (consolida votos e avança para o próximo empate)
+    if (
+      session.status === 'TIE_BREAK' &&
+      session.tieBreak?.active &&
+      allVotedNow &&
+      !autoConcludingTieBreakRef.current
+    ) {
+      autoConcludingTieBreakRef.current = true;
+      console.log('[AUTO-CONCLUDE TIE_BREAK] ✅ Disparando auto-conclusão!', {
+        totalVoted,
+        totalLimit,
+        mainVotersCount: session.mainVotersCount,
+        tieBreakVotersCount: session.tieBreakVotersCount,
+      });
+
+      concludeTieBreakRound();
+
+      setTimeout(() => {
+        autoConcludingTieBreakRef.current = false;
+      }, 500);
+
+      prevAllVotedRef.current = allVotedNow;
+      prevStatusRef.current = session.status;
+      prevTieBreakVotersRef.current = session.tieBreakVotersCount || 0;
+      return;
+    }
+
+    // Fluxo original para votação MAIN ou quando não é auto-conclusão de TIE_BREAK
+    const ties = detectVotingTies(session);
 
     if (ties.length > 0) {
       const justAllVoted = !prevAllVotedRef.current && allVotedNow;
@@ -459,7 +574,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }
     prevAllVotedRef.current = allVotedNow;
     prevStatusRef.current = session.status;
-  }, [session, connectedVotersCount]);
+    prevTieBreakVotersRef.current = session.tieBreakVotersCount || 0;
+  }, [session, connectedVotersCount, concludeTieBreakRound]);
 
   const handleStartTieBreak = (tie: TieInfo) => {
     // Critério próprio do admin: se clicou em candidatos (ex: CARLA e SIONEIDE), desempata entre eles
@@ -500,40 +616,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     if (!isVotingActive) return;
 
     if (session.status === 'TIE_BREAK') {
-      // Conclui a rodada de desempate e consolida os votos adicionais nos candidatos
-      const tieVotesMap = new Map(session.tieBreak?.options?.map((t) => [t.id, Math.floor(t.votesCount || 0)]) || []);
-      const updatedOptions = (session.options || []).map((opt) => {
-        const extra = tieVotesMap.get(opt.id) || 0;
-        return {
-          ...opt,
-          votesCount: Math.floor(opt.votesCount || 0) + extra,
-        };
-      });
-
-      const updatedSession: VotingSession = {
-        ...session,
-        options: updatedOptions,
-        status: 'CLOSED',
-        telaoMode: 'voting',
-        tieBreak: {
-          ...(session.tieBreak as any),
-          active: false,
-        },
-        tieBreakVotersCount: 0,
-        updatedAt: Date.now(),
-      };
-
-      saveSession(updatedSession);
-
-      const remainingTies = detectVotingTies(updatedSession);
-      if (remainingTies.length > 0) {
-        setIsTieAlertDismissed(false);
-        setIsTieModalOpen(true);
-        showNotification('success', `Rodada de desempate concluída! Ainda há ${remainingTies.length} empate(s) para resolver.`);
-      } else {
-        setIsTieAlertDismissed(true);
-        setIsTieModalOpen(false);
-        showNotification('success', 'Desempate finalizado com sucesso! Todos os empates foram resolvidos.');
+      const result = concludeTieBreakRound();
+      if (result) {
+        if (result.remainingTies.length > 0) {
+          showNotification('success', `Rodada de desempate concluída! Ainda há ${result.remainingTies.length} empate(s) para resolver.`);
+        } else {
+          showNotification('success', 'Desempate finalizado com sucesso! Todos os empates foram resolvidos.');
+        }
       }
       return;
     }
@@ -4046,7 +4135,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     {currentVotersVoted}
                     {session.totalVotersConnected && session.totalVotersConnected > 0 ? (
                       <span className="text-[10px] font-normal text-slate-400 font-mono ml-0.5">
-                        /{session.totalVotersConnected}
+                        /{session.status === 'TIE_BREAK' && session.mainVotersCount && session.mainVotersCount > 0 ? session.mainVotersCount : session.totalVotersConnected}
                       </span>
                     ) : null}
                   </span>
