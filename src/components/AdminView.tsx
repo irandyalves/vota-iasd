@@ -2603,7 +2603,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       )}
 
       {/* CARD: EVENTOS GERAIS ONLINE (LISTBOX + NOVO EVENTO À ESQUERDA, HISTÓRICO + ENGRENAGEM SEM FUNDO À DIREITA) */}
-      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 mb-0 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-t border-b border-amber-500/30 rounded-t-xl rounded-b-none shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative ${isHistoryMenuOpen || isGeneralEventMenuOpen ? "z-[100]" : "z-30"}`}>
+      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 mb-0 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-t border-b border-amber-500/30 rounded-none shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative ${isHistoryMenuOpen || isGeneralEventMenuOpen ? "z-[100]" : "z-30"}`}>
         {/* Esquerda: Grupo Comissão (sem borda, fica bold no hover) + Lápis, Excluir e Add esmaecidos que voltam à vida da esq para a dir em cores */}
         <div className="group flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
           <div className="flex items-center justify-center shrink-0 p-1">
