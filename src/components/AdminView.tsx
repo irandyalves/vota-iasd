@@ -1512,6 +1512,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   // Renderiza o modal de configuração de votação (REGRAS DA ELEIÇÃO)
   const renderEventConfigModal = () => {
     const isEditing = Boolean(editingEventId);
+
+    const currentTargetEvt = isEditing ? eventsList.find((e) => e.id === editingEventId) : null;
+    const isSelected = isEditing && editingEventId === currentActiveEventId;
+    const origName = (isSelected ? (session.title || currentTargetEvt?.name) : currentTargetEvt?.name) || '';
+    const origVacancies = isSelected ? session.vacancies : (currentTargetEvt?.vacancies ?? session.vacancies ?? 1);
+    const origS1Enabled = isSelected
+      ? (session.habilitarSuplente1 !== false)
+      : (currentTargetEvt?.habilitarSuplente1 !== undefined ? currentTargetEvt.habilitarSuplente1 : (session.habilitarSuplente1 !== false));
+    const origS1Count = isSelected
+      ? (session.suplentesCount ?? 1)
+      : (currentTargetEvt?.suplentesCount ?? session.suplentesCount ?? 1);
+    const origEmpates = isSelected
+      ? (session.resolverEmpates !== false)
+      : (currentTargetEvt?.resolverEmpates !== undefined ? currentTargetEvt.resolverEmpates : true);
+    const origTitulares = isSelected
+      ? (session.labelTitulares || currentTargetEvt?.labelTitulares || 'Titulares')
+      : (currentTargetEvt?.labelTitulares || 'Titulares');
+    const origSuplente1 = isSelected
+      ? (session.labelSuplente1 || currentTargetEvt?.labelSuplente1 || 'SUPLENTES')
+      : (currentTargetEvt?.labelSuplente1 || 'SUPLENTES');
+
+    const hasChanges = isEditing
+      ? (
+          eventFormName.trim() !== origName.trim() ||
+          (eventFormVacancies || 1) !== origVacancies ||
+          eventFormSuplente1Enabled !== origS1Enabled ||
+          (eventFormSuplente1Enabled && (eventFormSuplente1Count || 1) !== origS1Count) ||
+          eventFormResolverEmpates !== (origEmpates !== false) ||
+          eventFormLabelTitulares.trim() !== origTitulares.trim() ||
+          eventFormLabelSuplente1.trim() !== origSuplente1.trim()
+        )
+      : Boolean(eventFormName.trim());
     return (
       <motion.div
         ref={eventModalRef}
@@ -1752,12 +1784,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Linha 4: Botão Salvar centralizado horizontalmente */}
+          {/* Linha 4: Botão Salvar centralizado horizontalmente (SÓ FICA VERDE SE TIVER ALTERAÇÃO) */}
           <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/[0.08]">
             <button
               type="button"
-              onClick={handleSaveEventModal}
-              className="px-8 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-wider uppercase rounded-lg border border-emerald-400 cursor-pointer active:scale-95 transition-all shadow-[0_0_15px_rgba(16,185,129,0.35)]"
+              disabled={!hasChanges}
+              onClick={hasChanges ? handleSaveEventModal : undefined}
+              title={
+                hasChanges
+                  ? (isEditing ? 'Salvar alterações' : 'Criar votação')
+                  : 'Nenhuma alteração realizada'
+              }
+              className={`px-8 py-2 text-xs tracking-wider uppercase rounded-lg transition-all ${
+                hasChanges
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white font-black border border-emerald-400 cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.35)]'
+                  : 'bg-white/[0.04] text-slate-500 font-bold border border-white/[0.08] cursor-not-allowed opacity-50 shadow-none'
+              }`}
             >
               {isEditing ? 'Salvar' : 'Criar votação'}
             </button>
