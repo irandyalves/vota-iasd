@@ -4636,146 +4636,147 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           const isThisTieVotingNow = isTieBreakActive && tie.tiedCandidates.some((c) => activeTieCandidateIds.includes(c.id));
 
                           return (
-                            <motion.div
-                              layout
-                              key={tie.type + '-' + tie.label}
-                              initial={{ opacity: 0, height: 0, scale: 0.95 }}
-                              animate={{ opacity: 1, height: 'auto', scale: 1 }}
-                              exit={{ opacity: 0, height: 0, scale: 0.92, overflow: 'hidden' }}
-                              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                              className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-all duration-300 relative ${styles.container} ${
-                                isLockedByPriorTie ? 'opacity-40 grayscale-[35%] select-none' : ''
-                              }`}
-                            >
-                              {/* Header do Grupo: Escolha xx nomes xx vagas e BOTÃO ENVIAR à direita */}
-                              <div className="flex items-center justify-between gap-3 pb-1">
-                                <div className="min-w-0 flex-1 flex items-center flex-wrap gap-2">
-                                  {/* Linha: Escolha xx nome(s) xx vaga(s) */}
-                                  <div className="flex items-center flex-wrap gap-1 text-white font-medium text-xs sm:text-sm select-none leading-tight">
-                                    <span>Escolha</span>
-                                    <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
-                                      {String(remainingToChoose).padStart(2, '0')}
-                                    </span>
-                                    <span>{remainingToChoose === 1 ? 'nome' : 'nomes'}</span>
-                                    <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none ml-1.5">
-                                      {String(tie.vacanciesInDispute).padStart(2, '0')}
-                                    </span>
-                                    <span>{tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}</span>
+                            <React.Fragment key={tie.type + '-' + tie.label}>
+                              {index > 0 && (
+                                <div className="py-2.5 flex items-center gap-2">
+                                  <div className="flex-1 border-t-2 border-dashed border-slate-700/80" />
+                                </div>
+                              )}
+                              <motion.div
+                                layout
+                                initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                                exit={{ opacity: 0, height: 0, scale: 0.92, overflow: 'hidden' }}
+                                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-all duration-300 relative ${styles.container} ${
+                                  isLockedByPriorTie ? 'opacity-40 grayscale-[35%] select-none' : ''
+                                }`}
+                              >
+                                {/* Header do Grupo: Escolha xx nomes xx vagas e BOTÃO ENVIAR à direita */}
+                                <div className="flex items-center justify-between gap-3 pb-1">
+                                  <div className="min-w-0 flex-1 flex items-center flex-wrap gap-2">
+                                    {/* Linha: Escolha xx nome(s) xx vaga(s) */}
+                                    <div className="flex items-center flex-wrap gap-1 text-white font-medium text-xs sm:text-sm select-none leading-tight">
+                                      <span>Escolha</span>
+                                      <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
+                                        {String(remainingToChoose).padStart(2, '0')}
+                                      </span>
+                                      <span>{remainingToChoose === 1 ? 'nome' : 'nomes'}</span>
+                                      <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none ml-1.5">
+                                        {String(tie.vacanciesInDispute).padStart(2, '0')}
+                                      </span>
+                                      <span>{tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}</span>
+                                    </div>
+
+                                    {/* Se houver múltiplos grupos de empate, exibe também a categoria inline */}
+                                    {activeTiesToRender.length > 1 && (
+                                      <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
+                                        {styles.title}
+                                      </span>
+                                    )}
                                   </div>
 
-                                  {/* Se houver múltiplos grupos de empate, exibe também a categoria inline */}
-                                  {activeTiesToRender.length > 1 && (
-                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
-                                      {styles.title}
-                                    </span>
+                                  {/* Botão ENVIAR no lado direito: se estiver bloqueado aguardando o grupo acima, avisa */}
+                                  {isLockedByPriorTie ? (
+                                    <div
+                                      className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 bg-[#0b0e14]/90 text-amber-300/80 border border-amber-500/30 select-none shadow-sm"
+                                      title="Resolva primeiro o empate acima antes de iniciar este"
+                                    >
+                                      <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                      <span>BLOQUEADO</span>
+                                    </div>
+                                  ) : isThisTieVotingNow ? (
+                                    <div className="shrink-0 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
+                                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                                      <span>VOTANDO ({session.tieBreakVotersCount || 0}/{session.mainVotersCount && session.mainVotersCount > 0 ? session.mainVotersCount : (session.totalVotersConnected || connectedVotersCount || 1)})</span>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled={!isReady || isTieBreakActive}
+                                      onClick={() => isReady && !isTieBreakActive && handleStartTieBreak(tie)}
+                                      title={
+                                        isTieBreakActive
+                                          ? 'Aguarde a votação de desempate atual terminar'
+                                          : isReady
+                                          ? `Iniciar votação de desempate para ${styles.title}`
+                                          : `Selecione mais ${remainingToChoose} ${remainingToChoose === 1 ? 'nome' : 'nomes'} para enviar`
+                                      }
+                                      className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-200 select-none ${
+                                        isReady && !isTieBreakActive
+                                          ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95'
+                                          : 'bg-[#1c212e] border border-white/10 text-slate-400 cursor-not-allowed opacity-75'
+                                      }`}
+                                    >
+                                      <span>ENVIAR</span>
+                                      <ChevronsRight className="w-4 h-4 stroke-[2]" />
+                                    </button>
                                   )}
                                 </div>
 
-                                {/* Botão ENVIAR no lado direito: se estiver bloqueado aguardando o grupo acima, avisa */}
-                                {isLockedByPriorTie ? (
-                                  <div
-                                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 bg-[#0b0e14]/90 text-amber-300/80 border border-amber-500/30 select-none shadow-sm"
-                                    title="Resolva primeiro o empate acima antes de iniciar este"
-                                  >
-                                    <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                                    <span>Bloqueado • Resolva {activeTiesToRender[0]?.label ? getTieCategoryStyles(activeTiesToRender[0].type, activeTiesToRender[0].label).title : 'Titular'}</span>
-                                  </div>
-                                ) : isThisTieVotingNow ? (
-                                  <div className="shrink-0 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
-                                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                                    <span>EM VOTAÇÃO ({session.tieBreakVotersCount || 0}/{session.mainVotersCount && session.mainVotersCount > 0 ? session.mainVotersCount : (session.totalVotersConnected || connectedVotersCount || 1)})</span>
+                                {/* Cards dos Candidatos Empatados: se estiver em votação ativa, exibe os cards com as devidas progressões em tempo real */}
+                                {isThisTieVotingNow ? (
+                                  <div className="grid grid-cols-1 gap-2.5">
+                                    {(() => {
+                                      const liveTieOptions = session.tieBreak?.options || [];
+                                      const totalTieVotes = liveTieOptions.reduce((acc, opt) => acc + Math.floor(opt.votesCount || 0), 0);
+                                      const maxTieVotes = Math.max(...liveTieOptions.map((opt) => Math.floor(opt.votesCount || 0)), 1);
+
+                                      return liveTieOptions.map((c, cIdx) => {
+                                        const votes = Math.floor(c.votesCount || 0);
+                                        const percent = totalTieVotes > 0 ? Math.round((votes / totalTieVotes) * 100) : 0;
+                                        const barWidth = totalTieVotes > 0 ? (votes / maxTieVotes) * 100 : 0;
+                                        const isLeading = votes > 0 && votes === maxTieVotes;
+
+                                        return (
+                                          <div
+                                            key={c.id || cIdx}
+                                            className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-300 relative overflow-hidden bg-[#0d1627] ${
+                                              isLeading
+                                                ? 'border-emerald-400/80 shadow-[0_0_15px_rgba(16,185,129,0.25)] ring-1 ring-emerald-400/40'
+                                                : 'border-white/10'
+                                            }`}
+                                          >
+                                            <div className="flex items-center justify-between gap-2.5 mb-1.5">
+                                              <div className="flex items-center gap-2 min-w-0">
+                                                {c.photoUrl && (
+                                                  <img
+                                                    src={c.photoUrl}
+                                                    alt={c.name}
+                                                    className="w-7 h-7 rounded-md object-cover border border-white/20 shrink-0"
+                                                  />
+                                                )}
+                                                <span className="font-bold text-xs sm:text-sm text-white uppercase truncate">
+                                                  {c.name}
+                                                </span>
+                                              </div>
+
+                                              {/* Votos do Desempate e % */}
+                                              <div className="text-right shrink-0">
+                                                <span className="font-mono text-sm sm:text-base font-black text-amber-300">
+                                                  {votes} {votes === 1 ? 'voto' : 'votos'}
+                                                </span>
+                                                <span className="text-xs font-mono font-bold text-orange-400 ml-1.5">
+                                                  ({percent}%)
+                                                </span>
+                                              </div>
+                                            </div>
+
+                                            {/* Barra de Progresso do Desempate: SEMPRE VERDE */}
+                                            <div className="w-full h-3 bg-black/50 rounded-full border border-white/10 overflow-hidden relative shadow-inner">
+                                              <motion.div
+                                                initial={false}
+                                                animate={{ width: `${barWidth}%` }}
+                                                transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                                className="h-full rounded-full bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.6)]"
+                                              />
+                                            </div>
+                                          </div>
+                                        );
+                                      });
+                                    })()}
                                   </div>
                                 ) : (
-                                  <button
-                                    type="button"
-                                    disabled={!isReady || isTieBreakActive}
-                                    onClick={() => isReady && !isTieBreakActive && handleStartTieBreak(tie)}
-                                    title={
-                                      isTieBreakActive
-                                        ? 'Aguarde a votação de desempate atual terminar'
-                                        : isReady
-                                        ? `Iniciar votação de desempate para ${styles.title}`
-                                        : `Selecione mais ${remainingToChoose} ${remainingToChoose === 1 ? 'nome' : 'nomes'} para enviar`
-                                    }
-                                    className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-200 select-none ${
-                                      isReady && !isTieBreakActive
-                                        ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95'
-                                        : 'bg-[#1c212e] border border-white/10 text-slate-400 cursor-not-allowed opacity-75'
-                                    }`}
-                                  >
-                                    <span>ENVIAR</span>
-                                    <ChevronsRight className="w-4 h-4 stroke-[2]" />
-                                  </button>
-                                )}
-                              </div>
-
-                              {/* Cards dos Candidatos Empatados: se estiver em votação ativa, exibe os cards com as devidas progressões em tempo real */}
-                              {isThisTieVotingNow ? (
-                                <div className="grid grid-cols-1 gap-2.5">
-                                  {(() => {
-                                    const liveTieOptions = session.tieBreak?.options || [];
-                                    const totalTieVotes = liveTieOptions.reduce((acc, opt) => acc + Math.floor(opt.votesCount || 0), 0);
-                                    const maxTieVotes = Math.max(...liveTieOptions.map((opt) => Math.floor(opt.votesCount || 0)), 1);
-
-                                    return liveTieOptions.map((c, cIdx) => {
-                                      const votes = Math.floor(c.votesCount || 0);
-                                      const percent = totalTieVotes > 0 ? Math.round((votes / totalTieVotes) * 100) : 0;
-                                      const barWidth = totalTieVotes > 0 ? (votes / maxTieVotes) * 100 : 0;
-                                      const isLeading = votes > 0 && votes === maxTieVotes;
-
-                                      return (
-                                        <div
-                                          key={c.id || cIdx}
-                                          className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-300 relative overflow-hidden bg-[#0d1627] ${
-                                            isLeading
-                                              ? 'border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/40'
-                                              : 'border-white/10'
-                                          }`}
-                                        >
-                                          <div className="flex items-center justify-between gap-2.5 mb-1.5">
-                                            <div className="flex items-center gap-2 min-w-0">
-                                              {c.photoUrl ? (
-                                                <img
-                                                  src={c.photoUrl}
-                                                  alt={c.name}
-                                                  className="w-7 h-7 rounded-md object-cover border border-white/20 shrink-0"
-                                                />
-                                              ) : (
-                                                <div className="w-7 h-7 rounded-md bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0">
-                                                  {c.name.slice(0, 2).toUpperCase()}
-                                                </div>
-                                              )}
-                                              <span className="font-bold text-xs sm:text-sm text-white uppercase truncate">
-                                                {c.name}
-                                              </span>
-                                            </div>
-
-                                            {/* Votos do Desempate e % */}
-                                            <div className="text-right shrink-0">
-                                              <span className="font-mono text-sm sm:text-base font-black text-amber-300">
-                                                {votes} {votes === 1 ? 'voto' : 'votos'}
-                                              </span>
-                                              <span className="text-xs font-mono font-bold text-orange-400 ml-1.5">
-                                                ({percent}%)
-                                              </span>
-                                            </div>
-                                          </div>
-
-                                          {/* Barra de Progresso do Desempate */}
-                                          <div className="w-full h-3 bg-black/50 rounded-full border border-white/10 overflow-hidden relative shadow-inner">
-                                            <motion.div
-                                              initial={false}
-                                              animate={{ width: `${barWidth}%` }}
-                                              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                                              className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
-                                            />
-                                          </div>
-                                        </div>
-                                      );
-                                    });
-                                  })()}
-                                </div>
-                              ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                   {tie.tiedCandidates.map((c) => {
                                     const isSelected = selectedTieCandidateIds.includes(c.id);
@@ -4847,7 +4848,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 </div>
                               )}
                             </motion.div>
-                          );
+                          </React.Fragment>
+                        );
                         })}
                       </AnimatePresence>
                     </div>
