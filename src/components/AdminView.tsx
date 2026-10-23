@@ -1722,14 +1722,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Linha 3: Critério de desempate (sem fundo e sem legenda secundária) */}
-          <div className="px-1 py-1 flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <Star className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-200">
-                Critério de desempate:
-              </span>
-            </div>
+          {/* Linha 3: Critério de desempate com switch à frente e cor cinza médio se desmarcado */}
+          <div className="px-1 py-1 flex items-center gap-2.5">
             <label className="relative inline-flex items-center cursor-pointer shrink-0">
               <input
                 type="checkbox"
@@ -1739,6 +1733,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               />
               <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500 shadow-inner" />
             </label>
+            <div
+              onClick={() => setEventFormResolverEmpates(!eventFormResolverEmpates)}
+              className="flex items-center gap-1.5 cursor-pointer select-none"
+            >
+              <Star
+                className={`w-3.5 h-3.5 shrink-0 transition-colors ${
+                  eventFormResolverEmpates ? 'text-amber-400' : 'text-slate-500'
+                }`}
+              />
+              <span
+                className={`text-xs font-semibold transition-colors ${
+                  eventFormResolverEmpates ? 'text-slate-100' : 'text-slate-400'
+                }`}
+              >
+                Critério de desempate:
+              </span>
+            </div>
           </div>
 
           {/* Linha 4: Botão Salvar centralizado horizontalmente */}
@@ -3256,22 +3267,31 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
             </div>
 
-            {/* 4. Botão Ícone: Abrir Simulador de Celulares (4 a 10 Telas) */}
+            {/* 4. Botão Ícone: Abrir Simulador de Celulares (4 a 10 Telas em Nova Janela) */}
             <div className="relative group">
-              <a
-                href="?view=simulator"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                type="button"
+                onClick={() => {
+                  const width = Math.min(1560, window.screen.availWidth - 40);
+                  const height = Math.min(940, window.screen.availHeight - 60);
+                  const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
+                  const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+                  window.open(
+                    '?view=simulator',
+                    'VotaIasdSimulador',
+                    `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,status=no,resizable=yes,scrollbars=yes`
+                  );
+                }}
                 className="p-2 rounded-xl border border-purple-500/40 bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 hover:text-purple-100 shadow-[0_0_12px_rgba(168,85,247,0.25)] transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center"
-                title="Abrir Simulador de Celulares (4 a 10 Telas em Tempo Real)"
+                title="Abrir Simulador de Celulares em Nova Janela (4 a 10 Telas)"
                 aria-label="Abrir Simulador de Celulares"
               >
                 <FlaskConical className="w-4 h-4" />
-              </a>
+              </button>
 
               {/* Hint ao passar o mouse */}
               <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-purple-500/40 text-purple-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
-                🧪 Simulador (4 a 10 Celulares)
+                🧪 Abrir Simulador em Nova Janela
               </div>
             </div>
           </div>

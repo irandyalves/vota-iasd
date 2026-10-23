@@ -889,10 +889,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             </label>
             <select
               id="navbar-view-select"
-              value={currentView}
-              onChange={(e) =>
-                setCurrentView(e.target.value as 'admin' | 'voter' | 'telao' | 'simulator')
-              }
+              value={currentView === 'simulator' ? 'admin' : currentView}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === 'simulator') {
+                  const width = Math.min(1560, window.screen.availWidth - 40);
+                  const height = Math.min(940, window.screen.availHeight - 60);
+                  const left = Math.max(0, Math.round((window.screen.availWidth - width) / 2));
+                  const top = Math.max(0, Math.round((window.screen.availHeight - height) / 2));
+                  window.open(
+                    '?view=simulator',
+                    'VotaIasdSimulador',
+                    `width=${width},height=${height},left=${left},top=${top},menubar=no,toolbar=no,status=no,resizable=yes,scrollbars=yes`
+                  );
+                  return;
+                }
+                setCurrentView(val as 'admin' | 'voter' | 'telao');
+              }}
               className="bg-transparent text-xs font-black text-amber-300 outline-none cursor-pointer pr-1"
             >
               <option value="admin" className="bg-[#07132a] text-white font-bold">
@@ -905,7 +918,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Público
               </option>
               <option value="simulator" className="bg-[#07132a] text-purple-300 font-bold">
-                🧪 Simulador
+                🧪 Nova Janela: Simulador ↗
               </option>
             </select>
           </div>
