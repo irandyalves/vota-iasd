@@ -3840,7 +3840,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               layout: { type: 'spring', stiffness: 240, damping: 28 },
                             }}
                             style={{
-                              borderColor: hexToRgba(activeColor, isTitular ? 0.45 : isSuplente1 ? 0.35 : 0.2),
+                              borderColor: isTitular
+                                ? hexToRgba(winnerColor, 0.55)
+                                : isSuplente1
+                                ? hexToRgba(suplenteColor, 0.5)
+                                : isSuplente2
+                                ? hexToRgba(suplente2Color, 0.45)
+                                : 'rgba(255, 255, 255, 0.16)',
                             }}
                             className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] border ${
                               isFirstAfterTitulares ? 'border-t-transparent' : ''
@@ -4067,10 +4073,24 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98, y: -6 }}
                     transition={{ duration: 0.25 }}
-                    className={`relative w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-2 border-emerald-500 ${
-                      isSplit ? 'rounded-l-xl rounded-r-none border-r-0' : 'rounded-xl'
+                    className={`relative w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-l-2 border-emerald-500 border-t-0 border-b-0 border-r-0 ${
+                      isSplit ? 'rounded-l-xl rounded-r-none' : 'rounded-xl'
                     } p-3.5 sm:p-5 shadow-[0_0_25px_rgba(16,185,129,0.3)] text-white overflow-hidden space-y-3.5`}
                   >
+                    {/* Linha Verde Superior: ficando transparente da esquerda para a direita a partir de 40% */}
+                    <div
+                      className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none rounded-tl-xl"
+                      style={{
+                        background: 'linear-gradient(to right, #10b981 0%, #10b981 40%, transparent 100%)',
+                      }}
+                    />
+                    {/* Linha Verde Inferior: ficando transparente da esquerda para a direita a partir de 40% */}
+                    <div
+                      className="absolute bottom-0 left-0 right-0 h-[2px] pointer-events-none rounded-bl-xl"
+                      style={{
+                        background: 'linear-gradient(to right, #10b981 0%, #10b981 40%, transparent 100%)',
+                      }}
+                    />
                     {/* Header da Seção Inline de Desempate (sem linha divisória horizontal) */}
                     <div className="relative flex items-center justify-between pb-2 min-h-[36px]">
                       <div className="flex items-center gap-2 min-w-0">
