@@ -89,6 +89,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
+  // Filtro de exibição do histórico de votações (Só titulares / Titulares + demais / Completo)
+  const [historyFilter, setHistoryFilter] = useState<'titulares' | 'titulares_demais' | 'completo'>('completo');
+  const [isHistoryMenuOpen, setIsHistoryMenuOpen] = useState<boolean>(false);
   // Split ratio (largura % da coluna da esquerda - Nomes). Por padrão: 40% (Apuração: 60%)
   const [splitRatio, setSplitRatio] = useState<number>(() => {
     const saved = localStorage.getItem('vota_iasd_split_ratio');
@@ -101,6 +104,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
   const [isLgScreen, setIsLgScreen] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
   const splitContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!isHistoryMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-history-dropdown="true"]')) {
+        setIsHistoryMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [isHistoryMenuOpen]);
 
   useEffect(() => {
     const checkScreen = () => {
@@ -606,6 +621,54 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     generalEventsList.find((g) => g.name.toUpperCase() === (session.generalEventName || '').toUpperCase())?.id ||
     generalEventsList[0]?.id ||
     'gen_default';
+
+  const currentGeneralEvent = generalEventsList.find((g) => g.id === currentGeneralEventId) || generalEventsList[0];
+  const currentComissaoName = currentGeneralEvent?.name || session.generalEventName || session.category || 'COMISSÃO';
+
+  // Formata o subtítulo da eleição no histórico: Dia 22-OUT-2026 -> Eleição: Tesoureiro (sem bold, letra fina)
+  const formatHistorySubtitle = (record: VotingHistoryRecord) => {
+    const months = ['JAN', 'FEV', 'MAR', 'ABR', 'MAI', 'JUN', 'JUL', 'AGO', 'SET', 'OUT', 'NOV', 'DEZ'];
+
+    let day = '22';
+    let month = 'OUT';
+    let year = '2026';
+
+    if (record.timestamp) {
+      const d = new Date(record.timestamp);
+      if (!isNaN(d.getTime())) {
+        day = String(d.getDate()).padStart(2, '0');
+        month = months[d.getMonth()] || 'OUT';
+        year = String(d.getFullYear());
+      }
+    } else if (record.dateFormatted) {
+      const match = record.dateFormatted.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (match) {
+        day = String(match[1]).padStart(2, '0');
+        const mIdx = parseInt(match[2], 10) - 1;
+        month = months[mIdx] || 'OUT';
+        year = match[3];
+      }
+    }
+
+    let electionName = (record.sessionTitle || '').trim();
+    if (!electionName && record.headerTitle) {
+      electionName = record.headerTitle.replace(/^dia \d{1,2}\/\d{1,2}\/\d{4}\s*/i, '');
+    }
+    electionName = electionName.replace(/^elei[çc][ãa]o\s*[:-]?\s*/i, '').trim();
+
+    if (electionName.length > 0) {
+      electionName = electionName
+        .toLowerCase()
+        .split(' ')
+        .map((w) => (w.length > 2 ? w.charAt(0).toUpperCase() + w.slice(1) : w))
+        .join(' ');
+      electionName = electionName.charAt(0).toUpperCase() + electionName.slice(1);
+    } else {
+      electionName = 'Votação';
+    }
+
+    return `Dia ${day}-${month}-${year} -> Eleição: ${electionName}`;
+  };
 
   // Alterna entre Eventos Gerais existentes salvos no banco online
   const handleSwitchGeneralEvent = (targetId: string) => {
@@ -2786,19 +2849,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
         {/* Direita: Histórico (sem borda) à esquerda da Engrenagem, e Engrenagem (sem borda) lá na ponta */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
-          {/* Atalho para Histórico de Votações (sem borda) */}
-          <div className="relative group">
+          {/* Atalho para Histórico de Votações (sem borda) com Listbox Dropdown */}
+          <div className="relative" data-history-dropdown="true">
             <button
               type="button"
-              onClick={() => {
-                setIsGearOpen(true);
-                setTimeout(() => {
-                  document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
-                }, 200);
-              }}
+              onClick={() => setIsHistoryMenuOpen((prev) => !prev)}
               className="p-1.5 sm:p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 bg-transparent hover:bg-white/10 text-slate-300 hover:text-white border-0 shadow-none focus:outline-none"
-              title="Ver Histórico de Votações Encerradas"
-              aria-label="Ver Histórico de Votações Encerradas"
+              title="Visualizar Histórico de Votações"
+              aria-label="Visualizar Histórico de Votações"
             >
               <History className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
               {session.history && session.history.length > 0 && (
@@ -2807,9 +2865,94 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </span>
               )}
             </button>
-            <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
-              Histórico de Votações
-            </div>
+
+            {/* Listbox Dropdown ao clicar no Histórico */}
+            <AnimatePresence>
+              {isHistoryMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-full mt-2 w-64 bg-[#141721] border border-white/[0.12] rounded-xl shadow-2xl py-1.5 z-50 overflow-hidden"
+                >
+                  <div className="px-3 py-1.5 border-b border-white/[0.08] flex items-center justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+                      Exibição do Histórico
+                    </span>
+                    <span className="text-[10px] font-mono text-amber-300 font-bold">
+                      {session.history?.length || 0} {session.history?.length === 1 ? 'votação' : 'votações'}
+                    </span>
+                  </div>
+
+                  {/* Opção 1: Só titulares */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryFilter('titulares');
+                      setIsHistoryMenuOpen(false);
+                      setIsGearOpen(true);
+                      setTimeout(() => {
+                        document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
+                      }, 150);
+                    }}
+                    className={`w-full px-3 py-2 text-left transition cursor-pointer flex items-center justify-between gap-2 ${
+                      historyFilter === 'titulares' ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-200 hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">Só titulares</div>
+                      <div className="text-[10.5px] text-slate-400">Aqui é só os titulares</div>
+                    </div>
+                    {historyFilter === 'titulares' && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
+                  </button>
+
+                  {/* Opção 2: Titulares + demais */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryFilter('titulares_demais');
+                      setIsHistoryMenuOpen(false);
+                      setIsGearOpen(true);
+                      setTimeout(() => {
+                        document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
+                      }, 150);
+                    }}
+                    className={`w-full px-3 py-2 text-left transition cursor-pointer flex items-center justify-between gap-2 ${
+                      historyFilter === 'titulares_demais' ? 'bg-blue-500/15 text-blue-300' : 'text-slate-200 hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">Titulares + demais</div>
+                      <div className="text-[10.5px] text-slate-400">Titulares, suplentes e outros</div>
+                    </div>
+                    {historyFilter === 'titulares_demais' && <Check className="w-4 h-4 text-blue-400 shrink-0" />}
+                  </button>
+
+                  {/* Opção 3: Completo */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryFilter('completo');
+                      setIsHistoryMenuOpen(false);
+                      setIsGearOpen(true);
+                      setTimeout(() => {
+                        document.getElementById('historico-votacoes-card')?.scrollIntoView({ behavior: 'smooth' });
+                      }, 150);
+                    }}
+                    className={`w-full px-3 py-2 text-left transition cursor-pointer flex items-center justify-between gap-2 ${
+                      historyFilter === 'completo' ? 'bg-amber-500/15 text-amber-300' : 'text-slate-200 hover:bg-white/[0.06]'
+                    }`}
+                  >
+                    <div>
+                      <div className="text-xs font-semibold">Completo</div>
+                      <div className="text-[10.5px] text-slate-400">Vencedores e quem não teve votos</div>
+                    </div>
+                    {historyFilter === 'completo' && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Engrenagem sem borda e sem fundo lá na ponta direita */}
@@ -3572,31 +3715,45 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       >
                         {/* Cabeçalho do Card */}
                         <div className="flex items-center justify-between pb-2 border-b border-white/[0.06] flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <div className="w-6 h-6 rounded bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-300 shrink-0">
                               <History className="w-3.5 h-3.5 text-amber-400" />
                             </div>
-                            <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight flex items-center gap-2">
-                              Histórico de Votações Encerradas
-                              {session.history && session.history.length > 0 && (
-                                <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-bold border border-amber-500/30">
-                                  {session.history.length} {session.history.length === 1 ? 'eleição' : 'eleições'}
-                                </span>
-                              )}
+                            <span className="font-medium text-slate-100 text-xs sm:text-sm tracking-tight">
+                              Histórico de votações....
+                            </span>
+                            <span className="text-blue-400 font-normal text-xs sm:text-sm tracking-tight">
+                              [ {currentComissaoName.toUpperCase()} ]
                             </span>
                           </div>
 
-                          {session.history && session.history.length > 0 && (
-                            <button
-                              type="button"
-                              onClick={handleClearHistory}
-                              title="Limpar todos os registros arquivados"
-                              className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-medium transition cursor-pointer active:scale-95 flex items-center gap-1.5"
-                            >
-                              <Trash2 className="w-3 h-3 text-rose-400" />
-                              <span>Limpar Histórico</span>
-                            </button>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {/* Listbox seletor de exibição */}
+                            <div className="relative">
+                              <select
+                                value={historyFilter}
+                                onChange={(e) => setHistoryFilter(e.target.value as 'titulares' | 'titulares_demais' | 'completo')}
+                                className="px-2.5 py-1 rounded-lg bg-[#0b0d13] border border-white/[0.12] hover:border-amber-400/50 text-slate-200 text-xs font-normal outline-none cursor-pointer transition shadow-sm"
+                                title="Filtrar exibição dos registros"
+                              >
+                                <option value="titulares" className="bg-[#141721] text-white">Só titulares</option>
+                                <option value="titulares_demais" className="bg-[#141721] text-white">Titulares + demais</option>
+                                <option value="completo" className="bg-[#141721] text-white">Completo</option>
+                              </select>
+                            </div>
+
+                            {session.history && session.history.length > 0 && (
+                              <button
+                                type="button"
+                                onClick={handleClearHistory}
+                                title="Limpar todos os registros arquivados"
+                                className="px-2.5 py-1 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[11px] font-medium transition cursor-pointer active:scale-95 flex items-center gap-1.5"
+                              >
+                                <Trash2 className="w-3 h-3 text-rose-400" />
+                                <span>Limpar Histórico</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
 
                         {/* Lista de Registros do Histórico */}
@@ -3609,11 +3766,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               {/* Header da Eleição: Data e Título no formato oficial (dia xx/xx/xxxx ELEIÇÃO MULHERES) */}
                               <div className="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-white/[0.06]">
                                 <div className="flex items-center gap-2 flex-wrap">
-                                  <div className="p-1 rounded bg-amber-400/15 text-amber-300 border border-amber-400/30">
+                                  <div className="p-1 rounded bg-white/[0.05] text-slate-400 border border-white/[0.08]">
                                     <Calendar className="w-3.5 h-3.5" />
                                   </div>
-                                  <span className="font-extrabold text-amber-300 text-xs sm:text-sm tracking-wide">
-                                    {record.headerTitle}
+                                  <span className="font-light text-slate-200 text-xs sm:text-sm tracking-wide">
+                                    {formatHistorySubtitle(record)}
                                   </span>
                                   <span className="text-[10.5px] font-mono text-slate-400 bg-white/[0.05] px-1.5 py-0.5 rounded border border-white/[0.06]">
                                     {record.timeFormatted}
@@ -3652,134 +3809,150 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 </div>
                               </div>
 
-                              {/* As 3 Seções: Eleitos, Suplentes e Não Classificados */}
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
-                                {/* 1. ELEITOS */}
-                                <div className="bg-[#141721] border border-emerald-500/30 rounded-lg p-2.5 space-y-1.5">
-                                  <div className="flex items-center justify-between pb-1 border-b border-emerald-500/20">
-                                    <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
-                                      <Award className="w-3.5 h-3.5" />
-                                      ELEITOS ({record.eleitos?.length || 0})
-                                    </span>
-                                    <span className="text-[9.5px] font-bold text-emerald-300/80 uppercase">
-                                      Titulares
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                                    {record.eleitos && record.eleitos.length > 0 ? (
-                                      record.eleitos.map((c, cIdx) => (
-                                        <div
-                                          key={c.id || cIdx}
-                                          className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
-                                        >
-                                          <div className="flex items-center gap-1.5 min-w-0">
-                                            <span className="font-mono text-[10px] text-emerald-400 font-bold shrink-0">
-                                              #{cIdx + 1}
-                                            </span>
-                                            <span className="text-slate-100 font-medium truncate">
-                                              {c.name}
-                                            </span>
-                                          </div>
-                                          <span className="text-emerald-300 font-bold text-[10.5px] shrink-0 font-mono">
-                                            {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
-                                          </span>
-                                        </div>
-                                      ))
-                                    ) : (
-                                      <span className="text-[11px] text-slate-500 italic block py-1">Nenhum eleito</span>
-                                    )}
-                                  </div>
-                                </div>
+                              {/* As Seções de acordo com o filtro (Só titulares / Titulares + demais / Completo) */}
+                              {(() => {
+                                const outrosComVotos = (record.naoClassificados || []).filter((c) => (c.votesCount || 0) > 0);
+                                const showSuplentes = historyFilter !== 'titulares';
+                                const showNaoClassificados = historyFilter === 'completo' || (historyFilter === 'titulares_demais' && outrosComVotos.length > 0);
+                                const naoClassificadosLista = historyFilter === 'completo' ? (record.naoClassificados || []) : outrosComVotos;
 
-                                {/* 2. SUPLENTES */}
-                                <div className="bg-[#141721] border border-blue-500/30 rounded-lg p-2.5 space-y-1.5">
-                                  <div className="flex items-center justify-between pb-1 border-b border-blue-500/20">
-                                    <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
-                                      <Users className="w-3.5 h-3.5" />
-                                      SUPLENTES ({(record.suplentes?.length || 0) + (record.segundoSuplentes?.length || 0)})
-                                    </span>
-                                    <span className="text-[9.5px] font-bold text-blue-300/80 uppercase">
-                                      Reserva
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                                    {((record.suplentes?.length || 0) + (record.segundoSuplentes?.length || 0)) > 0 ? (
-                                      <>
-                                        {record.suplentes?.map((c, cIdx) => (
-                                          <div
-                                            key={c.id || cIdx}
-                                            className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
-                                          >
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                              <span className="font-mono text-[9px] text-blue-300 font-bold px-1 rounded bg-blue-500/20 shrink-0">
-                                                1º Sup
-                                              </span>
-                                              <span className="text-slate-100 font-medium truncate">
-                                                {c.name}
+                                const totalCols = 1 + (showSuplentes ? 1 : 0) + (showNaoClassificados ? 1 : 0);
+                                const gridClass = totalCols === 1 ? 'grid-cols-1' : totalCols === 2 ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1 md:grid-cols-3';
+
+                                return (
+                                  <div className={`grid gap-2.5 ${gridClass}`}>
+                                    {/* 1. ELEITOS / TITULARES (SEMPRE EXIBIDO) */}
+                                    <div className="bg-[#141721] border border-emerald-500/30 rounded-lg p-2.5 space-y-1.5">
+                                      <div className="flex items-center justify-between pb-1 border-b border-emerald-500/20">
+                                        <span className="text-xs font-bold text-emerald-400 flex items-center gap-1.5">
+                                          <Award className="w-3.5 h-3.5" />
+                                          ELEITOS ({record.eleitos?.length || 0})
+                                        </span>
+                                        <span className="text-[9.5px] font-bold text-emerald-300/80 uppercase">
+                                          Titulares
+                                        </span>
+                                      </div>
+                                      <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                        {record.eleitos && record.eleitos.length > 0 ? (
+                                          record.eleitos.map((c, cIdx) => (
+                                            <div
+                                              key={c.id || cIdx}
+                                              className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                            >
+                                              <div className="flex items-center gap-1.5 min-w-0">
+                                                <span className="font-mono text-[10px] text-emerald-400 font-bold shrink-0">
+                                                  #{cIdx + 1}
+                                                </span>
+                                                <span className="text-slate-100 font-medium truncate">
+                                                  {c.name}
+                                                </span>
+                                              </div>
+                                              <span className="text-emerald-300 font-bold text-[10.5px] shrink-0 font-mono">
+                                                {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
                                               </span>
                                             </div>
-                                            <span className="text-blue-300 font-bold text-[10.5px] shrink-0 font-mono">
-                                              {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
-                                            </span>
-                                          </div>
-                                        ))}
-                                        {record.segundoSuplentes?.map((c, cIdx) => (
-                                          <div
-                                            key={c.id || cIdx}
-                                            className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
-                                          >
-                                            <div className="flex items-center gap-1.5 min-w-0">
-                                              <span className="font-mono text-[9px] text-indigo-300 font-bold px-1 rounded bg-indigo-500/20 shrink-0">
-                                                2º Sup
-                                              </span>
-                                              <span className="text-slate-100 font-medium truncate">
-                                                {c.name}
-                                              </span>
-                                            </div>
-                                            <span className="text-indigo-300 font-bold text-[10.5px] shrink-0 font-mono">
-                                              {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
-                                            </span>
-                                          </div>
-                                        ))}
-                                      </>
-                                    ) : (
-                                      <span className="text-[11px] text-slate-500 italic block py-1">Sem suplentes</span>
-                                    )}
-                                  </div>
-                                </div>
+                                          ))
+                                        ) : (
+                                          <span className="text-[11px] text-slate-500 italic block py-1">Nenhum eleito</span>
+                                        )}
+                                      </div>
+                                    </div>
 
-                                {/* 3. NÃO CLASSIFICADOS */}
-                                <div className="bg-[#141721] border border-white/[0.08] rounded-lg p-2.5 space-y-1.5">
-                                  <div className="flex items-center justify-between pb-1 border-b border-white/[0.08]">
-                                    <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                                      <Activity className="w-3.5 h-3.5 text-slate-400" />
-                                      NÃO CLASSIFICADOS ({record.naoClassificados?.length || 0})
-                                    </span>
-                                    <span className="text-[9.5px] font-bold text-slate-500 uppercase">
-                                      Demais
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
-                                    {record.naoClassificados && record.naoClassificados.length > 0 ? (
-                                      record.naoClassificados.map((c, cIdx) => (
-                                        <div
-                                          key={c.id || cIdx}
-                                          className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
-                                        >
-                                          <span className="text-slate-400 font-medium truncate">
-                                            {c.name}
+                                    {/* 2. SUPLENTES */}
+                                    {showSuplentes && (
+                                      <div className="bg-[#141721] border border-blue-500/30 rounded-lg p-2.5 space-y-1.5">
+                                        <div className="flex items-center justify-between pb-1 border-b border-blue-500/20">
+                                          <span className="text-xs font-bold text-blue-400 flex items-center gap-1.5">
+                                            <Users className="w-3.5 h-3.5" />
+                                            SUPLENTES ({(record.suplentes?.length || 0) + (record.segundoSuplentes?.length || 0)})
                                           </span>
-                                          <span className="text-slate-400 font-mono text-[10.5px] shrink-0">
-                                            {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                          <span className="text-[9.5px] font-bold text-blue-300/80 uppercase">
+                                            Reserva
                                           </span>
                                         </div>
-                                      ))
-                                    ) : (
-                                      <span className="text-[11px] text-slate-500 italic block py-1">Nenhum</span>
+                                        <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                          {((record.suplentes?.length || 0) + (record.segundoSuplentes?.length || 0)) > 0 ? (
+                                            <>
+                                              {record.suplentes?.map((c, cIdx) => (
+                                                <div
+                                                  key={c.id || cIdx}
+                                                  className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                                >
+                                                  <div className="flex items-center gap-1.5 min-w-0">
+                                                    <span className="font-mono text-[9px] text-blue-300 font-bold px-1 rounded bg-blue-500/20 shrink-0">
+                                                      1º Sup
+                                                    </span>
+                                                    <span className="text-slate-100 font-medium truncate">
+                                                      {c.name}
+                                                    </span>
+                                                  </div>
+                                                  <span className="text-blue-300 font-bold text-[10.5px] shrink-0 font-mono">
+                                                    {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                                  </span>
+                                                </div>
+                                              ))}
+                                              {record.segundoSuplentes?.map((c, cIdx) => (
+                                                <div
+                                                  key={c.id || cIdx}
+                                                  className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                                >
+                                                  <div className="flex items-center gap-1.5 min-w-0">
+                                                    <span className="font-mono text-[9px] text-indigo-300 font-bold px-1 rounded bg-indigo-500/20 shrink-0">
+                                                      2º Sup
+                                                    </span>
+                                                    <span className="text-slate-100 font-medium truncate">
+                                                      {c.name}
+                                                    </span>
+                                                  </div>
+                                                  <span className="text-indigo-300 font-bold text-[10.5px] shrink-0 font-mono">
+                                                    {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                                  </span>
+                                                </div>
+                                              ))}
+                                            </>
+                                          ) : (
+                                            <span className="text-[11px] text-slate-500 italic block py-1">Sem suplentes</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* 3. NÃO CLASSIFICADOS / DEMAIS */}
+                                    {showNaoClassificados && (
+                                      <div className="bg-[#141721] border border-white/[0.08] rounded-lg p-2.5 space-y-1.5">
+                                        <div className="flex items-center justify-between pb-1 border-b border-white/[0.08]">
+                                          <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
+                                            <Activity className="w-3.5 h-3.5 text-slate-400" />
+                                            {historyFilter === 'completo' ? `NÃO CLASSIFICADOS (${naoClassificadosLista.length})` : `OUTROS (${naoClassificadosLista.length})`}
+                                          </span>
+                                          <span className="text-[9.5px] font-bold text-slate-500 uppercase">
+                                            {historyFilter === 'completo' ? 'Demais' : 'Com Votos'}
+                                          </span>
+                                        </div>
+                                        <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
+                                          {naoClassificadosLista && naoClassificadosLista.length > 0 ? (
+                                            naoClassificadosLista.map((c, cIdx) => (
+                                              <div
+                                                key={c.id || cIdx}
+                                                className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
+                                              >
+                                                <span className="text-slate-400 font-medium truncate">
+                                                  {c.name}
+                                                </span>
+                                                <span className="text-slate-400 font-mono text-[10.5px] shrink-0">
+                                                  {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                                </span>
+                                              </div>
+                                            ))
+                                          ) : (
+                                            <span className="text-[11px] text-slate-500 italic block py-1">Nenhum</span>
+                                          )}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
-                                </div>
-                              </div>
+                                );
+                              })()}
                             </div>
                           ))}
                         </div>
