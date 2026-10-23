@@ -906,7 +906,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       electionName = 'Votação';
     }
 
-    return `Dia ${day}-${month}-${year} -> Eleição: ${electionName}`;
+    return (
+      <>
+        <span>Dia {day}-{month}-{year} -&gt; Eleição: </span>
+        <span className="text-orange-300 font-normal">{electionName}</span>
+      </>
+    );
   };
 
   // Alterna entre Eventos Gerais existentes salvos no banco online
@@ -3892,7 +3897,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                 </span>
                                               </div>
                                               <span className="text-emerald-300 font-bold text-[10.5px] shrink-0 font-mono">
-                                                {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                                {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} <span className="text-orange-400">({c.percentage}%)</span>
                                               </span>
                                             </div>
                                           ))
@@ -3931,7 +3936,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                     </span>
                                                   </div>
                                                   <span className="text-blue-300 font-bold text-[10.5px] shrink-0 font-mono">
-                                                    {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                                    {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} <span className="text-orange-400">({c.percentage}%)</span>
                                                   </span>
                                                 </div>
                                               ))}
@@ -3949,7 +3954,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                     </span>
                                                   </div>
                                                   <span className="text-indigo-300 font-bold text-[10.5px] shrink-0 font-mono">
-                                                    {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                                    {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} <span className="text-orange-400">({c.percentage}%)</span>
                                                   </span>
                                                 </div>
                                               ))}
@@ -3984,7 +3989,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                   {c.name}
                                                 </span>
                                                 <span className="text-slate-400 font-mono text-[10.5px] shrink-0">
-                                                  {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} ({c.percentage}%)
+                                                  {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} <span className="text-orange-400 font-bold">({c.percentage}%)</span>
                                                 </span>
                                               </div>
                                             ))
