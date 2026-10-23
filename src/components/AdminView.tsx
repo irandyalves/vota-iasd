@@ -3987,7 +3987,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         const getTieCategoryStyles = (type: string, label: string) => {
           if (type === 'TITULAR' || /titular/i.test(label)) {
             return {
-              title: 'TITULAR',
+              title: 'Titular',
               container: 'bg-[#031d15]/95 border-0 shadow-[0_0_20px_rgba(16,185,129,0.18)]',
               badgeText: 'text-emerald-400',
               dot: 'bg-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.9)]',
@@ -4000,12 +4000,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               subTextBase: 'text-slate-400',
               subTextSelected: 'text-emerald-200 font-bold',
               circleSelected: 'border-emerald-400 bg-emerald-400 text-emerald-950',
-              btnEnviar: 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.45)] text-white',
             };
           }
           if (type === 'SUPLENTE_1' || /1[ºªo]?\s*suplente/i.test(label)) {
             return {
-              title: '1º SUPLENTE',
+              title: '1º Suplente',
               container: 'bg-[#06152d]/95 border-0 shadow-[0_0_20px_rgba(59,130,246,0.18)]',
               badgeText: 'text-blue-400',
               dot: 'bg-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.9)]',
@@ -4018,12 +4017,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               subTextBase: 'text-slate-400',
               subTextSelected: 'text-blue-200 font-bold',
               circleSelected: 'border-blue-400 bg-blue-400 text-blue-950',
-              btnEnviar: 'bg-blue-600 hover:bg-blue-500 border border-blue-400 shadow-[0_0_14px_rgba(59,130,246,0.45)] text-white',
             };
           }
           if (type === 'SUPLENTE_2' || /2[ºªo]?\s*suplente/i.test(label)) {
             return {
-              title: '2º SUPLENTE',
+              title: '2º Suplente',
               container: 'bg-[#0e1726]/95 border-0 shadow-[0_0_20px_rgba(100,116,139,0.18)]',
               badgeText: 'text-slate-300',
               dot: 'bg-slate-400 drop-shadow-[0_0_6px_rgba(148,163,184,0.9)]',
@@ -4036,11 +4034,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               subTextBase: 'text-slate-400',
               subTextSelected: 'text-slate-200 font-bold',
               circleSelected: 'border-slate-300 bg-slate-300 text-slate-950',
-              btnEnviar: 'bg-slate-600 hover:bg-slate-500 border border-slate-400 shadow-[0_0_14px_rgba(100,116,139,0.45)] text-white',
             };
           }
           return {
-            title: label.replace(/^Empate para (vaga de )?/i, '').toUpperCase() || 'DESEMPATE',
+            title: label.replace(/^Empate para (vaga de )?/i, '').trim() || 'Desempate',
             container: 'bg-[#1a0a10]/95 border-0 shadow-[0_0_20px_rgba(244,63,94,0.18)]',
             badgeText: 'text-rose-400',
             dot: 'bg-rose-400 drop-shadow-[0_0_6px_rgba(251,113,133,0.9)]',
@@ -4053,7 +4050,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             subTextBase: 'text-slate-400',
             subTextSelected: 'text-rose-200 font-bold',
             circleSelected: 'border-rose-400 bg-rose-400 text-rose-950',
-            btnEnviar: 'bg-rose-600 hover:bg-rose-500 border border-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.45)] text-white',
           };
         };
 
@@ -4141,37 +4137,48 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         const styles = getTieCategoryStyles(tie.type, tie.label);
                         const selectedInThisTie = tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id)).length;
                         const remainingToChoose = Math.max(0, maxAllowed - selectedInThisTie);
+                        const isReady = remainingToChoose === 0;
 
                         return (
                           <div
                             key={idx}
                             className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-colors ${styles.container}`}
                           >
-                            {/* Header do Grupo com Título, Vagas e BOTÃO ENVIAR à direita */}
+                            {/* Header do Grupo: Escolha em cima (sem caixa alta, sem 'para disputa'), Titular embaixo, e BOTÃO ENVIAR à direita */}
                             <div className="flex items-center justify-between gap-3 pb-1">
-                              <div className="min-w-0 flex-1 flex items-center flex-wrap gap-1.5">
-                                <span className={`px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider ${styles.badgeText} bg-white/10 border-0 shrink-0`}>
-                                  {styles.title}
-                                </span>
-                                <h4 className="font-black text-xs sm:text-sm tracking-wide flex items-center flex-wrap gap-1 text-white uppercase select-none leading-tight">
-                                  <span>ESCOLHA</span>
-                                  <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-base sm:text-lg leading-none mx-0.5">
+                              <div className="min-w-0 flex-1 flex flex-col gap-1">
+                                {/* Linha de Cima: Escolha xx nome(s) xx vaga(s) */}
+                                <div className="flex items-center flex-wrap gap-1 text-white font-medium text-xs sm:text-sm select-none leading-tight">
+                                  <span>Escolha</span>
+                                  <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
                                     {String(remainingToChoose).padStart(2, '0')}
                                   </span>
-                                  <span>{remainingToChoose === 1 ? 'NOME PARA DISPUTA' : 'NOMES PARA DISPUTA'}</span>
-                                  <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-base sm:text-lg leading-none mx-0.5">
+                                  <span>{remainingToChoose === 1 ? 'nome' : 'nomes'}</span>
+                                  <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none ml-1.5">
                                     {String(tie.vacanciesInDispute).padStart(2, '0')}
                                   </span>
-                                  <span>{tie.vacanciesInDispute === 1 ? 'VAGA' : 'VAGAS'}</span>
-                                </h4>
+                                  <span>{tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}</span>
+                                </div>
+
+                                {/* Linha de Baixo: Titular (sem caixa alta) */}
+                                <div>
+                                  <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
+                                    {styles.title}
+                                  </span>
+                                </div>
                               </div>
 
-                              {/* Botão ENVIAR no lado direito com a cor da categoria (sem bold) */}
+                              {/* Botão ENVIAR no lado direito: cinza por padrão, fica verde quando verdadeiro */}
                               <button
                                 type="button"
-                                onClick={() => handleStartTieBreak(tie)}
-                                title={`Iniciar votação de desempate para ${styles.title}`}
-                                className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-150 active:scale-95 cursor-pointer shadow-md select-none ${styles.btnEnviar}`}
+                                disabled={!isReady}
+                                onClick={() => isReady && handleStartTieBreak(tie)}
+                                title={isReady ? `Iniciar votação de desempate para ${styles.title}` : `Selecione mais ${remainingToChoose} ${remainingToChoose === 1 ? 'nome' : 'nomes'} para enviar`}
+                                className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-200 select-none ${
+                                  isReady
+                                    ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95'
+                                    : 'bg-[#1c212e] border border-white/10 text-slate-400 cursor-not-allowed opacity-75'
+                                }`}
                               >
                                 <span>ENVIAR</span>
                                 <ChevronsRight className="w-4 h-4 stroke-[2]" />
