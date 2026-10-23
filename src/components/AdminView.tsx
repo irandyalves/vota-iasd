@@ -3093,7 +3093,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       setTempVotacoesTitle(votacoesTitle);
                       setIsEditingVotacoesTitle(true);
                     }}
-                    className="text-white hover:text-white font-bold text-xs sm:text-sm tracking-wide transition cursor-pointer select-none"
+                    className="text-white hover:text-white font-normal text-xs sm:text-sm tracking-wide transition cursor-pointer select-none"
                     title="Mostrar seção de nomes (duplo clique ou clique no lápis para renomear)"
                   >
                     {votacoesTitle}
