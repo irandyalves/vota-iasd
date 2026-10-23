@@ -3992,7 +3992,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <h3 className="font-bold text-xs sm:text-sm tracking-wide truncate text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.7)]">
                     Apuração em Tempo Real
                   </h3>
-                  <p className="text-[10.5px] text-slate-400 truncate font-light">
+                  <p className="text-[11px] text-orange-400 truncate font-semibold uppercase tracking-wider">
                     {session.title || 'Votação em Andamento'}
                   </p>
                 </div>
@@ -4069,18 +4069,32 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </div>
               ) : (
                 <div className="flex flex-col -space-y-px flex-1 overflow-y-auto pr-1 min-h-[260px] max-h-[calc(100vh-380px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
-                  {/* Cabeçalho de Colunas */}
-                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 bg-white/[0.03] rounded-md border border-white/[0.05] gap-1.5 mb-0.5 shrink-0">
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <span className="w-5 text-center">#</span>
-                      <span className="w-[14ch] sm:w-[16ch] truncate">Nome</span>
-                      <span className="w-[68px] text-left">Cargo</span>
+                  {/* Cabeçalho de Colunas 100% Alinhadas com os Itens */}
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 p-1.5 sm:p-2 bg-white/[0.03] rounded-md border border-white/[0.05] gap-1.5 mb-0.5 shrink-0">
+                    {/* 1. Posição (Sem o #) */}
+                    <div className="w-7 text-center shrink-0" />
+
+                    {/* 2. Nome */}
+                    <div className="w-[130px] sm:w-[155px] shrink-0 text-left truncate">
+                      Nome
                     </div>
-                    <div className="flex-1 flex items-center justify-between mx-1 text-slate-400 min-w-0">
-                      <span className="truncate">Barra</span>
-                      <span className="text-[9px] font-mono shrink-0">100%|</span>
+
+                    {/* 3. Cargo */}
+                    <div className="w-[72px] shrink-0 text-left">
+                      Cargo
                     </div>
-                    <div className="shrink-0 min-w-[42px] text-center">
+
+                    {/* 4. Barra de Progresso com % */}
+                    <div className="flex-1 flex items-center justify-between mx-1 min-w-[50px] text-slate-400">
+                      <span className="truncate">Barra de Progresso</span>
+                      <span className="text-[9px] font-mono shrink-0 text-slate-400">100%</span>
+                    </div>
+
+                    {/* 5. Linha vertical alinhada com o limite 100% */}
+                    <div className="w-[1.5px] h-3.5 bg-white/30 border-r border-white/50 shrink-0 self-center" />
+
+                    {/* 6. Votos */}
+                    <div className="min-w-[42px] text-center shrink-0">
                       <span>Votos</span>
                     </div>
                   </div>
@@ -4132,20 +4146,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 : 'rounded-none'
                             } -mt-px hover:z-20 hover:border-opacity-100`}
                           >
-                            {/* # Posição */}
-                            <span className="w-5 text-center font-mono font-bold text-xs text-slate-400 shrink-0">
-                              #{idx + 1}
+                            {/* Posição: 1º dourado, 2º prata, 3º bronze, resto normal */}
+                            <span
+                              className={`w-7 text-center font-mono font-bold text-xs shrink-0 ${
+                                idx === 0
+                                  ? 'text-amber-400 font-black drop-shadow-[0_0_8px_rgba(251,191,36,0.6)]'
+                                  : idx === 1
+                                  ? 'text-slate-200 font-black drop-shadow-[0_0_6px_rgba(226,232,240,0.5)]'
+                                  : idx === 2
+                                  ? 'text-[#cd7f32] font-black drop-shadow-[0_0_6px_rgba(205,127,50,0.5)]'
+                                  : 'text-slate-400 font-medium'
+                              }`}
+                            >
+                              {idx + 1}º
                             </span>
 
                             {/* Nome */}
-                            <div className="w-[14ch] sm:w-[16ch] shrink-0" title={candidate.name}>
+                            <div className="w-[130px] sm:w-[155px] shrink-0 truncate" title={candidate.name}>
                               <span className="font-bold text-xs text-slate-100 uppercase truncate block">
                                 {candidate.name}
                               </span>
                             </div>
 
                             {/* Cargo */}
-                            <div className="w-[68px] shrink-0 flex items-center">
+                            <div className="w-[72px] shrink-0 flex items-center">
                               {isTitular ? (
                                 <span
                                   style={{
