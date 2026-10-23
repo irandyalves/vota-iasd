@@ -24,10 +24,6 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
   if (session.resolverEmpates === false) {
     return [];
   }
-  // Se o desempate está ativamente em andamento, não acusa novo empate até terminar a rodada
-  if (session.status === 'TIE_BREAK' && session.tieBreak?.active) {
-    return [];
-  }
   const ties: TieInfo[] = [];
   const options = [...session.options].sort((a, b) => Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0));
 

@@ -360,9 +360,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         options: tieOptions,
       },
     });
-    setIsTieModalOpen(false);
+    // O painel NÃO fecha ao enviar. Permanece aberto aguardando a apuração do resultado!
     setSelectedTieCandidateIds([]);
-    showNotification('success', `Votação de desempate iniciada com ${tieOptions.length} candidatos!`);
+    showNotification('success', `Votação de desempate iniciada com ${tieOptions.length} candidatos! Aguardando votos...`);
   };
 
   
@@ -4069,13 +4069,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 {isTieModalOpen ? (
                   <motion.div
                     key="tie-resolution-box"
-                    initial={{ opacity: 0, scale: 0.98, y: -6 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.98, y: -6 }}
-                    transition={{ duration: 0.25 }}
+                    initial={{ height: 0, opacity: 0, scaleY: 0.2, originY: 0 }}
+                    animate={{ height: 'auto', opacity: 1, scaleY: 1 }}
+                    exit={{ height: 0, opacity: 0, scaleY: 0.2, originY: 0 }}
+                    transition={{
+                      height: { duration: 0.75, ease: [0.12, 1, 0.2, 1] },
+                      scaleY: { duration: 0.75, ease: [0.12, 1, 0.2, 1] },
+                      opacity: { duration: 0.5, ease: 'easeOut' },
+                    }}
                     className={`relative w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-l-2 border-emerald-500 border-t-0 border-b-0 border-r-0 ${
                       isSplit ? 'rounded-l-xl rounded-r-none' : 'rounded-xl'
-                    } p-3.5 sm:p-5 shadow-[0_0_25px_rgba(16,185,129,0.3)] text-white overflow-hidden space-y-3.5`}
+                    } p-3.5 sm:p-5 shadow-[0_0_35px_rgba(16,185,129,0.35)] text-white overflow-hidden space-y-3.5 will-change-[height,transform]`}
                   >
                     {/* Linha Verde Superior: ficando transparente da esquerda para a direita a partir de 40% */}
                     <div
@@ -4150,120 +4154,144 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       </AnimatePresence>
                     </div>
 
-                    {/* Lista de Grupos de Empate */}
+                    {/* Lista de Grupos de Empate com Animação de Contração ao Resolver */}
                     <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
-                      {detectedTies.map((tie, idx) => {
-                        const maxAllowed = tie.vacanciesInDispute + 1;
-                        const styles = getTieCategoryStyles(tie.type, tie.label);
-                        const selectedInThisTie = tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id)).length;
-                        const remainingToChoose = Math.max(0, maxAllowed - selectedInThisTie);
-                        const isReady = remainingToChoose === 0;
+                      <AnimatePresence initial={false}>
+                        {detectedTies.map((tie) => {
+                          const maxAllowed = tie.vacanciesInDispute + 1;
+                          const styles = getTieCategoryStyles(tie.type, tie.label);
+                          const selectedInThisTie = tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id)).length;
+                          const remainingToChoose = Math.max(0, maxAllowed - selectedInThisTie);
+                          const isReady = remainingToChoose === 0;
 
-                        return (
-                          <div
-                            key={idx}
-                            className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-colors ${styles.container}`}
-                          >
-                            {/* Header do Grupo: Escolha em cima (sem caixa alta, sem 'para disputa'), Titular embaixo, e BOTÃO ENVIAR à direita */}
-                            <div className="flex items-center justify-between gap-3 pb-1">
-                              <div className="min-w-0 flex-1 flex flex-col gap-1">
-                                {/* Linha de Cima: Escolha xx nome(s) xx vaga(s) */}
-                                <div className="flex items-center flex-wrap gap-1 text-white font-medium text-xs sm:text-sm select-none leading-tight">
-                                  <span>Escolha</span>
-                                  <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
-                                    {String(remainingToChoose).padStart(2, '0')}
-                                  </span>
-                                  <span>{remainingToChoose === 1 ? 'nome' : 'nomes'}</span>
-                                  <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none ml-1.5">
-                                    {String(tie.vacanciesInDispute).padStart(2, '0')}
-                                  </span>
-                                  <span>{tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}</span>
+                          const isTieBreakActive = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
+                          const activeTieCandidateIds = session.tieBreak?.options?.map((o) => o.id) || [];
+                          const isThisTieVotingNow = isTieBreakActive && tie.tiedCandidates.some((c) => activeTieCandidateIds.includes(c.id));
+
+                          return (
+                            <motion.div
+                              layout
+                              key={tie.type + '-' + tie.label}
+                              initial={{ opacity: 0, height: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, height: 'auto', scale: 1 }}
+                              exit={{ opacity: 0, height: 0, scale: 0.92, overflow: 'hidden' }}
+                              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                              className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-colors ${styles.container}`}
+                            >
+                              {/* Header do Grupo: Escolha em cima (sem caixa alta, sem 'para disputa'), Titular embaixo, e BOTÃO ENVIAR à direita */}
+                              <div className="flex items-center justify-between gap-3 pb-1">
+                                <div className="min-w-0 flex-1 flex flex-col gap-1">
+                                  {/* Linha de Cima: Escolha xx nome(s) xx vaga(s) */}
+                                  <div className="flex items-center flex-wrap gap-1 text-white font-medium text-xs sm:text-sm select-none leading-tight">
+                                    <span>Escolha</span>
+                                    <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
+                                      {String(remainingToChoose).padStart(2, '0')}
+                                    </span>
+                                    <span>{remainingToChoose === 1 ? 'nome' : 'nomes'}</span>
+                                    <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none ml-1.5">
+                                      {String(tie.vacanciesInDispute).padStart(2, '0')}
+                                    </span>
+                                    <span>{tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}</span>
+                                  </div>
+
+                                  {/* Linha de Baixo: Titular (sem caixa alta) */}
+                                  <div>
+                                    <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
+                                      {styles.title}
+                                    </span>
+                                  </div>
                                 </div>
 
-                                {/* Linha de Baixo: Titular (sem caixa alta) */}
-                                <div>
-                                  <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
-                                    {styles.title}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {/* Botão ENVIAR no lado direito: cinza por padrão, fica verde quando verdadeiro */}
-                              <button
-                                type="button"
-                                disabled={!isReady}
-                                onClick={() => isReady && handleStartTieBreak(tie)}
-                                title={isReady ? `Iniciar votação de desempate para ${styles.title}` : `Selecione mais ${remainingToChoose} ${remainingToChoose === 1 ? 'nome' : 'nomes'} para enviar`}
-                                className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-200 select-none ${
-                                  isReady
-                                    ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95'
-                                    : 'bg-[#1c212e] border border-white/10 text-slate-400 cursor-not-allowed opacity-75'
-                                }`}
-                              >
-                                <span>ENVIAR</span>
-                                <ChevronsRight className="w-4 h-4 stroke-[2]" />
-                              </button>
-                            </div>
-
-                            {/* Cards dos Candidatos Empatados */}
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                              {tie.tiedCandidates.map((c) => {
-                                const isSelected = selectedTieCandidateIds.includes(c.id);
-
-                                return (
-                                  <div
-                                    key={c.id}
-                                    onClick={() => handleToggleTieCandidate(c.id, maxAllowed)}
-                                    className={`py-1.5 px-2.5 rounded-lg border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
-                                      isSelected ? styles.cardSelected : styles.cardBase
+                                {/* Botão ENVIAR no lado direito: cinza por padrão, fica verde quando verdadeiro, ou indica votação ativa */}
+                                {isThisTieVotingNow ? (
+                                  <div className="shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
+                                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                                    <span>EM VOTAÇÃO ({session.tieBreakVotersCount || 0})</span>
+                                  </div>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={!isReady || isTieBreakActive}
+                                    onClick={() => isReady && !isTieBreakActive && handleStartTieBreak(tie)}
+                                    title={
+                                      isTieBreakActive
+                                        ? 'Aguarde a votação de desempate atual terminar'
+                                        : isReady
+                                        ? `Iniciar votação de desempate para ${styles.title}`
+                                        : `Selecione mais ${remainingToChoose} ${remainingToChoose === 1 ? 'nome' : 'nomes'} para enviar`
+                                    }
+                                    className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-200 select-none ${
+                                      isReady && !isTieBreakActive
+                                        ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95'
+                                        : 'bg-[#1c212e] border border-white/10 text-slate-400 cursor-not-allowed opacity-75'
                                     }`}
                                   >
-                                    <div className="flex items-center gap-2 min-w-0">
-                                      {c.photoUrl ? (
-                                        <img
-                                          src={c.photoUrl}
-                                          alt={c.name}
-                                          className="w-6 h-6 rounded-md object-cover border border-white/20 shrink-0"
-                                        />
-                                      ) : (
-                                        <div
-                                          className={`w-5 h-5 flex items-center justify-center shrink-0 bg-transparent border-0 ${
-                                            isSelected ? styles.iconBoxSelected : styles.iconBoxBase
-                                          }`}
-                                        >
-                                          <Star className={`w-3.5 h-3.5 ${isSelected ? styles.starSelected : styles.starBase}`} />
+                                    <span>ENVIAR</span>
+                                    <ChevronsRight className="w-4 h-4 stroke-[2]" />
+                                  </button>
+                                )}
+                              </div>
+
+                              {/* Cards dos Candidatos Empatados */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {tie.tiedCandidates.map((c) => {
+                                  const isSelected = selectedTieCandidateIds.includes(c.id);
+
+                                  return (
+                                    <div
+                                      key={c.id}
+                                      onClick={() => !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
+                                      className={`py-1.5 px-2.5 rounded-lg border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
+                                        isSelected ? styles.cardSelected : styles.cardBase
+                                      } ${isThisTieVotingNow ? 'opacity-85 pointer-events-none' : ''}`}
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        {c.photoUrl ? (
+                                          <img
+                                            src={c.photoUrl}
+                                            alt={c.name}
+                                            className="w-6 h-6 rounded-md object-cover border border-white/20 shrink-0"
+                                          />
+                                        ) : (
+                                          <div
+                                            className={`w-5 h-5 flex items-center justify-center shrink-0 bg-transparent border-0 ${
+                                              isSelected ? styles.iconBoxSelected : styles.iconBoxBase
+                                            }`}
+                                          >
+                                            <Star className={`w-3.5 h-3.5 ${isSelected ? styles.starSelected : styles.starBase}`} />
+                                          </div>
+                                        )}
+                                        <div className="min-w-0">
+                                          <h5 className="font-black text-[11px] sm:text-xs text-white uppercase truncate leading-tight">
+                                            {c.name}
+                                          </h5>
+                                          <span className={`inline-flex items-center gap-1 text-[7.5px] font-black uppercase leading-tight ${
+                                            isSelected ? styles.subTextSelected : styles.subTextBase
+                                          }`}>
+                                            <Star className="w-2 h-2 fill-current" />
+                                            EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
+                                          </span>
                                         </div>
-                                      )}
-                                      <div className="min-w-0">
-                                        <h5 className="font-black text-[11px] sm:text-xs text-white uppercase truncate leading-tight">
-                                          {c.name}
-                                        </h5>
-                                        <span className={`inline-flex items-center gap-1 text-[7.5px] font-black uppercase leading-tight ${
-                                          isSelected ? styles.subTextSelected : styles.subTextBase
-                                        }`}>
-                                          <Star className="w-2 h-2 fill-current" />
-                                          EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
-                                        </span>
+                                      </div>
+
+                                      {/* Indicador de Seleção Circular Compacto */}
+                                      <div
+                                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                          isSelected
+                                            ? styles.circleSelected
+                                            : 'border-slate-600 bg-slate-900/60'
+                                        }`}
+                                      >
+                                        {isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />}
                                       </div>
                                     </div>
-
-                                    {/* Indicador de Seleção Circular Compacto */}
-                                    <div
-                                      className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                        isSelected
-                                          ? styles.circleSelected
-                                          : 'border-slate-600 bg-slate-900/60'
-                                      }`}
-                                    >
-                                      {isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />}
-                                    </div>
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          </div>
-                        );
-                      })}
+                                  );
+                                })}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </AnimatePresence>
                     </div>
                   </motion.div>
                 ) : (
