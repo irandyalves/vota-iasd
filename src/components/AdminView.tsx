@@ -93,6 +93,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   // Filtro de exibição do histórico de votações (Só titulares / Titulares + demais / Completo)
   const [historyFilter, setHistoryFilter] = useState<'titulares' | 'titulares_demais' | 'completo'>('completo');
   const [isHistoryMenuOpen, setIsHistoryMenuOpen] = useState<boolean>(false);
+  const [isHistoryHovered, setIsHistoryHovered] = useState<boolean>(false);
+  const [historyHoverKey, setHistoryHoverKey] = useState<number>(0);
   const [isGeneralEventMenuOpen, setIsGeneralEventMenuOpen] = useState<boolean>(false);
   // Split ratio (largura % da coluna da esquerda - Nomes). Por padrão: 40% (Apuração: 60%)
   const [splitRatio, setSplitRatio] = useState<number>(() => {
@@ -2832,11 +2834,43 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             <button
               type="button"
               onClick={() => setIsHistoryMenuOpen((prev) => !prev)}
-              className="p-1.5 sm:p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 bg-transparent hover:bg-white/10 text-slate-300 hover:text-white border-0 shadow-none focus:outline-none"
+              onMouseEnter={() => {
+                setIsHistoryHovered(true);
+                setHistoryHoverKey((k) => k + 1);
+              }}
+              onMouseLeave={() => setIsHistoryHovered(false)}
+              className="p-1.5 sm:p-2 rounded-xl transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center gap-1.5 bg-transparent hover:bg-yellow-400/10 text-slate-300 hover:text-yellow-400 border-0 shadow-none focus:outline-none"
               title="Visualizar Histórico de Votações"
               aria-label="Visualizar Histórico de Votações"
             >
-              <History className="w-4 h-4 sm:w-5 sm:h-5 text-slate-300" />
+              <motion.span
+                key={historyHoverKey}
+                className="inline-flex items-center justify-center"
+                animate={
+                  isHistoryHovered
+                    ? {
+                        rotate: [0, -385, -360, -360, -745, -720, -720, -1105, -1080],
+                        color: '#facc15',
+                        filter: 'drop-shadow(0 0 7px rgba(250,204,21,0.7))',
+                      }
+                    : {
+                        rotate: 0,
+                        color: isHistoryMenuOpen ? '#facc15' : '#cbd5e1',
+                        filter: isHistoryMenuOpen ? 'drop-shadow(0 0 6px rgba(250,204,21,0.5))' : 'none',
+                      }
+                }
+                transition={
+                  isHistoryHovered
+                    ? {
+                        duration: 2.05,
+                        times: [0, 0.136, 0.171, 0.415, 0.551, 0.585, 0.829, 0.966, 1],
+                        ease: 'easeInOut',
+                      }
+                    : { duration: 0.25 }
+                }
+              >
+                <History className="w-4 h-4 sm:w-5 sm:h-5 transition-colors" />
+              </motion.span>
               {session.history && session.history.length > 0 && (
                 <span className="text-[10px] font-black px-1.5 py-0.2 bg-amber-400 text-slate-950 rounded-full font-mono leading-none">
                   {session.history.length}
