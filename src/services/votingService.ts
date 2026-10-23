@@ -66,6 +66,15 @@ export function recordFirestoreOperation(ops: number = 1): void {
   } catch {}
 }
 
+export function resetFirestoreQuotaStats(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    localStorage.setItem(FIREBASE_QUOTA_STORAGE_KEY, JSON.stringify({ date: todayStr, count: 0 }));
+    window.dispatchEvent(new CustomEvent('vota_iasd_firestore_quota_change', { detail: getFirestoreQuotaStats() }));
+  } catch {}
+}
+
 export function isFirestoreQuotaExceeded(): boolean {
   return isQuotaExceeded;
 }
@@ -130,6 +139,10 @@ export async function verifyBallotOnServer(
   iteration: number = 1,
   customDeviceId?: string
 ): Promise<boolean | null> {
+  // Dispositivos simulados operam localmente e nunca consomem leituras da nuvem
+  if (customDeviceId && customDeviceId.startsWith('sim_')) {
+    return true;
+  }
   if (!isFirebaseConfigured || !db || isQuotaExceeded) return null;
   try {
     const voterId = customDeviceId || getDeviceId();
@@ -502,6 +515,20 @@ export async function submitBallot(
 
   if (selectedOptionIds.length > maxAllowed) {
     return { success: false, message: `O limite máximo é de ${maxAllowed} votos!` };
+  }
+
+  // 0. CELULARES DO SIMULADOR: Processamento 100% em memória local e broadcast
+  // Preserva 100% da cota do Firebase Firestore para a eleição real oficial
+  if (customDeviceId && customDeviceId.startsWith('sim_')) {
+    try {
+      const currentSession = getLocalSession();
+      const updated = applyBallotToSession(currentSession, selectedOptionIds, round);
+      setLocalSession(updated);
+      markAsVoted(session.id, round, iteration, customDeviceId);
+      return { success: true };
+    } catch (simErr) {
+      console.error('Erro ao processar voto simulado local:', simErr);
+    }
   }
 
   // 1. Grava voto no Firestore (se configurado e cota não excedida)

@@ -5,7 +5,7 @@ import { IasdLogo } from './IasdLogo';
 import { removeEasyBackground } from '../utils/imageUtils';
 import { detectVotingTies } from '../utils/tieDetection';
 import type { VotingSession, VotingHistoryRecord } from '../types';
-import { subscribeToConnectedVoters, getFirestoreQuotaStats } from '../services/votingService';
+import { subscribeToConnectedVoters, getFirestoreQuotaStats, resetFirestoreQuotaStats } from '../services/votingService';
 
 interface NavbarProps {
   currentView: 'voter' | 'telao' | 'admin' | 'simulator';
@@ -502,8 +502,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* LINHA DE BAIXO: consumo   xxx % embaixo a barra de progresso */}
             <div
-              className="mt-0.5 flex flex-col gap-0.5 select-none w-full max-w-[170px]"
-              title={`Consumo na Nuvem hoje: ${quotaStats.count.toLocaleString('pt-BR')} de ${quotaStats.max.toLocaleString('pt-BR')} gratuitas/dia (${quotaStats.percent}%)`}
+              className="mt-0.5 flex flex-col gap-0.5 select-none w-full max-w-[170px] cursor-pointer"
+              title={`Consumo na Nuvem hoje: ${quotaStats.count.toLocaleString('pt-BR')} de ${quotaStats.max.toLocaleString('pt-BR')} gratuitas/dia (${quotaStats.percent}%). Dê 2 cliques para zerar o contador de testes.`}
+              onDoubleClick={() => {
+                if (window.confirm('Deseja zerar o contador de testes de hoje?')) {
+                  resetFirestoreQuotaStats();
+                }
+              }}
             >
               <div className="flex items-center justify-between text-[9px] font-mono text-blue-200/70 leading-none">
                 <span className="lowercase">consumo</span>

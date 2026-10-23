@@ -119,6 +119,7 @@ export const VoterView: React.FC<VoterViewProps> = ({
   const [, forceRerender] = useState(0);
   useEffect(() => {
     if (!alreadyVoted) return;
+    if (deviceId && deviceId.startsWith('sim_')) return;
     let cancelled = false;
     const iteration = session.votingIteration || 1;
     verifyBallotOnServer(session.id, currentRound, iteration, deviceId).then((exists) => {
