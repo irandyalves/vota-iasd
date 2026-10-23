@@ -820,6 +820,48 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
   return (
     <div className="w-full min-h-screen flex flex-col items-center pb-36">
+      {/* Alerta de Desempate (FICA EM CIMA DO CABEÇALHO) */}
+      {isTieBreak && (
+        <div className="w-full max-w-[660px] mx-auto px-2 pt-2.5 sm:pt-3 mb-1">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="py-3 px-4 rounded-2xl bg-emerald-950/90 border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] text-emerald-100 flex items-center gap-3.5"
+          >
+            <Flame className="w-7 h-7 text-emerald-400 shrink-0 animate-bounce" />
+            <div className="space-y-0.5">
+              <h3 className="font-bold text-xs sm:text-sm text-emerald-400 uppercase tracking-wide">
+                Rodada de Desempate!
+              </h3>
+              <p className="text-[15px] sm:text-[17px] text-amber-300 font-bold leading-snug flex items-center flex-wrap gap-1">
+                <span>Escolha apenas</span>
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[24px] overflow-hidden align-middle">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.strong
+                      key={remainingVotes}
+                      initial={{ y: -16, opacity: 0, scale: 0.5 }}
+                      animate={{ y: 0, opacity: 1, scale: [1.4, 1] }}
+                      exit={{ y: 16, opacity: 0, scale: 0.5 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 550,
+                        damping: 22,
+                      }}
+                      className={`inline-block font-black text-lg sm:text-xl px-0.5 leading-none ${
+                        remainingVotes === 0 ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-orange-400'
+                      }`}
+                    >
+                      {remainingVotes}
+                    </motion.strong>
+                  </AnimatePresence>
+                </span>
+                <span>{remainingVotes === 1 ? 'nome.' : 'nomes.'}</span>
+              </p>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* CABEÇALHO: FONTE BONITA E MENOR, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ (PEGA DE BORDA A BORDA DA JANELA) */}
       {/* Formato: Escolha xx nomes (decrescente) | eleição do tesoureiro | A A */}
       <div
@@ -891,45 +933,6 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
       {/* ÁREA DOS CARDS: AUMENTADA EM 15% DE LARGURA COM POUCO PADDING LATERAL NO MOBILE */}
       <div className="w-full max-w-[660px] mx-auto px-1.5 sm:px-3 flex-1 flex flex-col">
-        {/* Alerta de Desempate (se aplicável) - Fica em cima dos cards */}
-        {isTieBreak && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-3.5 py-3.5 px-4 rounded-2xl bg-emerald-950/80 border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.25)] text-emerald-100 flex items-center gap-3.5 min-h-[72px]"
-          >
-            <Flame className="w-8 h-8 text-emerald-400 shrink-0 animate-bounce" />
-            <div className="space-y-0.5">
-              <h3 className="font-bold text-sm sm:text-base text-emerald-400 uppercase tracking-wide">
-                Rodada de Desempate!
-              </h3>
-              <p className="text-[13px] sm:text-sm text-emerald-200/90 leading-snug flex items-center flex-wrap gap-1">
-                <span>Escolha apenas</span>
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[24px] overflow-hidden align-middle">
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.strong
-                      key={remainingVotes}
-                      initial={{ y: -16, opacity: 0, scale: 0.5 }}
-                      animate={{ y: 0, opacity: 1, scale: [1.4, 1] }}
-                      exit={{ y: 16, opacity: 0, scale: 0.5 }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 550,
-                        damping: 22,
-                      }}
-                      className={`inline-block font-black text-base sm:text-lg px-0.5 leading-none ${
-                        remainingVotes === 0 ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-white'
-                      }`}
-                    >
-                      {remainingVotes}
-                    </motion.strong>
-                  </AnimatePresence>
-                </span>
-                <span>{remainingVotes === 1 ? 'nome' : 'nomes'} entre os candidatos abaixo.</span>
-              </p>
-            </div>
-          </motion.div>
-        )}
 
       {/* MODALZINHO LARANJA: FIXO NA TELA VISÍVEL DO CELULAR (SEMPRE VISÍVEL MESMO ROLADO ATÉ O FIM) */}
       <AnimatePresence mode="wait">
