@@ -3844,7 +3844,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isTitular = idx < vacancies;
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
-                      const isLastTitular = vacancies > 0 && idx === vacancies - 1 && rankedCandidates.length > vacancies;
                       const isFirstAfterTitulares = vacancies > 0 && idx === vacancies;
 
                       const activeColor = isTitular
@@ -3876,12 +3875,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             style={{
                               borderColor: hexToRgba(activeColor, isTitular ? 0.45 : isSuplente1 ? 0.35 : 0.2),
                             }}
-                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] ${
-                              isLastTitular
-                                ? 'border-t border-b-0 border-l-0 border-r-0'
-                                : isFirstAfterTitulares
-                                ? 'border-b border-t-0 border-l-0 border-r-0'
-                                : 'border'
+                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] border ${
+                              isFirstAfterTitulares ? 'border-t-transparent' : ''
                             } transition-colors duration-200 flex items-center justify-between gap-1.5 shadow-sm ${
                               idx === 0
                                 ? 'rounded-t-lg'
@@ -3890,58 +3885,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 : 'rounded-none'
                             } -mt-px hover:z-20 hover:border-opacity-100`}
                           >
-                            {/* Efeito Especial do Corte: Card Acima (isLastTitular) */}
-                            {isLastTitular && (
-                              <>
-                                {/* Borda esquerda sumindo de cima para baixo */}
-                                <div
-                                  className="absolute left-0 top-0 bottom-0 w-px pointer-events-none"
-                                  style={{
-                                    background: `linear-gradient(to bottom, ${hexToRgba(activeColor, 0.45)} 0%, transparent 100%)`,
-                                  }}
-                                />
-                                {/* Borda direita sumindo de cima para baixo */}
-                                <div
-                                  className="absolute right-0 top-0 bottom-0 w-px pointer-events-none"
-                                  style={{
-                                    background: `linear-gradient(to bottom, ${hexToRgba(activeColor, 0.45)} 0%, transparent 100%)`,
-                                  }}
-                                />
-                                {/* Borda inferior sumindo a partir do centro para esquerda e direita */}
-                                <div
-                                  className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
-                                  style={{
-                                    background: `linear-gradient(90deg, transparent 0%, ${hexToRgba(winnerColor, 0.65)} 50%, transparent 100%)`,
-                                  }}
-                                />
-                              </>
-                            )}
-
-                            {/* Efeito Especial do Corte: Card Abaixo (isFirstAfterTitulares) */}
+                            {/* Efeito Especial do Corte: APENAS no card imediatamente após o corte de titulares */}
                             {isFirstAfterTitulares && (
-                              <>
-                                {/* Borda esquerda sumindo de baixo para cima */}
-                                <div
-                                  className="absolute left-0 top-0 bottom-0 w-px pointer-events-none"
-                                  style={{
-                                    background: `linear-gradient(to top, ${hexToRgba(activeColor, 0.35)} 0%, transparent 100%)`,
-                                  }}
-                                />
-                                {/* Borda direita sumindo de baixo para cima */}
-                                <div
-                                  className="absolute right-0 top-0 bottom-0 w-px pointer-events-none"
-                                  style={{
-                                    background: `linear-gradient(to top, ${hexToRgba(activeColor, 0.35)} 0%, transparent 100%)`,
-                                  }}
-                                />
-                                {/* Borda superior sumindo a partir do centro para esquerda e direita */}
-                                <div
-                                  className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-                                  style={{
-                                    background: `linear-gradient(90deg, transparent 0%, ${hexToRgba(activeColor, 0.55)} 50%, transparent 100%)`,
-                                  }}
-                                />
-                              </>
+                              <div
+                                className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+                                style={{
+                                  background: `linear-gradient(90deg, transparent 0%, ${hexToRgba(activeColor, 0.75)} 50%, transparent 100%)`,
+                                }}
+                              />
                             )}
                             {/* Posição: 1º dourado, 2º prata, 3º bronze, resto normal */}
                             <span
@@ -4070,14 +4021,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           if (type === 'TITULAR' || /titular/i.test(label)) {
             return {
               title: 'TITULAR',
-              container: 'bg-[#031d15]/95 border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.18)]',
-              headerBorder: 'border-emerald-500/30',
+              container: 'bg-[#031d15]/95 border border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.18)]',
               badgeText: 'text-emerald-400',
               dot: 'bg-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.9)]',
               cardBase: 'bg-[#06241a] border border-emerald-500/50 hover:border-emerald-400 text-white',
               cardSelected: 'bg-emerald-950/90 border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/40 text-white',
-              iconBoxBase: 'bg-emerald-500/15 border-emerald-500/40 text-emerald-400',
-              iconBoxSelected: 'bg-emerald-500/25 border-emerald-400 text-emerald-300',
+              iconBoxBase: 'bg-transparent border-0 text-emerald-400',
+              iconBoxSelected: 'bg-transparent border-0 text-emerald-300',
               starBase: 'fill-emerald-400 text-emerald-400',
               starSelected: 'fill-emerald-300 text-emerald-300',
               subTextBase: 'text-emerald-300/80',
@@ -4089,14 +4039,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           if (type === 'SUPLENTE_1' || /1[ºªo]?\s*suplente/i.test(label)) {
             return {
               title: '1º SUPLENTE',
-              container: 'bg-[#06152d]/95 border-blue-500/60 shadow-[0_0_20px_rgba(59,130,246,0.18)]',
-              headerBorder: 'border-blue-500/30',
+              container: 'bg-[#06152d]/95 border-0 shadow-[0_0_20px_rgba(59,130,246,0.18)]',
               badgeText: 'text-blue-400',
               dot: 'bg-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.9)]',
               cardBase: 'bg-[#081c3b] border border-blue-500/50 hover:border-blue-400 text-white',
               cardSelected: 'bg-blue-950/90 border-2 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.35)] ring-2 ring-blue-400/40 text-white',
-              iconBoxBase: 'bg-blue-500/15 border-blue-500/40 text-blue-400',
-              iconBoxSelected: 'bg-blue-500/25 border-blue-400 text-blue-300',
+              iconBoxBase: 'bg-transparent border-0 text-blue-400',
+              iconBoxSelected: 'bg-transparent border-0 text-blue-300',
               starBase: 'fill-blue-400 text-blue-400',
               starSelected: 'fill-blue-300 text-blue-300',
               subTextBase: 'text-blue-300/80',
@@ -4108,14 +4057,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           if (type === 'SUPLENTE_2' || /2[ºªo]?\s*suplente/i.test(label)) {
             return {
               title: '2º SUPLENTE',
-              container: 'bg-[#0e1726]/95 border-slate-500/60 shadow-[0_0_20px_rgba(100,116,139,0.18)]',
-              headerBorder: 'border-slate-500/30',
+              container: 'bg-[#0e1726]/95 border-0 shadow-[0_0_20px_rgba(100,116,139,0.18)]',
               badgeText: 'text-slate-300',
               dot: 'bg-slate-400 drop-shadow-[0_0_6px_rgba(148,163,184,0.9)]',
               cardBase: 'bg-[#131d2e] border border-slate-500/50 hover:border-slate-400 text-white',
               cardSelected: 'bg-slate-900/90 border-2 border-slate-300 shadow-[0_0_12px_rgba(148,163,184,0.35)] ring-2 ring-slate-400/40 text-white',
-              iconBoxBase: 'bg-slate-500/15 border-slate-500/40 text-slate-400',
-              iconBoxSelected: 'bg-slate-500/25 border-slate-300 text-slate-200',
+              iconBoxBase: 'bg-transparent border-0 text-slate-400',
+              iconBoxSelected: 'bg-transparent border-0 text-slate-200',
               starBase: 'fill-slate-400 text-slate-400',
               starSelected: 'fill-slate-300 text-slate-300',
               subTextBase: 'text-slate-300/80',
@@ -4126,14 +4074,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           }
           return {
             title: label.replace(/^Empate para (vaga de )?/i, '').toUpperCase() || 'DESEMPATE',
-            container: 'bg-[#1a0a10]/95 border-rose-500/60 shadow-[0_0_20px_rgba(244,63,94,0.18)]',
-            headerBorder: 'border-rose-500/30',
+            container: 'bg-[#1a0a10]/95 border border-rose-500/60 shadow-[0_0_20px_rgba(244,63,94,0.18)]',
             badgeText: 'text-rose-400',
             dot: 'bg-rose-400 drop-shadow-[0_0_6px_rgba(251,113,133,0.9)]',
             cardBase: 'bg-[#220d16] border border-rose-500/50 hover:border-rose-400 text-white',
             cardSelected: 'bg-rose-950/90 border-2 border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.35)] ring-2 ring-rose-400/40 text-white',
-            iconBoxBase: 'bg-rose-500/15 border-rose-500/40 text-rose-400',
-            iconBoxSelected: 'bg-rose-500/25 border-rose-400 text-rose-300',
+            iconBoxBase: 'bg-transparent border-0 text-rose-400',
+            iconBoxSelected: 'bg-transparent border-0 text-rose-300',
             starBase: 'fill-rose-400 text-rose-400',
             starSelected: 'fill-rose-300 text-rose-300',
             subTextBase: 'text-rose-300/80',
@@ -4161,8 +4108,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       isSplit ? 'rounded-l-xl rounded-r-none border-r-0' : 'rounded-xl'
                     } p-3.5 sm:p-5 shadow-[0_0_25px_rgba(16,185,129,0.3)] text-white overflow-hidden space-y-3.5`}
                   >
-                    {/* Header da Seção Inline de Desempate */}
-                    <div className="flex items-center justify-between pb-2.5 border-b border-emerald-500/30">
+                    {/* Header da Seção Inline de Desempate (sem linha divisória horizontal) */}
+                    <div className="flex items-center justify-between pb-2">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shrink-0">
                           <Star className="w-4 h-4 text-emerald-400 fill-emerald-400" />
@@ -4194,7 +4141,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         return (
                           <div
                             key={idx}
-                            className={`p-3 rounded-xl border space-y-2.5 shadow-inner transition-colors ${styles.container}`}
+                            className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-colors ${styles.container}`}
                           >
                             {/* Header do Grupo com Título, Vagas e BOTÃO ENVIAR à direita */}
                             <div className="flex items-center justify-between gap-3 pb-1">
@@ -4249,11 +4196,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                         />
                                       ) : (
                                         <div
-                                          className={`w-6 h-6 rounded-md flex items-center justify-center shrink-0 border ${
+                                          className={`w-5 h-5 flex items-center justify-center shrink-0 bg-transparent border-0 ${
                                             isSelected ? styles.iconBoxSelected : styles.iconBoxBase
                                           }`}
                                         >
-                                          <Star className={`w-3 h-3 ${isSelected ? styles.starSelected : styles.starBase}`} />
+                                          <Star className={`w-3.5 h-3.5 ${isSelected ? styles.starSelected : styles.starBase}`} />
                                         </div>
                                       )}
                                       <div className="min-w-0">
