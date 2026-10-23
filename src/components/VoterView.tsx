@@ -28,13 +28,27 @@ interface VoterViewProps {
   session: VotingSession;
   deviceId?: string;
   autoAuthPin?: boolean;
+  externalSelectedIds?: string[];
+  onSelectedIdsChange?: (ids: string[]) => void;
 }
 
-export const VoterView: React.FC<VoterViewProps> = ({ session, deviceId, autoAuthPin }) => {
+export const VoterView: React.FC<VoterViewProps> = ({
+  session,
+  deviceId,
+  autoAuthPin,
+  externalSelectedIds,
+  onSelectedIdsChange,
+}) => {
   const [enteredPin, setEnteredPin] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(autoAuthPin));
   const [pinError, setPinError] = useState('');
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>(() => externalSelectedIds || []);
+
+  useEffect(() => {
+    if (externalSelectedIds !== undefined) {
+      setSelectedIds(externalSelectedIds);
+    }
+  }, [externalSelectedIds]);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -195,7 +209,9 @@ export const VoterView: React.FC<VoterViewProps> = ({ session, deviceId, autoAut
     }
 
     if (selectedIds.includes(id)) {
-      setSelectedIds(selectedIds.filter((item) => item !== id));
+      const next = selectedIds.filter((item) => item !== id);
+      setSelectedIds(next);
+      onSelectedIdsChange?.(next);
       setErrorMessage('');
     } else {
       if (selectedIds.length >= maxVotes) {
@@ -208,7 +224,9 @@ export const VoterView: React.FC<VoterViewProps> = ({ session, deviceId, autoAut
         }
         return;
       }
-      setSelectedIds([...selectedIds, id]);
+      const next = [...selectedIds, id];
+      setSelectedIds(next);
+      onSelectedIdsChange?.(next);
     }
   };
 
