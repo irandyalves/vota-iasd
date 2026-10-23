@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import {
   Mic,
@@ -333,10 +333,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     (hasTies && (isTieModalOpen || session.status === 'CLOSED')) ||
     session.status === 'TIE_BREAK' ||
     Boolean(session.tieBreak?.active);
-  const activeOptions =
-    session.status === 'TIE_BREAK' && session.tieBreak?.active
-      ? session.tieBreak.options || []
-      : session.options || [];
+  // Apuração em Tempo Real SEMPRE exibe todos os candidatos (JAMAIS somem!)
+  const activeOptions: VotingOption[] = useMemo(() => {
+    const rawList: VotingOption[] = session.options || [];
+    if (session.status === 'TIE_BREAK' && session.tieBreak?.active && session.tieBreak.options) {
+      const tieVotesMap = new Map(session.tieBreak.options.map((t) => [t.id, Math.floor(t.votesCount || 0)]));
+      return rawList.map((opt) => {
+        const extra = tieVotesMap.get(opt.id) || 0;
+        return {
+          ...opt,
+          votesCount: Math.floor(opt.votesCount || 0) + extra,
+        };
+      });
+    }
+    return rawList;
+  }, [session.options, session.status, session.tieBreak]);
 
   const rankedCandidates = [...activeOptions].sort((a, b) => {
     const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
@@ -344,8 +355,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
   });
 
-  const totalVotesCast = activeOptions.reduce((acc, curr) => acc + Math.floor(curr.votesCount || 0), 0);
-  const maxVotesRecorded = Math.max(...activeOptions.map((o) => Math.floor(o.votesCount || 0)), 1);
+  const totalVotesCast = activeOptions.reduce((acc: number, curr: VotingOption) => acc + Math.floor(curr.votesCount || 0), 0);
+  const maxVotesRecorded = Math.max(...activeOptions.map((o: VotingOption) => Math.floor(o.votesCount || 0)), 1);
   const vacancies = session.vacancies || 1;
   const s1Count = session.habilitarSuplente1 !== false ? (session.suplentesCount ?? 1) : 0;
   const s2Count = session.habilitarSuplente2 === true ? (session.segundoSuplentesCount ?? 1) : 0;
@@ -3874,11 +3885,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             {/* Ranking Dinâmico em Tempo Real */}
             <div className="space-y-1.5 pt-1 flex-1 flex flex-col min-h-0">
 
-              {totalVotesCast === 0 ? (
+              {activeOptions.length === 0 ? (
                 <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/50 flex flex-col items-center justify-center gap-2 flex-1">
                   <Activity className="w-5 h-5 text-slate-500 animate-pulse" />
-                  <p className="font-medium text-slate-300">Votação aberta! Aguardando votos...</p>
-                  <p className="text-[11px] text-slate-500">O ranking e as barras atualizarão automaticamente aqui assim que os votos entrarem.</p>
+                  <p className="font-medium text-slate-300">Nenhum candidato cadastrado</p>
+                  <p className="text-[11px] text-slate-500">Adicione nomes na coluna ao lado para visualizar a apuração em tempo real.</p>
                 </div>
               ) : (
                 <div className="flex flex-col -space-y-px flex-1 overflow-y-auto pr-1 min-h-[260px] max-h-[calc(100vh-380px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
@@ -3916,7 +3927,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     {rankedCandidates.map((candidate, idx) => {
                       const votes = Math.floor(candidate.votesCount || 0);
                       const percent = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
-                      const barWidth = maxVotesRecorded > 0 ? Math.max(3, Math.round((votes / maxVotesRecorded) * 100)) : 0;
+                      const barWidth = votes > 0 && maxVotesRecorded > 0 ? Math.max(3, Math.round((votes / maxVotesRecorded) * 100)) : 0;
                       const isTitular = idx < vacancies;
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
