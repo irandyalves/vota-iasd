@@ -718,12 +718,12 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                                 ? 'font-bold text-[11px] sm:text-xs text-slate-100'
                                 : 'font-semibold text-[10px] sm:text-[11px] text-slate-200'
                             }`}
-                            title={option.tieBreakDisputeWith ? `${option.name} desempate com ${option.tieBreakDisputeWith}` : option.name}
+                            title={option.tieBreakDisputeWith ? `${option.name} > desempate com ${option.tieBreakDisputeWith}` : option.name}
                           >
                             {option.name}
                             {option.tieBreakDisputeWith && (
-                              <span className="text-amber-300 font-normal text-[9px] sm:text-[10px] lowercase ml-1">
-                                desempate com {option.tieBreakDisputeWith}
+                              <span className="text-amber-300 font-normal text-[9px] sm:text-[10px] ml-1">
+                                &gt; desempate com {option.tieBreakDisputeWith}
                               </span>
                             )}
                           </h4>

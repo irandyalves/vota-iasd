@@ -2025,7 +2025,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       if (c.acceptStatus === 'Declinou') {
         return `${i + 1}. ${c.name} (DECLINOU DO CONVITE - ${c.declinedOriginalRank || '?'}º lugar original) - ${c.votesCount} votos (${c.percentage}%)`;
       }
-      const tieInfo = c.tieBreakDisputeWith ? ` - desempate com ${c.tieBreakDisputeWith}` : '';
+      const tieInfo = c.tieBreakDisputeWith ? ` > desempate com ${c.tieBreakDisputeWith}` : '';
       return `${i + 1}. ${c.name}${tieInfo} - ${c.votesCount} votos (${c.percentage}%)`;
     };
 
@@ -4110,7 +4110,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                   {c.name}
                                                   {c.tieBreakDisputeWith && (
                                                     <span className="text-amber-300 font-normal text-[10.5px] ml-1">
-                                                      desempate com {c.tieBreakDisputeWith}
+                                                      &gt; desempate com {c.tieBreakDisputeWith}
                                                     </span>
                                                   )}
                                                 </span>
@@ -4154,7 +4154,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                       {c.name}
                                                       {c.tieBreakDisputeWith && (
                                                         <span className="text-amber-300 font-normal text-[10.5px] ml-1">
-                                                          desempate com {c.tieBreakDisputeWith}
+                                                          &gt; desempate com {c.tieBreakDisputeWith}
                                                         </span>
                                                       )}
                                                     </span>
@@ -4177,7 +4177,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                       {c.name}
                                                       {c.tieBreakDisputeWith && (
                                                         <span className="text-amber-300 font-normal text-[10.5px] ml-1">
-                                                          desempate com {c.tieBreakDisputeWith}
+                                                          &gt; desempate com {c.tieBreakDisputeWith}
                                                         </span>
                                                       )}
                                                     </span>
@@ -4379,7 +4379,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     </div>
 
                     {/* 7. Convite (Aceito / Pensará / Declinou) */}
-                    <div className="w-[88px] text-center shrink-0">
+                    <div className="w-[79px] text-center shrink-0">
                       <span>Convite</span>
                     </div>
                   </div>
@@ -4397,7 +4397,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isThinking = candidate.acceptStatus === 'Pensará';
                       const isDeclined = candidate.acceptStatus === 'Declinou';
 
-                      const activeColor = isTiedCandidate
+                      const activeColor = isDeclined
+                        ? '#475569'
+                        : isThinking
+                        ? '#64748b'
+                        : isTiedCandidate
                         ? '#f43f5e'
                         : isTitular
                         ? winnerColor
@@ -4426,7 +4430,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               layout: { type: 'spring', stiffness: 240, damping: 28 },
                             }}
                             style={{
-                              borderColor: isTiedCandidate
+                              borderColor: isDeclined
+                                ? 'rgba(71, 85, 105, 0.4)'
+                                : isThinking
+                                ? 'rgba(148, 163, 184, 0.45)'
+                                : isTiedCandidate
                                 ? 'rgba(244, 63, 94, 0.65)'
                                 : isTitular
                                 ? hexToRgba(winnerColor, 0.55)
@@ -4440,7 +4448,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               isDeclined
                                 ? 'bg-[#150f14] border-rose-950/60 opacity-60'
                                 : isThinking
-                                ? 'bg-[#121622] border-slate-600/90 text-slate-300 shadow-[0_0_12px_rgba(100,116,139,0.3)]'
+                                ? 'bg-[#131722] border-slate-600/80 text-slate-300 shadow-[0_0_10px_rgba(100,116,139,0.25)]'
                                 : isTiedCandidate
                                 ? 'bg-[#180d14] shadow-[0_0_15px_rgba(244,63,94,0.22)] ring-1 ring-rose-500/30'
                                 : 'bg-[#0b0d13]'
@@ -4481,15 +4489,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             {/* Nome */}
                             <div
                               className="w-[185px] sm:w-[230px] shrink-0 truncate"
-                              title={candidate.tieBreakDisputeWith ? `${candidate.name} desempate com ${candidate.tieBreakDisputeWith}` : candidate.name}
+                              title={candidate.tieBreakDisputeWith ? `${candidate.name} > desempate com ${candidate.tieBreakDisputeWith}` : candidate.name}
                             >
                               <span className={`font-bold text-xs uppercase truncate block ${
                                 isDeclined ? 'line-through text-slate-500' : isThinking ? 'text-slate-300' : 'text-slate-100'
                               }`}>
                                 {candidate.name}
                                 {candidate.tieBreakDisputeWith && !isDeclined && (
-                                  <span className="text-amber-300 font-normal text-[10px] lowercase ml-1">
-                                    desempate com {candidate.tieBreakDisputeWith}
+                                  <span className="text-amber-300 font-normal text-[10px] ml-1">
+                                    &gt; desempate com {candidate.tieBreakDisputeWith}
                                   </span>
                                 )}
                                 {isDeclined && (
@@ -4517,34 +4525,61 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 </span>
                               ) : isTitular ? (
                                 <span
-                                  style={{
-                                    backgroundColor: hexToRgba(winnerColor, 0.2),
-                                    borderColor: hexToRgba(winnerColor, 0.5),
-                                    color: winnerColor.toLowerCase() === '#10b981' ? '#6ee7b7' : '#ffffff',
-                                  }}
+                                  style={
+                                    isThinking
+                                      ? {
+                                          backgroundColor: 'rgba(100, 116, 139, 0.25)',
+                                          borderColor: 'rgba(148, 163, 184, 0.45)',
+                                          color: '#cbd5e1',
+                                        }
+                                      : {
+                                          backgroundColor: hexToRgba(winnerColor, 0.2),
+                                          borderColor: hexToRgba(winnerColor, 0.5),
+                                          color: winnerColor.toLowerCase() === '#10b981' ? '#6ee7b7' : '#ffffff',
+                                        }
+                                  }
                                   className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
                                 >
-                                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: winnerColor }} />
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full"
+                                    style={{ backgroundColor: isThinking ? '#94a3b8' : winnerColor }}
+                                  />
                                   Titular
                                 </span>
                               ) : isSuplente1 ? (
                                 <span
-                                  style={{
-                                    backgroundColor: hexToRgba(suplenteColor, 0.2),
-                                    borderColor: hexToRgba(suplenteColor, 0.5),
-                                    color: '#93c5fd',
-                                  }}
+                                  style={
+                                    isThinking
+                                      ? {
+                                          backgroundColor: 'rgba(100, 116, 139, 0.25)',
+                                          borderColor: 'rgba(148, 163, 184, 0.45)',
+                                          color: '#cbd5e1',
+                                        }
+                                      : {
+                                          backgroundColor: hexToRgba(suplenteColor, 0.2),
+                                          borderColor: hexToRgba(suplenteColor, 0.5),
+                                          color: '#93c5fd',
+                                        }
+                                  }
                                   className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
                                 >
                                   {s2Count > 0 ? '1º Sup' : 'Supl.'}
                                 </span>
                               ) : isSuplente2 ? (
                                 <span
-                                  style={{
-                                    backgroundColor: hexToRgba(suplente2Color, 0.2),
-                                    borderColor: hexToRgba(suplente2Color, 0.5),
-                                    color: '#cbd5e1',
-                                  }}
+                                  style={
+                                    isThinking
+                                      ? {
+                                          backgroundColor: 'rgba(100, 116, 139, 0.25)',
+                                          borderColor: 'rgba(148, 163, 184, 0.45)',
+                                          color: '#cbd5e1',
+                                        }
+                                      : {
+                                          backgroundColor: hexToRgba(suplente2Color, 0.2),
+                                          borderColor: hexToRgba(suplente2Color, 0.5),
+                                          color: '#cbd5e1',
+                                        }
+                                  }
                                   className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
                                 >
                                   2º Sup
@@ -4575,11 +4610,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 >
                                   <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
                                   <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20 pr-0.5">
-                                    <span className="text-[11px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[10px] select-none leading-none">
+                                    <span className={`text-[11px] font-mono font-black ${isThinking ? 'text-slate-300' : 'text-amber-100'} drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[10px] select-none leading-none`}>
                                       {percent}%
                                     </span>
-                                    <div className="absolute -inset-y-1 w-2 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[1.5px]" />
-                                    <div className="relative w-[3px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24] rounded-r-xs" />
+                                    <div className={`absolute -inset-y-1 w-2 -right-0.5 ${isThinking ? 'bg-slate-400 opacity-60' : 'bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85'} blur-[1.5px]`} />
+                                    <div className={`relative w-[3px] h-full ${isThinking ? 'bg-slate-300 shadow-[0_0_5px_#94a3b8]' : 'bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24]'} rounded-r-xs`} />
                                   </div>
                                 </motion.div>
                               ) : (
@@ -4592,11 +4627,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             {/* Linha vertical final de limite 100% */}
                             <div className="w-[1.5px] h-4.5 bg-white/25 border-r border-white/40 shrink-0 self-center" />
 
-                            {/* Votos (amarelo, bold, sem badge) */}
+                            {/* Votos (amarelo, bold, sem badge; cinza se estiver Pensará) */}
                             <div className="min-w-[42px] text-center shrink-0 flex items-center justify-center">
                               <span
                                 className={`font-mono font-black text-[20px] select-none leading-none ${
-                                  votes > 0 ? 'text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]' : 'text-slate-600'
+                                  isThinking
+                                    ? 'text-slate-400 drop-shadow-none'
+                                    : votes > 0
+                                    ? 'text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]'
+                                    : 'text-slate-600'
                                 }`}
                               >
                                 {votes}
@@ -4604,7 +4643,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </div>
 
                             {/* 7. Convite (Aceito / Pensará / Declinou) */}
-                            <div className="w-[88px] shrink-0 flex items-center justify-center">
+                            <div className="w-[79px] shrink-0 flex items-center justify-center">
                               <select
                                 value={candidate.acceptStatus || 'Aceito'}
                                 onChange={(e) =>
@@ -4615,7 +4654,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   )
                                 }
                                 disabled={isVotingActive}
-                                className={`w-full text-[10.5px] font-bold py-1 px-1 rounded border transition-all cursor-pointer ${
+                                className={`w-full text-[10px] font-bold py-1 px-1 rounded border transition-all cursor-pointer ${
                                   candidate.acceptStatus === 'Declinou'
                                     ? 'bg-rose-950/80 border-rose-500/60 text-rose-300'
                                     : candidate.acceptStatus === 'Pensará'

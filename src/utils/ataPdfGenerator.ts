@@ -138,7 +138,7 @@ export function generateAtaPdf(record: VotingHistoryRecord): void {
   const eleitosRows = (record.eleitos && record.eleitos.length > 0)
     ? record.eleitos.map((c, i) => [
         String(i + 1),
-        c.tieBreakDisputeWith ? `${c.name} - desempate com ${c.tieBreakDisputeWith}` : c.name,
+        c.tieBreakDisputeWith ? `${c.name} > desempate com ${c.tieBreakDisputeWith}` : c.name,
         String(c.votesCount),
         `${c.percentage}%`,
         'ELEITO - TITULAR',
@@ -198,7 +198,7 @@ export function generateAtaPdf(record: VotingHistoryRecord): void {
 
     const suplentesRows = suplentesTotal.map((c, i) => [
       String(i + 1),
-      c.tieBreakDisputeWith ? `${c.name} - desempate com ${c.tieBreakDisputeWith}` : c.name,
+      c.tieBreakDisputeWith ? `${c.name} > desempate com ${c.tieBreakDisputeWith}` : c.name,
       String(c.votesCount),
       `${c.percentage}%`,
       c.tipo,
@@ -255,7 +255,7 @@ export function generateAtaPdf(record: VotingHistoryRecord): void {
       const nameText = isDeclined
         ? `${c.name} (DECLINOU DO CONVITE${c.declinedOriginalRank ? ` - ${c.declinedOriginalRank}º lugar original` : ''})`
         : c.tieBreakDisputeWith
-        ? `${c.name} - desempate com ${c.tieBreakDisputeWith}`
+        ? `${c.name} > desempate com ${c.tieBreakDisputeWith}`
         : c.name;
       const classifText = isDeclined ? 'DECLINOU CONVITE' : 'NÃO CLASSIFICADO';
       return [
