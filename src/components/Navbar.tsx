@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { RefreshCw, Camera, Lock, Unlock, Wand2, Flame } from 'lucide-react';
+import { RefreshCw, Camera, Lock, Unlock, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
 import { removeEasyBackground } from '../utils/imageUtils';
@@ -708,78 +708,46 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
-          {/* SLOT DIREITO: BOTÃO ENCERRAR VOTAÇÃO (EM APURAÇÃO) OU VU METER (EM VOTAÇÃO) */}
+          {/* SLOT DIREITO: BOTÃO ENCERRAR VOTAÇÃO (EM APURAÇÃO SEM EMPATE) OU VU METER (EM VOTAÇÃO OU SE HOUVER EMPATES) */}
           <div className="absolute left-full ml-3 flex items-center justify-start pointer-events-none">
             <AnimatePresence mode="wait">
-              {showApuracaoCaption ? (
-                /* BOTÃO À DIREITA: DESEMPATAR (SE HOUVER EMPATE) OU ENCERRAR VOTAÇÃO (NORMAL) */
+              {showApuracaoCaption && !hasTies ? (
+                /* BOTÃO À DIREITA: ENCERRAR VOTAÇÃO (NORMAL SEM EMPATE) */
                 <motion.div
-                  key={hasTies ? 'btn-desempatar-navbar' : 'btn-encerrar-apuracao'}
+                  key="btn-encerrar-apuracao"
                   initial={{ opacity: 0, x: -20, scale: 0.95 }}
                   animate={{ opacity: 1, x: 0, scale: 1 }}
                   exit={{ opacity: 0, x: -20, scale: 0.95 }}
                   transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                   className="pointer-events-auto flex items-center shrink-0 pl-1 select-none"
                 >
-                  {hasTies ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (typeof window !== 'undefined') {
-                          window.dispatchEvent(new CustomEvent('open-tie-modal'));
-                        }
-                      }}
-                      title="Empate detectado! Clique para abrir a votação de desempate"
-                      style={{
-                        backgroundColor: '#ea580c',
-                        borderColor: '#fb923c',
-                        boxShadow: '0 4px 0 #9a3412, 2px 4px 0 #7c2d12',
-                      }}
-                      className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
-                    >
-                      <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-white leading-none whitespace-nowrap flex items-center gap-1">
-                        <Flame className="w-3.5 h-3.5 text-yellow-300 animate-bounce" />
-                        DESEMPATAR
-                      </span>
-                      {/* Pontos em Braille 50% menor em tom contrastante */}
-                      <div className="flex items-center gap-1 mt-1 pointer-events-none">
-                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
-                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
-                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
-                        <span className="w-1.5" />
-                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
-                        <span className="w-1 h-1 rounded-full bg-[#fed7aa] shadow-[0.5px_0.5px_0_#7c2d12]" />
-                      </div>
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleEndVoting}
-                      title="Encerrar votação, registrar histórico em configurações e ficar pronto para outra"
-                      style={{
-                        backgroundColor: '#ffffff',
-                        borderColor: '#e2e8f0',
-                        boxShadow: '0 4px 0 #94a3b8, 2px 4px 0 #64748b',
-                      }}
-                      className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
-                    >
-                      <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap">
-                        ENCERRAR VOTAÇÃO
-                      </span>
-                      {/* Braille 50% menor em cinza/prata */}
-                      <div className="flex items-center gap-1 mt-1 pointer-events-none">
-                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                        <span className="w-1.5" />
-                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                        <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
-                      </div>
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={handleEndVoting}
+                    title="Encerrar votação, registrar histórico em configurações e ficar pronto para outra"
+                    style={{
+                      backgroundColor: '#ffffff',
+                      borderColor: '#e2e8f0',
+                      boxShadow: '0 4px 0 #94a3b8, 2px 4px 0 #64748b',
+                    }}
+                    className="px-3.5 py-1.5 min-h-[38px] rounded-[10px] border-[2.5px] transition-all duration-200 active:translate-y-[2px] cursor-pointer flex flex-col items-center justify-center select-none shrink-0"
+                  >
+                    <span className="font-black text-[10px] sm:text-[11px] tracking-wider uppercase font-sans text-[#1a1a1a] leading-none whitespace-nowrap">
+                      ENCERRAR VOTAÇÃO
+                    </span>
+                    {/* Braille 50% menor em cinza/prata */}
+                    <div className="flex items-center gap-1 mt-1 pointer-events-none">
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1.5" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                      <span className="w-1 h-1 rounded-full bg-[#cbd5e1] shadow-[0.5px_0.5px_0_#94a3b8]" />
+                    </div>
+                  </button>
                 </motion.div>
-              ) : isVotingActive ? (
-                /* VU METER NORMAL DURANTE A VOTAÇÃO */
+              ) : isVotingActive || hasTies ? (
+                /* VU METER NORMAL DURANTE A VOTAÇÃO OU QUANDO HÁ EMPATES */
                 <motion.div
                   key="vumeter-navbar"
                   initial={{ opacity: 0, x: -30, scale: 0.95 }}
