@@ -2120,39 +2120,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   return (
     <div className="w-full flex-1 flex flex-col px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100 min-h-0">
-      {/* AVISO QUICANDO: VOCÊ JÁ ESCOLHEU XX NOMES (MODALZINHO LARANJA COM ALTA VISIBILIDADE) */}
-      <AnimatePresence>
-        {tieWarningModal && (
-          <motion.div
-            key={`tie-warning-${tieWarningTrigger}`}
-            onClick={() => setTieWarningModal(null)}
-            initial={{ y: -50, opacity: 0, scale: 0.88 }}
-            animate={{ y: 0, opacity: 1, scale: 1 }}
-            exit={{ y: -40, opacity: 0, scale: 0.88 }}
-            transition={{
-              type: 'spring',
-              stiffness: 550,
-              damping: 18,
-              mass: 0.85,
-            }}
-            className="fixed top-5 inset-x-4 max-w-sm mx-auto p-3.5 rounded-2xl bg-[#064e3b] border-2 border-white text-white flex items-center justify-center gap-2.5 shadow-[0_16px_36px_rgba(0,0,0,0.8),0_0_16px_rgba(255,255,255,0.3)] cursor-pointer select-none z-[9999]"
-          >
-            <AlertCircle className="w-5 h-5 shrink-0 text-white drop-shadow self-center" />
-            <div className="flex flex-col items-center text-center gap-1">
-              <span className="font-black text-sm sm:text-base tracking-wide uppercase text-white drop-shadow flex items-center justify-center gap-1.5 flex-wrap">
-                <span>VOCÊ JÁ ESCOLHEU</span>
-                <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-xl sm:text-2xl leading-none">
-                  {tieWarningModal.replace('VOCÊ JÁ ESCOLHEU ', '')}
-                </span>
-              </span>
-              <span className="text-[13px] sm:text-[14px] text-emerald-100 font-bold tracking-normal normal-case leading-snug">
-                Para escolher outro, desmarque algum.
-              </span>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* MODAL BONITO DE CONFIRMAÇÃO (SUBSTITUI O CONFIRM NATIVO DO NAVEGADOR) */}
       <AnimatePresence>
         {confirmModal && (
@@ -4021,16 +3988,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           if (type === 'TITULAR' || /titular/i.test(label)) {
             return {
               title: 'TITULAR',
-              container: 'bg-[#031d15]/95 border border-emerald-500/60 shadow-[0_0_20px_rgba(16,185,129,0.18)]',
+              container: 'bg-[#031d15]/95 border-0 shadow-[0_0_20px_rgba(16,185,129,0.18)]',
               badgeText: 'text-emerald-400',
               dot: 'bg-emerald-400 drop-shadow-[0_0_6px_rgba(52,211,153,0.9)]',
-              cardBase: 'bg-[#06241a] border border-emerald-500/50 hover:border-emerald-400 text-white',
+              cardBase: 'bg-[#141721] border border-white/[0.12] hover:border-slate-500 text-slate-200',
               cardSelected: 'bg-emerald-950/90 border-2 border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.35)] ring-2 ring-emerald-400/40 text-white',
-              iconBoxBase: 'bg-transparent border-0 text-emerald-400',
+              iconBoxBase: 'bg-transparent border-0 text-slate-400',
               iconBoxSelected: 'bg-transparent border-0 text-emerald-300',
-              starBase: 'fill-emerald-400 text-emerald-400',
+              starBase: 'fill-slate-500 text-slate-500',
               starSelected: 'fill-emerald-300 text-emerald-300',
-              subTextBase: 'text-emerald-300/80',
+              subTextBase: 'text-slate-400',
               subTextSelected: 'text-emerald-200 font-bold',
               circleSelected: 'border-emerald-400 bg-emerald-400 text-emerald-950',
               btnEnviar: 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.45)] text-white',
@@ -4042,13 +4009,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               container: 'bg-[#06152d]/95 border-0 shadow-[0_0_20px_rgba(59,130,246,0.18)]',
               badgeText: 'text-blue-400',
               dot: 'bg-blue-400 drop-shadow-[0_0_6px_rgba(96,165,250,0.9)]',
-              cardBase: 'bg-[#081c3b] border border-blue-500/50 hover:border-blue-400 text-white',
+              cardBase: 'bg-[#141721] border border-white/[0.12] hover:border-slate-500 text-slate-200',
               cardSelected: 'bg-blue-950/90 border-2 border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.35)] ring-2 ring-blue-400/40 text-white',
-              iconBoxBase: 'bg-transparent border-0 text-blue-400',
+              iconBoxBase: 'bg-transparent border-0 text-slate-400',
               iconBoxSelected: 'bg-transparent border-0 text-blue-300',
-              starBase: 'fill-blue-400 text-blue-400',
+              starBase: 'fill-slate-500 text-slate-500',
               starSelected: 'fill-blue-300 text-blue-300',
-              subTextBase: 'text-blue-300/80',
+              subTextBase: 'text-slate-400',
               subTextSelected: 'text-blue-200 font-bold',
               circleSelected: 'border-blue-400 bg-blue-400 text-blue-950',
               btnEnviar: 'bg-blue-600 hover:bg-blue-500 border border-blue-400 shadow-[0_0_14px_rgba(59,130,246,0.45)] text-white',
@@ -4060,13 +4027,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               container: 'bg-[#0e1726]/95 border-0 shadow-[0_0_20px_rgba(100,116,139,0.18)]',
               badgeText: 'text-slate-300',
               dot: 'bg-slate-400 drop-shadow-[0_0_6px_rgba(148,163,184,0.9)]',
-              cardBase: 'bg-[#131d2e] border border-slate-500/50 hover:border-slate-400 text-white',
+              cardBase: 'bg-[#141721] border border-white/[0.12] hover:border-slate-500 text-slate-200',
               cardSelected: 'bg-slate-900/90 border-2 border-slate-300 shadow-[0_0_12px_rgba(148,163,184,0.35)] ring-2 ring-slate-400/40 text-white',
               iconBoxBase: 'bg-transparent border-0 text-slate-400',
               iconBoxSelected: 'bg-transparent border-0 text-slate-200',
-              starBase: 'fill-slate-400 text-slate-400',
+              starBase: 'fill-slate-500 text-slate-500',
               starSelected: 'fill-slate-300 text-slate-300',
-              subTextBase: 'text-slate-300/80',
+              subTextBase: 'text-slate-400',
               subTextSelected: 'text-slate-200 font-bold',
               circleSelected: 'border-slate-300 bg-slate-300 text-slate-950',
               btnEnviar: 'bg-slate-600 hover:bg-slate-500 border border-slate-400 shadow-[0_0_14px_rgba(100,116,139,0.45)] text-white',
@@ -4074,16 +4041,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           }
           return {
             title: label.replace(/^Empate para (vaga de )?/i, '').toUpperCase() || 'DESEMPATE',
-            container: 'bg-[#1a0a10]/95 border border-rose-500/60 shadow-[0_0_20px_rgba(244,63,94,0.18)]',
+            container: 'bg-[#1a0a10]/95 border-0 shadow-[0_0_20px_rgba(244,63,94,0.18)]',
             badgeText: 'text-rose-400',
             dot: 'bg-rose-400 drop-shadow-[0_0_6px_rgba(251,113,133,0.9)]',
-            cardBase: 'bg-[#220d16] border border-rose-500/50 hover:border-rose-400 text-white',
+            cardBase: 'bg-[#141721] border border-white/[0.12] hover:border-slate-500 text-slate-200',
             cardSelected: 'bg-rose-950/90 border-2 border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.35)] ring-2 ring-rose-400/40 text-white',
-            iconBoxBase: 'bg-transparent border-0 text-rose-400',
+            iconBoxBase: 'bg-transparent border-0 text-slate-400',
             iconBoxSelected: 'bg-transparent border-0 text-rose-300',
-            starBase: 'fill-rose-400 text-rose-400',
+            starBase: 'fill-slate-500 text-slate-500',
             starSelected: 'fill-rose-300 text-rose-300',
-            subTextBase: 'text-rose-300/80',
+            subTextBase: 'text-slate-400',
             subTextSelected: 'text-rose-200 font-bold',
             circleSelected: 'border-rose-400 bg-rose-400 text-rose-950',
             btnEnviar: 'bg-rose-600 hover:bg-rose-500 border border-rose-400 shadow-[0_0_14px_rgba(244,63,94,0.45)] text-white',
@@ -4104,12 +4071,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.98, y: -6 }}
                     transition={{ duration: 0.25 }}
-                    className={`w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-2 border-emerald-500 ${
+                    className={`relative w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-2 border-emerald-500 ${
                       isSplit ? 'rounded-l-xl rounded-r-none border-r-0' : 'rounded-xl'
                     } p-3.5 sm:p-5 shadow-[0_0_25px_rgba(16,185,129,0.3)] text-white overflow-hidden space-y-3.5`}
                   >
                     {/* Header da Seção Inline de Desempate (sem linha divisória horizontal) */}
-                    <div className="flex items-center justify-between pb-2">
+                    <div className="relative flex items-center justify-between pb-2 min-h-[36px]">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shrink-0">
                           <Star className="w-4 h-4 text-emerald-400 fill-emerald-400" />
@@ -4125,11 +4092,46 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           setTieWarningModal(null);
                           setSelectedTieCandidateIds([]);
                         }}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer shrink-0"
                         title="Fechar painel de desempate"
                       >
                         <X className="w-4 h-4" />
                       </button>
+
+                      {/* Notificação que cai direto no cabeçalho de votação para desempatar */}
+                      <AnimatePresence>
+                        {tieWarningModal && (
+                          <motion.div
+                            key={`tie-warning-${tieWarningTrigger}`}
+                            onClick={() => setTieWarningModal(null)}
+                            initial={{ y: -20, opacity: 0, scale: 0.95 }}
+                            animate={{ y: 0, opacity: 1, scale: 1 }}
+                            exit={{ y: -20, opacity: 0, scale: 0.95 }}
+                            transition={{
+                              type: 'spring',
+                              stiffness: 550,
+                              damping: 22,
+                            }}
+                            className="absolute inset-0 z-50 rounded-lg bg-[#064e3b] border border-emerald-400 px-3 py-1.5 text-white flex items-center justify-between gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.8),0_0_12px_rgba(16,185,129,0.35)] cursor-pointer select-none"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <AlertCircle className="w-4 h-4 shrink-0 text-emerald-300 drop-shadow" />
+                              <span className="font-black text-xs sm:text-sm tracking-wide uppercase text-white flex items-center gap-1">
+                                <span>VOCÊ JÁ ESCOLHEU</span>
+                                <span className="text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
+                                  {tieWarningModal.replace('VOCÊ JÁ ESCOLHEU ', '')}
+                                </span>
+                              </span>
+                              <span className="text-[11px] sm:text-xs text-emerald-200 font-medium normal-case hidden sm:inline">
+                                • Para escolher outro, desmarque algum.
+                              </span>
+                            </div>
+                            <span className="text-[10px] text-emerald-300/80 font-mono shrink-0 hover:text-white">
+                              ✕
+                            </span>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     {/* Lista de Grupos de Empate */}
@@ -4137,6 +4139,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       {detectedTies.map((tie, idx) => {
                         const maxAllowed = tie.vacanciesInDispute + 1;
                         const styles = getTieCategoryStyles(tie.type, tie.label);
+                        const selectedInThisTie = tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id)).length;
+                        const remainingToChoose = Math.max(0, maxAllowed - selectedInThisTie);
 
                         return (
                           <div
@@ -4146,15 +4150,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             {/* Header do Grupo com Título, Vagas e BOTÃO ENVIAR à direita */}
                             <div className="flex items-center justify-between gap-3 pb-1">
                               <div className="min-w-0 flex-1 flex items-center flex-wrap gap-1.5">
-                                <span className={`px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider ${styles.badgeText} bg-white/10 border border-white/15 shrink-0`}>
+                                <span className={`px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-black uppercase tracking-wider ${styles.badgeText} bg-white/10 border-0 shrink-0`}>
                                   {styles.title}
                                 </span>
                                 <h4 className="font-black text-xs sm:text-sm tracking-wide flex items-center flex-wrap gap-1 text-white uppercase select-none leading-tight">
                                   <span>ESCOLHA</span>
                                   <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-base sm:text-lg leading-none mx-0.5">
-                                    {String(tie.vacanciesInDispute + 1).padStart(2, '0')}
+                                    {String(remainingToChoose).padStart(2, '0')}
                                   </span>
-                                  <span>{tie.vacanciesInDispute + 1 === 1 ? 'NOME PARA DISPUTA' : 'NOMES PARA DISPUTA'}</span>
+                                  <span>{remainingToChoose === 1 ? 'NOME PARA DISPUTA' : 'NOMES PARA DISPUTA'}</span>
                                   <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-base sm:text-lg leading-none mx-0.5">
                                     {String(tie.vacanciesInDispute).padStart(2, '0')}
                                   </span>
@@ -4162,15 +4166,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 </h4>
                               </div>
 
-                              {/* Botão ENVIAR no lado direito com a cor da categoria */}
+                              {/* Botão ENVIAR no lado direito com a cor da categoria (sem bold) */}
                               <button
                                 type="button"
                                 onClick={() => handleStartTieBreak(tie)}
                                 title={`Iniciar votação de desempate para ${styles.title}`}
-                                className={`shrink-0 px-3.5 py-1.5 rounded-lg font-black text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-150 active:scale-95 cursor-pointer shadow-md select-none ${styles.btnEnviar}`}
+                                className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-150 active:scale-95 cursor-pointer shadow-md select-none ${styles.btnEnviar}`}
                               >
                                 <span>ENVIAR</span>
-                                <ChevronsRight className="w-4 h-4 stroke-[2.5]" />
+                                <ChevronsRight className="w-4 h-4 stroke-[2]" />
                               </button>
                             </div>
 
