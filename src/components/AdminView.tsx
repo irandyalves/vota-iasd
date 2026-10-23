@@ -3122,10 +3122,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     }
                   }}
                   title="Criar nova votação / evento"
-                  className="group px-2.5 sm:px-3 py-1.5 min-h-[34px] rounded-lg bg-transparent hover:bg-emerald-500/20 border border-transparent hover:border-emerald-500/50 text-white hover:text-emerald-300 font-normal text-xs tracking-normal flex items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-95"
+                  className={`group px-3 py-1.5 min-h-[32px] rounded-lg border flex items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-95 text-xs font-medium tracking-normal ${
+                    isCreatingNewEvent && !editingEventId
+                      ? 'bg-[#062b1e] border-emerald-500/80 text-emerald-400 shadow-sm'
+                      : 'bg-transparent border-transparent hover:bg-[#062b1e] hover:border-emerald-500/80 text-white hover:text-emerald-400'
+                  }`}
                 >
-                  <Plus className="w-4 h-4 stroke-[2.5] text-white group-hover:text-emerald-300 transition-colors" />
-                  <span className="text-white group-hover:text-emerald-300 font-normal transition-colors">Criar</span>
+                  <Plus
+                    className={`w-3.5 h-3.5 stroke-[2.5] transition-colors ${
+                      isCreatingNewEvent && !editingEventId
+                        ? 'text-emerald-400'
+                        : 'text-white group-hover:text-emerald-400'
+                    }`}
+                  />
+                  <span
+                    className={`transition-colors ${
+                      isCreatingNewEvent && !editingEventId
+                        ? 'text-emerald-400'
+                        : 'text-white group-hover:text-emerald-400'
+                    }`}
+                  >
+                    Criar
+                  </span>
                 </button>
 
                 {/* MODAL DE CRIAR VOTAÇÃO */}
@@ -3134,12 +3152,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </AnimatePresence>
               </div>
             </div>
-
-            {/* SETINHAS DISCRETAS APÓS O BOTÃO CRIAR VOTAÇÃO */}
-            <ChevronsRight
-              className="w-4 h-4 text-slate-500 shrink-0 -mx-0.5"
-              strokeWidth={2}
-            />
 
             {/* EVENTOS CRIADOS COM BORDA DESIGNER DIRECIONAL */}
             {eventsList.length === 0 ? (
