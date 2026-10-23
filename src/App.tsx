@@ -3,6 +3,7 @@ import { Navbar } from './components/Navbar';
 import { VoterView } from './components/VoterView';
 import { TelaoView } from './components/TelaoView';
 import { AdminView } from './components/AdminView';
+import { SimulatorView } from './components/SimulatorView';
 import type { VotingSession } from './types';
 import { subscribeToSession, saveSession, getLocalSession } from './services/votingService';
 
@@ -10,7 +11,7 @@ const CURRENT_BUILD_VERSION = import.meta.env.VITE_BUILD_VERSION || '';
 
 export function App() {
   const [session, setSession] = useState<VotingSession>(getLocalSession);
-  const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin'>('admin');
+  const [currentView, setCurrentView] = useState<'voter' | 'telao' | 'admin' | 'simulator'>('admin');
 
   // Auto-atualização em tempo real no GitHub Pages / Firebase Hosting sem precisar dar Ctrl+F5 manual
   useEffect(() => {
@@ -68,8 +69,8 @@ export function App() {
       const viewParam = params.get('view');
       const isMobile = window.innerWidth <= 768;
 
-      let effectiveView: 'voter' | 'telao' | 'admin' = 'admin';
-      if (viewParam === 'telao' || viewParam === 'admin' || viewParam === 'voter') {
+      let effectiveView: 'voter' | 'telao' | 'admin' | 'simulator' = 'admin';
+      if (viewParam === 'telao' || viewParam === 'admin' || viewParam === 'voter' || viewParam === 'simulator') {
         effectiveView = viewParam;
       } else if (isMobile) {
         effectiveView = 'voter';
@@ -128,6 +129,7 @@ export function App() {
         {currentView === 'voter' && <VoterView session={session} />}
         {currentView === 'telao' && <TelaoView session={session} />}
         {currentView === 'admin' && <AdminView session={session} />}
+        {currentView === 'simulator' && <SimulatorView session={session} onReturnToAdmin={handleReturnToAdmin} />}
       </main>
 
       {/* Rodapé discreto da igreja (exibido apenas no Admin) */}

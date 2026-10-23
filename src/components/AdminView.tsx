@@ -34,6 +34,7 @@ import {
   Lock,
   CheckCircle2,
   Smartphone,
+  FlaskConical,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
@@ -3089,28 +3090,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <div
                     onClick={() => handleSelectEventButton(evt)}
                     title="Selecionar este evento"
-                    className={`group relative pl-3.5 pr-2.5 py-1.5 min-h-[34px] rounded-l-lg rounded-r-md text-xs tracking-normal flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none ${
+                    className={`group relative px-3 py-1.5 min-h-[34px] rounded-md text-xs tracking-normal flex items-center gap-1.5 transition-all duration-150 cursor-pointer select-none ${
                       isSelected
                         ? 'font-medium text-slate-100 bg-[#0b0d13] shadow-md'
                         : 'font-normal text-slate-400 bg-[#0b0d13]/60 hover:bg-[#0b0d13] hover:text-slate-200'
                     }`}
                   >
-                    {/* Borda desenhada com gradientes suaves */}
+                    {/* Borda somente nas laterais esquerda e direita (sem superior nem inferior) */}
                     <div
-                      className="absolute inset-0 pointer-events-none rounded-l-lg transition-all duration-150"
+                      className="absolute inset-0 pointer-events-none rounded-md transition-all duration-150"
                       style={{
-                        borderTopWidth: isSelected ? '1.5px' : '1px',
-                        borderBottomWidth: isSelected ? '1.5px' : '1px',
-                        borderLeftWidth: isSelected ? '4.5px' : '3.5px',
-                        borderRightWidth: '0px',
+                        borderTopWidth: '0px',
+                        borderBottomWidth: '0px',
+                        borderLeftWidth: isSelected ? '3.5px' : '2px',
+                        borderRightWidth: isSelected ? '3.5px' : '2px',
                         borderStyle: 'solid',
                         borderColor: isSelected ? '#10b981' : 'rgba(255,255,255,0.18)',
-                        borderTopLeftRadius: '8px',
-                        borderBottomLeftRadius: '8px',
-                        borderTopRightRadius: '0px',
-                        borderBottomRightRadius: '0px',
-                        WebkitMaskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
-                        maskImage: 'linear-gradient(to right, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 100%)',
                         filter: isSelected ? 'drop-shadow(0 0 5px rgba(16,185,129,0.35))' : undefined,
                         opacity: isSelected ? 1 : 0.6,
                       }}
@@ -3265,6 +3260,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 {session.showLiveResultsOnMobile
                   ? 'Celular: Resultados em Tempo Real (Ativado)'
                   : 'Celular: Resultados em Tempo Real (Desativado)'}
+              </div>
+            </div>
+
+            {/* 4. Botão Ícone: Abrir Simulador de Celulares (4 a 10 Telas) */}
+            <div className="relative group">
+              <a
+                href="?view=simulator"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-2 rounded-xl border border-purple-500/40 bg-purple-950/40 hover:bg-purple-900/60 text-purple-300 hover:text-purple-100 shadow-[0_0_12px_rgba(168,85,247,0.25)] transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center"
+                title="Abrir Simulador de Celulares (4 a 10 Telas em Tempo Real)"
+                aria-label="Abrir Simulador de Celulares"
+              >
+                <FlaskConical className="w-4 h-4" />
+              </a>
+
+              {/* Hint ao passar o mouse */}
+              <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-purple-500/40 text-purple-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
+                🧪 Simulador (4 a 10 Celulares)
               </div>
             </div>
           </div>

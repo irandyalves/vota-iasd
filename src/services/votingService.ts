@@ -71,7 +71,8 @@ export function isFirestoreQuotaExceeded(): boolean {
 }
 
 // Obter ou gerar ID exclusivo deste aparelho/navegador
-export function getDeviceId(): string {
+export function getDeviceId(customId?: string): string {
+  if (customId) return customId;
   if (typeof window === 'undefined') return 'server';
   let deviceId = localStorage.getItem(STORAGE_DEVICE_KEY);
   if (!deviceId) {
@@ -82,21 +83,43 @@ export function getDeviceId(): string {
 }
 
 // Verifica se o dispositivo já votou nesta sessão e rodada
-export function hasVoted(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN', iteration: number = 1): boolean {
+export function hasVoted(
+  sessionId: string,
+  round: 'MAIN' | 'TIE_BREAK' = 'MAIN',
+  iteration: number = 1,
+  customDeviceId?: string
+): boolean {
   if (typeof window === 'undefined') return false;
-  const key = `voted_${sessionId}_i${iteration}_${round}`;
+  const key = customDeviceId
+    ? `voted_${customDeviceId}_${sessionId}_i${iteration}_${round}`
+    : `voted_${sessionId}_i${iteration}_${round}`;
   return localStorage.getItem(key) === 'true';
 }
 
-export function markAsVoted(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN', iteration: number = 1): void {
+export function markAsVoted(
+  sessionId: string,
+  round: 'MAIN' | 'TIE_BREAK' = 'MAIN',
+  iteration: number = 1,
+  customDeviceId?: string
+): void {
   if (typeof window === 'undefined') return;
-  const key = `voted_${sessionId}_i${iteration}_${round}`;
+  const key = customDeviceId
+    ? `voted_${customDeviceId}_${sessionId}_i${iteration}_${round}`
+    : `voted_${sessionId}_i${iteration}_${round}`;
   localStorage.setItem(key, 'true');
 }
 
-export function clearVotedFlag(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 'MAIN', iteration: number = 1): void {
+export function clearVotedFlag(
+  sessionId: string,
+  round: 'MAIN' | 'TIE_BREAK' = 'MAIN',
+  iteration: number = 1,
+  customDeviceId?: string
+): void {
   if (typeof window === 'undefined') return;
-  localStorage.removeItem(`voted_${sessionId}_i${iteration}_${round}`);
+  const key = customDeviceId
+    ? `voted_${customDeviceId}_${sessionId}_i${iteration}_${round}`
+    : `voted_${sessionId}_i${iteration}_${round}`;
+  localStorage.removeItem(key);
 }
 
 // Confere no servidor se a cédula deste aparelho existe de fato (fonte da verdade).
@@ -104,11 +127,13 @@ export function clearVotedFlag(sessionId: string, round: 'MAIN' | 'TIE_BREAK' = 
 export async function verifyBallotOnServer(
   sessionId: string,
   round: 'MAIN' | 'TIE_BREAK' = 'MAIN',
-  iteration: number = 1
+  iteration: number = 1,
+  customDeviceId?: string
 ): Promise<boolean | null> {
   if (!isFirebaseConfigured || !db || isQuotaExceeded) return null;
   try {
-    const ballotRef = doc(db, 'sessions', sessionId, 'ballots', `${getDeviceId()}_${round}_i${iteration}`);
+    const voterId = customDeviceId || getDeviceId();
+    const ballotRef = doc(db, 'sessions', sessionId, 'ballots', `${voterId}_${round}_i${iteration}`);
     recordFirestoreOperation(1);
     const snap = await getDoc(ballotRef);
     return snap.exists();
@@ -457,12 +482,13 @@ export function applyBallotToSession(
 export async function submitBallot(
   session: VotingSession,
   selectedOptionIds: string[],
-  round: 'MAIN' | 'TIE_BREAK' = 'MAIN'
+  round: 'MAIN' | 'TIE_BREAK' = 'MAIN',
+  customDeviceId?: string
 ): Promise<{ success: boolean; message?: string }> {
-  const voterId = getDeviceId();
+  const voterId = customDeviceId || getDeviceId();
   const iteration = session.votingIteration || 1;
 
-  if (hasVoted(session.id, round, iteration)) {
+  if (hasVoted(session.id, round, iteration, customDeviceId)) {
     return { success: false, message: 'Você já votou nesta rodada com este dispositivo!' };
   }
 
@@ -565,11 +591,11 @@ export async function submitBallot(
         }
       } catch (_) {}
 
-      markAsVoted(session.id, round, iteration);
+      markAsVoted(session.id, round, iteration, customDeviceId);
       return { success: true };
     } catch (err: unknown) {
       if (err instanceof Error && err.message === 'ALREADY_VOTED') {
-        markAsVoted(session.id, round, iteration);
+        markAsVoted(session.id, round, iteration, customDeviceId);
         return { success: false, message: 'Você já votou nesta rodada com este dispositivo!' };
       }
       if (err instanceof Error && err.message === 'ROUND_CHANGED') {
@@ -590,7 +616,7 @@ export async function submitBallot(
   try {
     const p2pSuccess = await sendBallotViaP2P(selectedOptionIds, round, iteration, voterId);
     if (p2pSuccess) {
-      markAsVoted(session.id, round, iteration);
+      markAsVoted(session.id, round, iteration, customDeviceId);
       return { success: true };
     }
   } catch (p2pErr) {
@@ -603,7 +629,7 @@ export async function submitBallot(
     const updated = applyBallotToSession(currentSession, selectedOptionIds, round);
     setLocalSession(updated);
     broadcastSessionP2P(updated);
-    markAsVoted(session.id, round, iteration);
+    markAsVoted(session.id, round, iteration, customDeviceId);
     return { success: true };
   } catch (localErr) {
     console.error('Falha ao aplicar voto localmente:', localErr);
@@ -615,9 +641,9 @@ export async function submitBallot(
 }
 
 // Registra a presença de um votante conectado (SOMENTE LOCAL/BROADCAST - sem Firestore para não queimar cota)
-export function registerVoterPresence(_sessionId: string): () => void {
+export function registerVoterPresence(_sessionId: string, customDeviceId?: string): () => void {
   if (typeof window === 'undefined') return () => {};
-  const voterId = getDeviceId();
+  const voterId = customDeviceId || getDeviceId();
 
   try {
     const raw = localStorage.getItem('vota_iasd_local_voters');

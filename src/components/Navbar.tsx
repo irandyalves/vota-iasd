@@ -8,8 +8,8 @@ import type { VotingSession, VotingHistoryRecord } from '../types';
 import { subscribeToConnectedVoters, getFirestoreQuotaStats } from '../services/votingService';
 
 interface NavbarProps {
-  currentView: 'voter' | 'telao' | 'admin';
-  setCurrentView: (view: 'voter' | 'telao' | 'admin') => void;
+  currentView: 'voter' | 'telao' | 'admin' | 'simulator';
+  setCurrentView: (view: 'voter' | 'telao' | 'admin' | 'simulator') => void;
   pin?: string;
   onRegeneratePin?: (newPin: string) => void;
   logoUrl?: string;
@@ -891,7 +891,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               id="navbar-view-select"
               value={currentView}
               onChange={(e) =>
-                setCurrentView(e.target.value as 'admin' | 'voter' | 'telao')
+                setCurrentView(e.target.value as 'admin' | 'voter' | 'telao' | 'simulator')
               }
               className="bg-transparent text-xs font-black text-amber-300 outline-none cursor-pointer pr-1"
             >
@@ -903,6 +903,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               </option>
               <option value="telao" className="bg-[#07132a] text-white font-bold">
                 Público
+              </option>
+              <option value="simulator" className="bg-[#07132a] text-purple-300 font-bold">
+                🧪 Simulador
               </option>
             </select>
           </div>

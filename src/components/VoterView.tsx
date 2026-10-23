@@ -26,11 +26,13 @@ import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
 
 interface VoterViewProps {
   session: VotingSession;
+  deviceId?: string;
+  autoAuthPin?: boolean;
 }
 
-export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
+export const VoterView: React.FC<VoterViewProps> = ({ session, deviceId, autoAuthPin }) => {
   const [enteredPin, setEnteredPin] = useState('');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => Boolean(autoAuthPin));
   const [pinError, setPinError] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -96,7 +98,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const alreadyVoted =
     session.status !== 'WAITING' &&
     session.status !== 'CLOSED' &&
-    hasVoted(session.id, currentRound, session.votingIteration || 1);
+    hasVoted(session.id, currentRound, session.votingIteration || 1, deviceId);
 
   // Confere no servidor se a trava local corresponde a uma cédula real.
   // Se a trava existir só no aparelho (voto nunca chegou ao servidor), libera para votar de verdade.
@@ -105,9 +107,9 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     if (!alreadyVoted) return;
     let cancelled = false;
     const iteration = session.votingIteration || 1;
-    verifyBallotOnServer(session.id, currentRound, iteration).then((exists) => {
+    verifyBallotOnServer(session.id, currentRound, iteration, deviceId).then((exists) => {
       if (!cancelled && exists === false) {
-        clearVotedFlag(session.id, currentRound, iteration);
+        clearVotedFlag(session.id, currentRound, iteration, deviceId);
         setSubmitSuccess(false);
         forceRerender((n) => n + 1);
       }
@@ -115,9 +117,9 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     return () => {
       cancelled = true;
     };
-  }, [alreadyVoted, session.id, currentRound, session.votingIteration]);
+  }, [alreadyVoted, session.id, currentRound, session.votingIteration, deviceId]);
 
-  const myDeviceId = getDeviceId();
+  const myDeviceId = getDeviceId(deviceId);
   const isLocked = Boolean(session.accessLocked);
   const isAlreadyAllowed =
     (Array.isArray(session.allowedVoterIds) && session.allowedVoterIds.includes(myDeviceId)) ||
@@ -127,9 +129,9 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   // Registra presença do votante assim que acessa a página (via QR Code ou link direto)
   useEffect(() => {
     if (isBlockedByLock) return;
-    const unsub = registerVoterPresence(session.id);
+    const unsub = registerVoterPresence(session.id, deviceId);
     return unsub;
-  }, [session.id, isBlockedByLock]);
+  }, [session.id, isBlockedByLock, deviceId]);
 
   // Conecta ao Host P2P WebRTC do Admin (alternativa direta se Firebase atingir cota)
   useEffect(() => {
@@ -238,7 +240,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     setIsSubmitting(true);
     setErrorMessage('');
 
-    const res = await submitBallot(session, selectedIds, currentRound);
+    const res = await submitBallot(session, selectedIds, currentRound, deviceId);
 
     if (res.success) {
       // 🔔 Toca o som oficial da Urna Eletrônica do TSE!
