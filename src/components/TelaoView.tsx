@@ -9,7 +9,7 @@ import {
   Star,
 } from 'lucide-react';
 import type { VotingSession, VotingOption } from '../types';
-import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
+import { detectVotingTies, getEffectiveSuplentes, compareCandidatesRanking } from '../utils/tieDetection';
 
 interface TelaoViewProps {
   session: VotingSession;
@@ -199,13 +199,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const unclassifiedStyles = getCardColorStyles(unclassifiedColor, true);
 
   // Ordena opções por contagem de votos (decrescente), depois por desempate, e por ordem alfabética (A-Z)
-  const sortedOptions = [...optionsToDisplay].sort((a, b) => {
-    const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
-    if (diff !== 0) return diff;
-    const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
-    if (tieDiff !== 0) return tieDiff;
-    return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
-  });
+  const sortedOptions = [...optionsToDisplay].sort(compareCandidatesRanking);
 
   const maxVotesRecorded = Math.max(...optionsToDisplay.map((o) => Math.floor(o.votesCount || 0)), 1);
   const totalVotesCast = optionsToDisplay.reduce((acc, curr) => acc + Math.floor(curr.votesCount || 0), 0);

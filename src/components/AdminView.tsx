@@ -36,7 +36,7 @@ import {
   Smartphone,
   FlaskConical,
 } from 'lucide-react';
-import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
+import { detectVotingTies, compareCandidatesRanking, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
 import { generateAtaPdf } from '../utils/ataPdfGenerator';
 import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord, GeneralEventRecord, HistoryCandidateResult } from '../types';
@@ -359,19 +359,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     return session.options || [];
   }, [session.options]);
 
-  const rankedCandidates = [...activeOptions].sort((a, b) => {
-    // Candidatos que declinaram vão SEMPRE para o final da lista!
-    const aDeclined = a.acceptStatus === 'Declinou';
-    const bDeclined = b.acceptStatus === 'Declinou';
-    if (aDeclined && !bDeclined) return 1;
-    if (!aDeclined && bDeclined) return -1;
-
-    const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
-    if (diff !== 0) return diff;
-    const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
-    if (tieDiff !== 0) return tieDiff;
-    return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
-  });
+  const rankedCandidates = [...activeOptions].sort(compareCandidatesRanking);
 
   // Modal para confirmação de recusa de convite (Declinou)
   const [declineModal, setDeclineModal] = useState<{
@@ -512,19 +500,36 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       }
     }
 
+    // Rank inicial da disputa (ex: disputa entre 4º e 5º lugar -> baseStartRank = 4)
+    let baseStartRank = session.tieBreak?.startRank;
+    if (baseStartRank === undefined) {
+      const idxInRanked = rankedCandidates.findIndex((c) => tieOptions.some((t) => t.id === c.id));
+      baseStartRank = idxInRanked >= 0 ? idxInRanked + 1 : 1;
+    }
+
+    // Mapeia os novos ranks relativos conquistados no desempate
+    const tieRankMap = new Map<string, number>();
+    tieSorted.forEach((c, idx) => {
+      tieRankMap.set(c.id, baseStartRank! + idx);
+    });
+
     // Oponentes que disputaram com os vencedores no desempate
     const opponentsNames = tieOptions
       .filter((c) => !winnerIds.has(c.id))
       .map((c) => c.name)
       .join(', ');
 
-    // O nome vencedor do desempate recebe +1 voto e troca e sobe no ranking!
+    // O VENCEDOR NÃO RECEBE +1 PONTO! O número de votos gerais permanece estritamente intacto!
+    // Apenas a ordem é consolidada via tieBreakRank e a anotação 'desempate com XXXX'
     const updatedOptions = (session.options || []).map((opt) => {
-      if (winnerIds.has(opt.id)) {
+      const achievedRank = tieRankMap.get(opt.id);
+      if (achievedRank !== undefined) {
+        const isWinner = winnerIds.has(opt.id);
         return {
           ...opt,
-          votesCount: Math.floor(opt.votesCount || 0) + 1,
-          tieBreakDisputeWith: opponentsNames || undefined,
+          votesCount: Math.floor(opt.votesCount || 0), // ZERO pontos extras adicionados! Votos reais intactos.
+          tieBreakRank: achievedRank,
+          tieBreakDisputeWith: isWinner ? opponentsNames || undefined : undefined,
         };
       }
       return opt;
@@ -572,7 +577,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }
 
     return { updatedSession, remainingTies };
-  }, [session]);
+  }, [session, rankedCandidates]);
 
   useEffect(() => {
     // Para TIE_BREAK: o limite de votantes é a quantidade de votantes que participaram da rodada principal (mainVotersCount).
@@ -681,6 +686,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         vacancies: vacancies,
         maxVotesPerVoter: Math.min(vacancies, tieOptions.length),
         options: tieOptions,
+        startRank: tie.startRank,
+        endRank: tie.endRank,
       },
     });
     setSelectedTieCandidateIds([]);

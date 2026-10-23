@@ -3,7 +3,7 @@ import { RefreshCw, Camera, Lock, Unlock, Wand2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { IasdLogo } from './IasdLogo';
 import { removeEasyBackground } from '../utils/imageUtils';
-import { detectVotingTies } from '../utils/tieDetection';
+import { detectVotingTies, compareCandidatesRanking } from '../utils/tieDetection';
 import type { VotingSession, VotingHistoryRecord } from '../types';
 import { subscribeToConnectedVoters, getFirestoreQuotaStats, resetFirestoreQuotaStats } from '../services/votingService';
 
@@ -177,6 +177,11 @@ export const Navbar: React.FC<NavbarProps> = ({
     const freshOptions = [...session.options].map((o) => ({
       ...o,
       votesCount: 0,
+      tieBreakVotes: 0,
+      tieBreakRank: undefined,
+      tieBreakDisputeWith: undefined,
+      acceptStatus: undefined,
+      declinedOriginalRank: undefined,
     }));
     const nextIteration = (session.votingIteration || 1) + 1;
     onSaveSession({
@@ -221,10 +226,46 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (isVotingActive) {
       // Se estamos em rodada de desempate, encerra e consolida os vencedores do desempate
       if (session.status === 'TIE_BREAK') {
-        const tieVotesMap = new Map(session.tieBreak?.options?.map((t) => [t.id, Math.floor(t.votesCount || 0)]) || []);
+        const tieOptions = session.tieBreak?.options || [];
+        const tieSorted = [...tieOptions].sort((a, b) => Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0));
+        const vacanciesInDispute = session.tieBreak?.vacancies || 1;
+
+        const winnerIds = new Set<string>();
+        if (tieSorted.length >= 2) {
+          for (let i = 0; i < vacanciesInDispute && i < tieSorted.length; i++) {
+            const candidate = tieSorted[i];
+            const nextCandidate = tieSorted[i + 1];
+            if (candidate && Math.floor(candidate.votesCount || 0) > Math.floor(nextCandidate?.votesCount || 0)) {
+              winnerIds.add(candidate.id);
+            } else if (candidate && Math.floor(candidate.votesCount || 0) > 0 && !nextCandidate) {
+              winnerIds.add(candidate.id);
+            }
+          }
+        }
+
+        const baseStartRank = session.tieBreak?.startRank ?? 1;
+        const tieRankMap = new Map<string, number>();
+        tieSorted.forEach((c, idx) => {
+          tieRankMap.set(c.id, baseStartRank + idx);
+        });
+
+        const opponentsNames = tieOptions
+          .filter((c) => !winnerIds.has(c.id))
+          .map((c) => c.name)
+          .join(', ');
+
         const updatedOptions = session.options.map((opt) => {
-          const extra = tieVotesMap.get(opt.id) || 0;
-          return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extra };
+          const achievedRank = tieRankMap.get(opt.id);
+          if (achievedRank !== undefined) {
+            const isWinner = winnerIds.has(opt.id);
+            return {
+              ...opt,
+              votesCount: Math.floor(opt.votesCount || 0), // ZERO pontos extras adicionados!
+              tieBreakRank: achievedRank,
+              tieBreakDisputeWith: isWinner ? opponentsNames || undefined : undefined,
+            };
+          }
+          return opt;
         });
 
         onSaveSession({
@@ -266,7 +307,15 @@ export const Navbar: React.FC<NavbarProps> = ({
     } else {
       // Inicia NOVA VOTAÇÃO a partir do estado inicial WAITING mantendo os nomes em ordem A-Z
       const freshOptions = [...session.options]
-        .map((o) => ({ ...o, votesCount: 0 }))
+        .map((o) => ({
+          ...o,
+          votesCount: 0,
+          tieBreakVotes: 0,
+          tieBreakRank: undefined,
+          tieBreakDisputeWith: undefined,
+          acceptStatus: undefined,
+          declinedOriginalRank: undefined,
+        }))
         .sort((a, b) =>
           a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
         );
@@ -288,28 +337,54 @@ export const Navbar: React.FC<NavbarProps> = ({
   const handleEndVoting = () => {
     if (!session || !onSaveSession) return;
 
-    // Se estiver em rodada de desempate, consolida os vencedores
+    // Se estiver em rodada de desempate, consolida os vencedores sem adicionar pontos
     let optionsToClassify = [...session.options];
     if (session.status === 'TIE_BREAK' && session.tieBreak?.options) {
-      const tieVotesMap = new Map(session.tieBreak.options.map((t) => [t.id, Math.floor(t.votesCount || 0)]));
+      const tieOptions = session.tieBreak.options;
+      const tieSorted = [...tieOptions].sort((a, b) => Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0));
+      const vacanciesInDispute = session.tieBreak.vacancies || 1;
+
+      const winnerIds = new Set<string>();
+      if (tieSorted.length >= 2) {
+        for (let i = 0; i < vacanciesInDispute && i < tieSorted.length; i++) {
+          const candidate = tieSorted[i];
+          const nextCandidate = tieSorted[i + 1];
+          if (candidate && Math.floor(candidate.votesCount || 0) > Math.floor(nextCandidate?.votesCount || 0)) {
+            winnerIds.add(candidate.id);
+          } else if (candidate && Math.floor(candidate.votesCount || 0) > 0 && !nextCandidate) {
+            winnerIds.add(candidate.id);
+          }
+        }
+      }
+
+      const baseStartRank = session.tieBreak.startRank ?? 1;
+      const tieRankMap = new Map<string, number>();
+      tieSorted.forEach((c, idx) => {
+        tieRankMap.set(c.id, baseStartRank + idx);
+      });
+
+      const opponentsNames = tieOptions
+        .filter((c) => !winnerIds.has(c.id))
+        .map((c) => c.name)
+        .join(', ');
+
       optionsToClassify = session.options.map((opt) => {
-        const extra = tieVotesMap.get(opt.id) || 0;
-        return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extra };
+        const achievedRank = tieRankMap.get(opt.id);
+        if (achievedRank !== undefined) {
+          const isWinner = winnerIds.has(opt.id);
+          return {
+            ...opt,
+            votesCount: Math.floor(opt.votesCount || 0), // ZERO pontos extras adicionados!
+            tieBreakRank: achievedRank,
+            tieBreakDisputeWith: isWinner ? opponentsNames || undefined : undefined,
+          };
+        }
+        return opt;
       });
     }
 
-    // 1. Calcular apuração final: Eleitos, Suplentes, Não Classificados (Candidatos que declinaram vão pro final)
-    const sortedOptions = [...optionsToClassify].sort((a, b) => {
-      const aDeclined = a.acceptStatus === 'Declinou';
-      const bDeclined = b.acceptStatus === 'Declinou';
-      if (aDeclined && !bDeclined) return 1;
-      if (!aDeclined && bDeclined) return -1;
-      const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
-      if (diff !== 0) return diff;
-      const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
-      if (tieDiff !== 0) return tieDiff;
-      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
-    });
+    // 1. Calcular apuração final: Eleitos, Suplentes, Não Classificados
+    const sortedOptions = [...optionsToClassify].sort(compareCandidatesRanking);
 
     const totalVotes = optionsToClassify.reduce(
       (sum, o) => sum + Math.floor(o.votesCount || 0),
@@ -396,7 +471,15 @@ export const Navbar: React.FC<NavbarProps> = ({
 
     // 2. Fica pronto para outra: zera votos e reordena A-Z
     const freshOptions = [...session.options]
-      .map((o) => ({ ...o, votesCount: 0 }))
+      .map((o) => ({
+        ...o,
+        votesCount: 0,
+        tieBreakVotes: 0,
+        tieBreakRank: undefined,
+        tieBreakDisputeWith: undefined,
+        acceptStatus: undefined,
+        declinedOriginalRank: undefined,
+      }))
       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }));
 
     const nextIteration = (session.votingIteration || 1) + 1;

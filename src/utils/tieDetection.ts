@@ -20,6 +20,74 @@ export function getEffectiveSuplentes(session: VotingSession) {
 }
 
 /**
+ * Ordena candidatos da eleição com regras consistentes e oficiais:
+ * 1. Candidatos que declinaram convite vão para o final da lista (preservando ordem original).
+ * 2. Votos gerais da eleição (decrescente). Não é alterado por desempates!
+ * 3. Se empatados em votos gerais, posição de desempate já conquistada (tieBreakRank crescente: 4º antes de 5º).
+ * 4. Vencedor direto de desempate (tieBreakDisputeWith preenchido).
+ * 5. tieBreakVotes (se aplicável).
+ * 6. Ordem alfabética A-Z (critério desempate padrão).
+ */
+export function compareCandidatesRanking(a: VotingOption, b: VotingOption): number {
+  const aDeclined = a.acceptStatus === 'Declinou';
+  const bDeclined = b.acceptStatus === 'Declinou';
+  if (aDeclined && !bDeclined) return 1;
+  if (!aDeclined && bDeclined) return -1;
+  if (aDeclined && bDeclined) {
+    const aOrig = a.declinedOriginalRank ?? 9999;
+    const bOrig = b.declinedOriginalRank ?? 9999;
+    if (aOrig !== bOrig) return aOrig - bOrig;
+  }
+
+  const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
+  if (diff !== 0) return diff;
+
+  const rankA = a.tieBreakRank;
+  const rankB = b.tieBreakRank;
+  if (rankA !== undefined && rankB !== undefined && rankA !== rankB) {
+    return rankA - rankB;
+  }
+  if (rankA !== undefined && rankB === undefined) return -1;
+  if (rankA === undefined && rankB !== undefined) return 1;
+
+  if (a.tieBreakDisputeWith && !b.tieBreakDisputeWith) return -1;
+  if (!a.tieBreakDisputeWith && b.tieBreakDisputeWith) return 1;
+
+  const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
+  if (tieDiff !== 0) return tieDiff;
+
+  return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+}
+
+/**
+ * Determina se dois candidatos com mesma pontuação ainda precisam de desempate.
+ * Retorna false se o desempate entre eles já foi resolvido.
+ */
+export function areCandidatesTied(a: VotingOption, b: VotingOption): boolean {
+  const votesA = Math.floor(a.votesCount || 0);
+  const votesB = Math.floor(b.votesCount || 0);
+  if (votesA <= 0 || votesB <= 0 || votesA !== votesB) {
+    return false;
+  }
+  // Se ambos possuem ranks de desempate distintos e definidos, já desempataram entre si
+  if (a.tieBreakRank !== undefined && b.tieBreakRank !== undefined && a.tieBreakRank !== b.tieBreakRank) {
+    return false;
+  }
+  // Se um deles venceu o desempate citando o outro oponente
+  if (a.tieBreakDisputeWith && a.tieBreakDisputeWith.toLowerCase().includes(b.name.toLowerCase())) {
+    return false;
+  }
+  if (b.tieBreakDisputeWith && b.tieBreakDisputeWith.toLowerCase().includes(a.name.toLowerCase())) {
+    return false;
+  }
+  // Se um tem tieBreakRank definido e o outro não tem, foram diferenciados
+  if ((a.tieBreakRank !== undefined && b.tieBreakRank === undefined) || (a.tieBreakRank === undefined && b.tieBreakRank !== undefined)) {
+    return false;
+  }
+  return true;
+}
+
+/**
  * Detecta todos os empates da eleição com rankeamento completo e priorização:
  * 1. Empate no corte entre Titulares e Suplentes (resolve PRIMEIRO quem entra como titular)
  * 2. Empate no corte de Suplentes e Demais
@@ -34,13 +102,7 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
   // Candidatos que recusaram/declinaram vão para o fim da lista e não disputam desempates
   const activeOptions = [...session.options]
     .filter((o) => o.acceptStatus !== 'Declinou')
-    .sort((a, b) => {
-      const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
-      if (diff !== 0) return diff;
-      const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
-      if (tieDiff !== 0) return tieDiff;
-      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
-    });
+    .sort(compareCandidatesRanking);
 
   const V = session.vacancies || 1;
   const { s1Count, s2Count } = getEffectiveSuplentes(session);
@@ -50,19 +112,22 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
 
   const ties: TieInfo[] = [];
 
-  // Agrupa blocos contíguos de candidatos com mesmo número de votos e mesmos tieBreakVotes
   let i = 0;
   while (i < activeOptions.length) {
-    const startIdx = i;
-    const currentOpt = activeOptions[startIdx];
+    const currentOpt = activeOptions[i];
     const votes = Math.floor(currentOpt.votesCount || 0);
-    const tieVotes = Math.floor(currentOpt.tieBreakVotes || 0);
 
-    // Encontra todos os empatados consecutivos com a mesma pontuação
+    if (votes <= 0) {
+      i++;
+      continue;
+    }
+
+    const startIdx = i;
+
+    // Encontra todos os empatados consecutivos que ainda não resolveram desempate entre si
     while (
       i + 1 < activeOptions.length &&
-      Math.floor(activeOptions[i + 1].votesCount || 0) === votes &&
-      Math.floor(activeOptions[i + 1].tieBreakVotes || 0) === tieVotes
+      areCandidatesTied(activeOptions[i], activeOptions[i + 1])
     ) {
       i++;
     }

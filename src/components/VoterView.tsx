@@ -22,7 +22,7 @@ import {
 import { connectVoterToHost } from '../services/peerSyncService';
 import { urnaAudio } from '../utils/audio';
 import { IasdLogo } from './IasdLogo';
-import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
+import { detectVotingTies, getEffectiveSuplentes, compareCandidatesRanking } from '../utils/tieDetection';
 
 interface VoterViewProps {
   session: VotingSession;
@@ -305,11 +305,7 @@ export const VoterView: React.FC<VoterViewProps> = ({
       : [];
     const hasTies = detectedTies.length > 0;
 
-    const sortedOptions = [...resultOptions].sort((a, b) => {
-      const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
-      if (diff !== 0) return diff;
-      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
-    });
+    const sortedOptions = [...resultOptions].sort(compareCandidatesRanking);
     const maxVotesRecorded = Math.max(...resultOptions.map((o) => Math.floor(o.votesCount || 0)), 1);
     const totalVotesCast = resultOptions.reduce((acc, curr) => acc + Math.floor(curr.votesCount || 0), 0);
 

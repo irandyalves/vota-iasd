@@ -6,6 +6,7 @@ export interface VotingOption {
   votesCount: number;
   createdAt?: number;
   tieBreakVotes?: number;
+  tieBreakRank?: number;
   tieBreakDisputeWith?: string;
   acceptStatus?: 'Aceito' | 'Pensará' | 'Declinou';
   declinedOriginalRank?: number;
@@ -51,6 +52,8 @@ export interface VotingEventItem {
     vacancies: number;
     maxVotesPerVoter: number;
     options: VotingOption[];
+    startRank?: number;
+    endRank?: number;
   } | null;
   mainVotersCount?: number;
   tieBreakVotersCount?: number;
@@ -87,6 +90,8 @@ export interface GeneralEventRecord {
     vacancies: number;
     maxVotesPerVoter: number;
     options: VotingOption[];
+    startRank?: number;
+    endRank?: number;
   } | null;
   mainVotersCount?: number;
   tieBreakVotersCount?: number;
@@ -132,6 +137,8 @@ export interface VotingSession {
     vacancies: number;
     maxVotesPerVoter: number;
     options: VotingOption[];
+    startRank?: number;
+    endRank?: number;
   } | null;
   totalVotersConnected?: number;
   resolverEmpates?: boolean;
@@ -151,6 +158,8 @@ export interface HistoryCandidateResult {
   votesCount: number;
   percentage: number;
   photoUrl?: string;
+  tieBreakVotes?: number;
+  tieBreakRank?: number;
   tieBreakDisputeWith?: string;
   acceptStatus?: 'Aceito' | 'Pensará' | 'Declinou';
   declinedOriginalRank?: number;
