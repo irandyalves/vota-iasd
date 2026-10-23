@@ -30,6 +30,42 @@ export function saveLocalTelaoLayout(layout: TelaoLayoutConfig): void {
 
 let isQuotaExceeded = false;
 
+const FIREBASE_QUOTA_STORAGE_KEY = 'vota_iasd_firestore_quota_today';
+const FIREBASE_DAILY_QUOTA_LIMIT = 50000;
+
+export function getFirestoreQuotaStats(): { count: number; max: number; percent: number } {
+  if (typeof window === 'undefined') return { count: 0, max: FIREBASE_DAILY_QUOTA_LIMIT, percent: 0 };
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const raw = localStorage.getItem(FIREBASE_QUOTA_STORAGE_KEY);
+    let data = raw ? JSON.parse(raw) : null;
+    if (!data || data.date !== todayStr) {
+      data = { date: todayStr, count: 0 };
+      localStorage.setItem(FIREBASE_QUOTA_STORAGE_KEY, JSON.stringify(data));
+    }
+    const count = Number(data.count) || 0;
+    const percent = Math.min(100, Math.round((count / FIREBASE_DAILY_QUOTA_LIMIT) * 1000) / 10);
+    return { count, max: FIREBASE_DAILY_QUOTA_LIMIT, percent };
+  } catch {
+    return { count: 0, max: FIREBASE_DAILY_QUOTA_LIMIT, percent: 0 };
+  }
+}
+
+export function recordFirestoreOperation(ops: number = 1): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const raw = localStorage.getItem(FIREBASE_QUOTA_STORAGE_KEY);
+    let data = raw ? JSON.parse(raw) : null;
+    if (!data || data.date !== todayStr) {
+      data = { date: todayStr, count: 0 };
+    }
+    data.count = (Number(data.count) || 0) + ops;
+    localStorage.setItem(FIREBASE_QUOTA_STORAGE_KEY, JSON.stringify(data));
+    window.dispatchEvent(new CustomEvent('vota_iasd_firestore_quota_change', { detail: getFirestoreQuotaStats() }));
+  } catch {}
+}
+
 export function isFirestoreQuotaExceeded(): boolean {
   return isQuotaExceeded;
 }
@@ -73,6 +109,7 @@ export async function verifyBallotOnServer(
   if (!isFirebaseConfigured || !db || isQuotaExceeded) return null;
   try {
     const ballotRef = doc(db, 'sessions', sessionId, 'ballots', `${getDeviceId()}_${round}_i${iteration}`);
+    recordFirestoreOperation(1);
     const snap = await getDoc(ballotRef);
     return snap.exists();
   } catch (err: any) {
@@ -276,6 +313,7 @@ export async function saveSession(session: VotingSession): Promise<void> {
     firestoreDebounceTimer = setTimeout(async () => {
       try {
         const sessionRef = doc(database, 'sessions', session.id);
+        recordFirestoreOperation(1);
         await setDoc(sessionRef, cleanSession, { merge: true });
       } catch (error: any) {
         if (error?.code === 'resource-exhausted') {
@@ -307,6 +345,7 @@ export function subscribeToSession(
       unsubFirestore = onSnapshot(
         sessionRef,
         (docSnap) => {
+          recordFirestoreOperation(1);
           if (docSnap.exists()) {
             const remoteData = docSnap.data() as VotingSession;
             onUpdate(remoteData);
@@ -408,41 +447,7 @@ export function applyBallotToSession(
     const newTieVotersCount = currentTieVoters + 1;
     (updated as any).tieBreakVotersCount = newTieVotersCount;
     updated.tieBreak.options = updatedTieOptions;
-
-    const expectedVoters =
-      (updated as any).mainVotersCount ||
-      Math.max(...(updated.options || []).map((o) => Math.floor(o.votesCount || 0)), 1);
-
-    const isTieBreakFinished = newTieVotersCount >= expectedVoters;
-
-    if (isTieBreakFinished) {
-      const sortedTieOptions = [...updatedTieOptions].sort(
-        (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
-      );
-      const vacancies = updated.tieBreak.vacancies || 1;
-      const winnerIds: string[] = [];
-
-      if (sortedTieOptions.length > vacancies) {
-        const cutoffTieVotes = sortedTieOptions[vacancies - 1]?.votesCount || 0;
-        const nextTieVotes = sortedTieOptions[vacancies]?.votesCount || 0;
-        if (cutoffTieVotes > nextTieVotes) {
-          sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-        }
-      } else if (sortedTieOptions.length > 0) {
-        sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-      }
-
-      updated.options = (updated.options || []).map((opt) => {
-        const isWinner = winnerIds.includes(opt.id);
-        const extraVote = isWinner ? 1 : 0;
-        return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extraVote };
-      });
-
-      updated.status = 'CLOSED';
-      updated.telaoMode = 'voting';
-      updated.tieBreak.active = false;
-      (updated as any).tieBreakVotersCount = 0;
-    }
+    updated.updatedAt = Date.now();
   }
 
   return updated;
@@ -488,6 +493,7 @@ export async function submitBallot(
       };
 
       await runTransaction(db, async (transaction) => {
+        recordFirestoreOperation(2);
         const sessionSnap = await transaction.get(sessionRef);
         const existingBallot = await transaction.get(ballotRef);
 
@@ -542,51 +548,11 @@ export async function submitBallot(
           const currentTieVoters = (liveData as any)?.tieBreakVotersCount || 0;
           const newTieVotersCount = currentTieVoters + 1;
 
-          const expectedVoters =
-            (liveData as any)?.mainVotersCount ||
-            Math.max(...liveOptions.map((o) => Math.floor(o.votesCount || 0)), 1);
-
-          const isTieBreakFinished = newTieVotersCount >= expectedVoters;
-
-          if (isTieBreakFinished) {
-            const sortedTieOptions = [...updatedTieOptions].sort(
-              (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
-            );
-            const vacancies = liveTieBreak.vacancies || 1;
-
-            const winnerIds: string[] = [];
-            if (sortedTieOptions.length > vacancies) {
-              const cutoffTieVotes = sortedTieOptions[vacancies - 1]?.votesCount || 0;
-              const nextTieVotes = sortedTieOptions[vacancies]?.votesCount || 0;
-              if (cutoffTieVotes > nextTieVotes) {
-                sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-              }
-            } else if (sortedTieOptions.length > 0) {
-              sortedTieOptions.slice(0, vacancies).forEach((w) => winnerIds.push(w.id));
-            }
-
-            const updatedMainOptions = liveOptions.map((opt) => {
-              const isWinner = winnerIds.includes(opt.id);
-              const extraVote = isWinner ? 1 : 0;
-              return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extraVote };
-            });
-
-            transaction.update(sessionRef, {
-              options: updatedMainOptions,
-              status: 'CLOSED',
-              telaoMode: 'voting',
-              'tieBreak.options': updatedTieOptions,
-              'tieBreak.active': false,
-              tieBreakVotersCount: 0,
-              updatedAt: Date.now(),
-            });
-          } else {
-            transaction.update(sessionRef, {
-              'tieBreak.options': updatedTieOptions,
-              tieBreakVotersCount: newTieVotersCount,
-              updatedAt: Date.now(),
-            });
-          }
+          transaction.update(sessionRef, {
+            'tieBreak.options': updatedTieOptions,
+            tieBreakVotersCount: newTieVotersCount,
+            updatedAt: Date.now(),
+          });
         }
       });
 

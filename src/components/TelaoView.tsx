@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
 import { QRCodeSVG } from 'qrcode.react';
 import confetti from 'canvas-confetti';
@@ -8,7 +8,7 @@ import {
   Users,
   Star,
 } from 'lucide-react';
-import type { VotingSession } from '../types';
+import type { VotingSession, VotingOption } from '../types';
 import { detectVotingTies, getEffectiveSuplentes } from '../utils/tieDetection';
 
 interface TelaoViewProps {
@@ -155,17 +155,28 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   // Identifica se estamos em rodada de desempate
   const isTieBreak = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
-  const optionsToDisplay = isTieBreak
-    ? (session.tieBreak?.options || [])
-    : session.options;
 
-  const vacancies = isTieBreak
-    ? (session.tieBreak?.vacancies || 1)
-    : session.vacancies;
+  // REGRA DE OURO: Apuração / Ranking no Telão SEMPRE exibe todos os candidatos (JAMAIS somem no desempate!)
+  const optionsToDisplay: VotingOption[] = useMemo(() => {
+    const rawList: VotingOption[] = session.options || [];
+    if (isTieBreak && session.tieBreak?.options) {
+      const tieVotesMap = new Map(session.tieBreak.options.map((t) => [t.id, Math.floor(t.votesCount || 0)]));
+      return rawList.map((opt) => {
+        const extra = tieVotesMap.get(opt.id) || 0;
+        return {
+          ...opt,
+          votesCount: Math.floor(opt.votesCount || 0) + extra,
+        };
+      });
+    }
+    return rawList;
+  }, [session.options, isTieBreak, session.tieBreak]);
+
+  const vacancies = session.vacancies || 1;
 
   const { s1Count, s2Count } = getEffectiveSuplentes(session);
-  const suplentesCount = isTieBreak ? 0 : s1Count;
-  const segundoSuplentesCount = isTieBreak ? 0 : s2Count;
+  const suplentesCount = s1Count;
+  const segundoSuplentesCount = s2Count;
 
   // Detecção de empates que afetam a classificação
   const detectedTies = detectVotingTies(session);
@@ -210,8 +221,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const maxVotesPerBallot = isTieBreak
     ? (session.tieBreak?.maxVotesPerVoter || 1)
     : (session.maxVotesPerVoter || 1);
-  const totalVotersVoted =
-    totalVotesCast > 0 ? Math.max(1, Math.round(totalVotesCast / maxVotesPerBallot)) : 0;
+  const totalVotersVoted = isTieBreak
+    ? (session.tieBreakVotersCount || 0)
+    : (session.mainVotersCount || (totalVotesCast > 0 ? Math.max(1, Math.round(totalVotesCast / maxVotesPerBallot)) : 0));
 
   // Força Modo Tela Cheia (Fullscreen) contínuo
   const enterFullscreen = () => {

@@ -111,6 +111,7 @@ export interface VotingSession {
   votingIteration?: number; // Contador incremental de versão da votação (invalida cache dos celulares em nova votação)
   showResultsLive: boolean; // Mostrar corrida ao vivo no telão ou ocultar até o fim
   showQrOnTelao?: boolean; // Controlar exibição do QR Code no Telão
+  showLiveResultsOnMobile?: boolean; // Controlar se os votantes podem ver resultados em tempo real no celular (Privilégio do Admin)
   telaoMode?: 'names' | 'voting'; // Modo de exibição no Telão: 'names' (Nomes para escolha - Print 2) ou 'voting' (Apuração / Tempo real)
   telaoLayout?: TelaoLayoutConfig; // Personalização de layout, altura, espaçamento, colunas e cores dos cards no Telão
   events?: VotingEventItem[]; // Lista de eventos criados (ex: "Escolha do Tesoureiro", "Diáconos", etc.)

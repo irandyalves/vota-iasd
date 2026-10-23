@@ -5,7 +5,7 @@ import { IasdLogo } from './IasdLogo';
 import { removeEasyBackground } from '../utils/imageUtils';
 import { detectVotingTies } from '../utils/tieDetection';
 import type { VotingSession, VotingHistoryRecord } from '../types';
-import { subscribeToConnectedVoters } from '../services/votingService';
+import { subscribeToConnectedVoters, getFirestoreQuotaStats } from '../services/votingService';
 
 interface NavbarProps {
   currentView: 'voter' | 'telao' | 'admin';
@@ -33,6 +33,21 @@ export const Navbar: React.FC<NavbarProps> = ({
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [localPin, setLocalPin] = useState(pin);
   const [connectedVoters, setConnectedVoters] = useState<string[]>([]);
+  const [quotaStats, setQuotaStats] = useState(() => getFirestoreQuotaStats());
+
+  useEffect(() => {
+    const handleQuotaChange = (e: any) => {
+      if (e?.detail) {
+        setQuotaStats(e.detail);
+      } else {
+        setQuotaStats(getFirestoreQuotaStats());
+      }
+    };
+    window.addEventListener('vota_iasd_firestore_quota_change', handleQuotaChange as EventListener);
+    return () => {
+      window.removeEventListener('vota_iasd_firestore_quota_change', handleQuotaChange as EventListener);
+    };
+  }, []);
 
   // Escuta os votantes que conectaram pelo QR Code ou endereço
   useEffect(() => {
@@ -486,6 +501,42 @@ export const Navbar: React.FC<NavbarProps> = ({
             <span className="text-[10px] text-blue-300/80 font-semibold tracking-wider uppercase block mt-0.5 select-none">
               SISTEMA ELEITORAL
             </span>
+
+            {/* Barra de Progresso da Escuta / Leituras Nuvem Firebase (Limite Diário 50.000) */}
+            <div
+              className="mt-1 flex flex-col gap-0.5 select-none"
+              title={`Operações na Nuvem hoje: ${quotaStats.count.toLocaleString('pt-BR')} de ${quotaStats.max.toLocaleString('pt-BR')} gratuitas/dia (${quotaStats.percent}%)`}
+            >
+              <div className="flex items-center justify-between text-[9px] font-mono text-blue-200/70 leading-none gap-2">
+                <span className="flex items-center gap-1">
+                  <span
+                    className={`inline-block w-1.5 h-1.5 rounded-full ${
+                      quotaStats.percent > 90
+                        ? 'bg-red-400 animate-pulse'
+                        : quotaStats.percent > 70
+                        ? 'bg-amber-400'
+                        : 'bg-emerald-400'
+                    }`}
+                  />
+                  Escuta Nuvem
+                </span>
+                <span className="font-semibold text-white/90">
+                  {quotaStats.count > 1000 ? `${(quotaStats.count / 1000).toFixed(1)}k` : quotaStats.count}/50k
+                </span>
+              </div>
+              <div className="w-[110px] sm:w-[124px] h-[3.5px] bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${
+                    quotaStats.percent > 90
+                      ? 'bg-gradient-to-r from-amber-500 to-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)]'
+                      : quotaStats.percent > 70
+                      ? 'bg-gradient-to-r from-yellow-400 to-amber-500'
+                      : 'bg-gradient-to-r from-teal-400 to-emerald-400'
+                  }`}
+                  style={{ width: `${Math.max(2, Math.min(100, quotaStats.percent))}%` }}
+                />
+              </div>
+            </div>
           </div>
         </div>
 

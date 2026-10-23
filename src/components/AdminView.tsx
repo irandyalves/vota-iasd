@@ -17,7 +17,6 @@ import {
   ArrowDownAZ,
   Pencil,
   Plus,
-  FolderPlus,
   Building2,
   ChevronsRight,
   X,
@@ -33,6 +32,8 @@ import {
   FileDown,
   ChevronDown,
   Lock,
+  CheckCircle2,
+  Smartphone,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
@@ -92,6 +93,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   // Filtro de exibição do histórico de votações (Só titulares / Titulares + demais / Completo)
   const [historyFilter, setHistoryFilter] = useState<'titulares' | 'titulares_demais' | 'completo'>('completo');
   const [isHistoryMenuOpen, setIsHistoryMenuOpen] = useState<boolean>(false);
+  const [isGeneralEventMenuOpen, setIsGeneralEventMenuOpen] = useState<boolean>(false);
   // Split ratio (largura % da coluna da esquerda - Nomes). Por padrão: 40% (Apuração: 60%)
   const [splitRatio, setSplitRatio] = useState<number>(() => {
     const saved = localStorage.getItem('vota_iasd_split_ratio');
@@ -116,6 +118,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     window.addEventListener('mousedown', handleClickOutside);
     return () => window.removeEventListener('mousedown', handleClickOutside);
   }, [isHistoryMenuOpen]);
+
+  useEffect(() => {
+    if (!isGeneralEventMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('[data-general-event-dropdown="true"]')) {
+        setIsGeneralEventMenuOpen(false);
+      }
+    };
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => window.removeEventListener('mousedown', handleClickOutside);
+  }, [isGeneralEventMenuOpen]);
 
   useEffect(() => {
     const checkScreen = () => {
@@ -224,7 +238,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     } else {
       if (selectedTieCandidateIds.length >= maxAllowed) {
         setTieWarningTrigger(Date.now());
-        setTieWarningModal(`VOCÊ JÁ ESCOLHEU ${String(maxAllowed).padStart(2, '0')}`);
+        setTieWarningModal(String(maxAllowed).padStart(2, '0'));
         return;
       }
       setSelectedTieCandidateIds((prev) => [...prev, id]);
@@ -256,7 +270,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       return orderA - orderB;
     });
   }, [detectedTies]);
-  const shouldRenderTieResolution = hasTies;
+  const shouldRenderTieResolution = hasTies || session.status === 'TIE_BREAK' || Boolean(session.tieBreak?.active);
 
   const [tieGlowingIds, setTieGlowingIds] = useState<Record<string, boolean>>({});
   const prevTieBreakActiveRef = useRef<boolean>(Boolean(session.tieBreak?.active));
@@ -481,7 +495,71 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     showNotification('success', `Votação de desempate iniciada com ${tieOptions.length} candidatos! Aguardando votos...`);
   };
 
-  
+  // Concluir votação: acionado pelo botão no topo (antes do histórico) ou pela detecção do último votante
+  const handleConcludeVoting = () => {
+    if (!isVotingActive) return;
+
+    if (session.status === 'TIE_BREAK') {
+      // Conclui a rodada de desempate e consolida os votos adicionais nos candidatos
+      const tieVotesMap = new Map(session.tieBreak?.options?.map((t) => [t.id, Math.floor(t.votesCount || 0)]) || []);
+      const updatedOptions = (session.options || []).map((opt) => {
+        const extra = tieVotesMap.get(opt.id) || 0;
+        return {
+          ...opt,
+          votesCount: Math.floor(opt.votesCount || 0) + extra,
+        };
+      });
+
+      const updatedSession: VotingSession = {
+        ...session,
+        options: updatedOptions,
+        status: 'CLOSED',
+        telaoMode: 'voting',
+        tieBreak: {
+          ...(session.tieBreak as any),
+          active: false,
+        },
+        tieBreakVotersCount: 0,
+        updatedAt: Date.now(),
+      };
+
+      saveSession(updatedSession);
+
+      const remainingTies = detectVotingTies(updatedSession);
+      if (remainingTies.length > 0) {
+        setIsTieAlertDismissed(false);
+        setIsTieModalOpen(true);
+        showNotification('success', `Rodada de desempate concluída! Ainda há ${remainingTies.length} empate(s) para resolver.`);
+      } else {
+        setIsTieAlertDismissed(true);
+        setIsTieModalOpen(false);
+        showNotification('success', 'Desempate finalizado com sucesso! Todos os empates foram resolvidos.');
+      }
+      return;
+    }
+
+    // Se estiver em votação normal (MAIN)
+    const updatedSession: VotingSession = {
+      ...session,
+      status: 'CLOSED',
+      telaoMode: 'voting',
+      updatedAt: Date.now(),
+    };
+
+    saveSession(updatedSession);
+
+    const ties = detectVotingTies(updatedSession);
+    if (ties.length > 0) {
+      setIsTieAlertDismissed(false);
+      setIsTieModalOpen(true);
+      showNotification('success', `Votação concluída! Detectamos ${ties.length} empate(s) para resolver.`);
+    } else {
+      setIsTieAlertDismissed(true);
+      setIsTieModalOpen(false);
+      showNotification('success', 'Votação concluída com sucesso! Apuração pronta.');
+    }
+  };
+
   const [confirmModal, setConfirmModal] = useState<{
     title: string;
     highlight?: string;
@@ -1871,26 +1949,43 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   }, []);
 
   const handleDeleteHistoryItem = (historyId: string) => {
-    if (!window.confirm('Excluir este registro do histórico de votações?')) return;
-    const updatedHistory = (session.history || []).filter((h) => h.id !== historyId);
-    saveSession({ ...session, history: updatedHistory });
-    try {
-      localStorage.setItem('vota_iasd_voting_history', JSON.stringify(updatedHistory));
-    } catch (e) {
-      console.error(e);
-    }
-    showNotification('success', 'Registro removido do histórico com sucesso.');
+    const item = (session.history || []).find((h) => h.id === historyId);
+    setConfirmModal({
+      title: 'Excluir do Histórico',
+      highlight: item?.headerTitle || item?.sessionTitle || 'Registro de Votação',
+      description: 'Deseja realmente excluir permanentemente este registro arquivado do histórico de votações?',
+      confirmLabel: 'Sim, Excluir',
+      onConfirm: () => {
+        const updatedHistory = (session.history || []).filter((h) => h.id !== historyId);
+        saveSession({ ...session, history: updatedHistory });
+        try {
+          localStorage.setItem('vota_iasd_voting_history', JSON.stringify(updatedHistory));
+        } catch (e) {
+          console.error(e);
+        }
+        setConfirmModal(null);
+        showNotification('success', 'Registro removido do histórico com sucesso.');
+      },
+    });
   };
 
   const handleClearHistory = () => {
-    if (!window.confirm('Tem certeza que deseja apagar TODO o histórico de votações arquivado?')) return;
-    saveSession({ ...session, history: [] });
-    try {
-      localStorage.removeItem('vota_iasd_voting_history');
-    } catch (e) {
-      console.error(e);
-    }
-    showNotification('success', 'Histórico de votações limpo com sucesso.');
+    setConfirmModal({
+      title: 'Limpar Todo o Histórico',
+      highlight: `${session.history?.length || 0} ${session.history?.length === 1 ? 'votação arquivada' : 'votações arquivadas'}`,
+      description: 'Atenção: esta ação apagará permanentemente todos os relatórios e registros arquivados no histórico. Tem certeza?',
+      confirmLabel: 'Sim, Limpar Tudo',
+      onConfirm: () => {
+        saveSession({ ...session, history: [] });
+        try {
+          localStorage.removeItem('vota_iasd_voting_history');
+        } catch (e) {
+          console.error(e);
+        }
+        setConfirmModal(null);
+        showNotification('success', 'Histórico de votações limpo com sucesso.');
+      },
+    });
   };
 
   const handleDownloadAtaPdf = (record: VotingHistoryRecord) => {
@@ -2257,7 +2352,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               if (e.key === 'Escape') setConfirmModal(null);
             }}
             tabIndex={-1}
-            className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[9999] bg-black/75 backdrop-blur-md flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.88, y: 14 }}
@@ -2627,28 +2722,82 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       )}
 
       {/* CARD: EVENTOS GERAIS ONLINE (LISTBOX + NOVO EVENTO À ESQUERDA, HISTÓRICO + ENGRENAGEM SEM FUNDO À DIREITA) */}
-      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative ${isHistoryMenuOpen ? "z-[100]" : "z-30"}`}>
+      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative ${isHistoryMenuOpen || isGeneralEventMenuOpen ? "z-[100]" : "z-30"}`}>
         {/* Esquerda: Grupo Comissão (sem borda, fica bold no hover) + Lápis, Excluir e Add esmaecidos que voltam à vida da esq para a dir em cores */}
         <div className="group flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
           <div className="flex items-center justify-center shrink-0 p-1">
             <Building2 className="w-5 h-5 text-amber-400" />
           </div>
 
-          {/* Listbox dos Eventos Existentes (SEM BORDA, fica bold ao passar o mouse) */}
-          <div className="relative shrink-0">
-            <select
-              value={currentGeneralEventId}
-              onChange={(e) => handleSwitchGeneralEvent(e.target.value)}
-              className="bg-transparent hover:bg-white/5 text-amber-300 text-xs sm:text-sm font-normal group-hover:font-bold hover:font-bold pl-1.5 pr-7 py-1.5 rounded-lg border-0 outline-none focus:outline-none focus:ring-0 shadow-none cursor-pointer appearance-none min-w-[200px] max-w-[280px] sm:max-w-[380px] truncate transition-all duration-200"
+          {/* Listbox dos Eventos Existentes (Customizado, Suave e sem o Select Feio do Navegador) */}
+          <div className="relative shrink-0" data-general-event-dropdown="true">
+            <button
+              type="button"
+              onClick={() => setIsGeneralEventMenuOpen((prev) => !prev)}
+              className="bg-transparent hover:bg-white/5 text-amber-300 text-xs sm:text-sm font-normal group-hover:font-bold hover:font-bold pl-1.5 pr-2 py-1.5 rounded-lg border-0 outline-none cursor-pointer flex items-center justify-between gap-2 min-w-[200px] max-w-[280px] sm:max-w-[380px] transition-all duration-200"
               title="Selecione o Evento Geral"
             >
-              {generalEventsList.map((gev) => (
-                <option key={gev.id} value={gev.id} className="bg-[#0b172a] text-slate-100 py-1 font-normal">
-                  {gev.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3.5 h-3.5 text-amber-400/80 group-hover:text-amber-300 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none transition-colors" />
+              <span className="truncate">
+                {generalEventsList.find((g) => g.id === currentGeneralEventId)?.name || session.generalEventName || 'Evento Geral'}
+              </span>
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-amber-400/80 group-hover:text-amber-300 transition-transform duration-200 shrink-0 ${
+                  isGeneralEventMenuOpen ? 'rotate-180 text-amber-300' : ''
+                }`}
+              />
+            </button>
+
+            {/* Listbox Dropdown Customizado com Animação Suave */}
+            <AnimatePresence>
+              {isGeneralEventMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-[998] bg-transparent"
+                    onClick={() => setIsGeneralEventMenuOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                    transition={{ duration: 0.15, ease: [0.16, 1, 0.3, 1] }}
+                    className="absolute left-0 top-full mt-1.5 min-w-[240px] max-w-[340px] w-max bg-[#141721] border border-amber-500/30 rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.95),0_0_20px_rgba(245,158,11,0.12)] py-1.5 z-[999] overflow-hidden"
+                  >
+                    <div className="px-3 py-1.5 border-b border-white/[0.08] flex items-center justify-between">
+                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-slate-400">
+                        Eventos Gerais Online
+                      </span>
+                      <span className="text-[10px] font-mono text-amber-300 font-bold">
+                        {generalEventsList.length} {generalEventsList.length === 1 ? 'evento' : 'eventos'}
+                      </span>
+                    </div>
+
+                    <div className="max-h-60 overflow-y-auto scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent]">
+                      {generalEventsList.map((gev) => {
+                        const isSelected = gev.id === currentGeneralEventId;
+                        return (
+                          <button
+                            key={gev.id}
+                            type="button"
+                            onClick={() => {
+                              handleSwitchGeneralEvent(gev.id);
+                              setIsGeneralEventMenuOpen(false);
+                            }}
+                            className={`w-full px-3 py-2 text-left transition-colors duration-150 cursor-pointer flex items-center justify-between gap-2.5 ${
+                              isSelected
+                                ? 'bg-amber-500/20 text-amber-300 font-bold'
+                                : 'text-slate-200 hover:bg-white/[0.08] hover:text-white font-normal'
+                            }`}
+                          >
+                            <span className="truncate text-xs sm:text-sm">{gev.name}</span>
+                            {isSelected && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* 1. Lápis (da esq para a dir: delay 0ms) - esmaecido em repouso, ganha vida e cor âmbar */}
@@ -2693,8 +2842,28 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </button>
         </div>
 
-        {/* Direita: Histórico (sem borda) à esquerda da Engrenagem, e Engrenagem (sem borda) lá na ponta */}
+        {/* Direita: Concluir Votação + Histórico + Engrenagem */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
+          {/* BOTÃO CONCLUIR VOTAÇÃO (SEMPRE PRESENTE ANTES DO HISTÓRICO, 100% VISÍVEL E HABILITADO QUANDO EM VOTAÇÃO) */}
+          <button
+            type="button"
+            onClick={handleConcludeVoting}
+            disabled={!isVotingActive}
+            title={
+              isVotingActive
+                ? 'Concluir votação e apurar os resultados (identifica empates ou finaliza rodada)'
+                : 'Concluir votação (disponível quando a votação estiver em andamento)'
+            }
+            className={`px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all select-none shrink-0 ${
+              isVotingActive
+                ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95 animate-pulse'
+                : 'opacity-30 grayscale pointer-events-none cursor-not-allowed bg-white/[0.04] border border-white/10 text-slate-400 shadow-none'
+            }`}
+          >
+            <CheckCircle2 className={`w-3.5 h-3.5 ${isVotingActive ? 'text-emerald-200' : 'text-slate-500'}`} />
+            <span>CONCLUIR VOTAÇÃO</span>
+          </button>
+
           {/* Atalho para Histórico de Votações (sem borda) com Listbox Dropdown */}
           <div className={`relative ${isHistoryMenuOpen ? 'z-[110]' : ''}`} data-history-dropdown="true">
             <button
@@ -2918,7 +3087,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       setTempVotacoesTitle(votacoesTitle);
                       setIsEditingVotacoesTitle(true);
                     }}
-                    className="text-slate-300 hover:text-white font-medium text-xs sm:text-sm tracking-wide transition cursor-pointer select-none"
+                    className="text-white hover:text-white font-bold text-xs sm:text-sm tracking-wide transition cursor-pointer select-none"
                     title="Mostrar seção de nomes (duplo clique ou clique no lápis para renomear)"
                   >
                     {votacoesTitle}
@@ -2929,7 +3098,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       setTempVotacoesTitle(votacoesTitle);
                       setIsEditingVotacoesTitle(true);
                     }}
-                    className="p-1 text-slate-500 hover:text-amber-400 transition cursor-pointer shrink-0"
+                    className="p-1 text-slate-400 hover:text-amber-400 transition cursor-pointer shrink-0"
                     title="Renomear título (salvo somente neste computador)"
                   >
                     <Pencil className="w-3 h-3" />
@@ -2937,7 +3106,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 </div>
               )}
 
-              {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO */}
+              {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR" E DO MODALZINHO */}
               <div className={`relative flex items-center shrink-0 pl-1 sm:pl-2 ${isCreatingNewEvent && !editingEventId ? 'z-[150]' : ''}`}>
                 <button
                   ref={createEventBtnRef}
@@ -2952,10 +3121,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     }
                   }}
                   title="Criar nova votação / evento"
-                  className="px-3 py-1.5 min-h-[34px] rounded-lg bg-transparent hover:bg-emerald-500/20 border border-transparent hover:border-emerald-500/40 text-emerald-400 hover:text-emerald-300 font-bold text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95"
+                  className="group px-2.5 sm:px-3 py-1.5 min-h-[34px] rounded-lg bg-transparent hover:bg-emerald-500/20 border border-transparent hover:border-emerald-500/50 text-white hover:text-emerald-300 font-normal text-xs tracking-normal flex items-center gap-1.5 transition-all duration-200 cursor-pointer active:scale-95"
                 >
-                  <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>+ Criar votação</span>
+                  <Plus className="w-4 h-4 stroke-[2.5] text-white group-hover:text-emerald-300 transition-colors" />
+                  <span className="text-white group-hover:text-emerald-300 font-normal transition-colors">Criar</span>
                 </button>
 
                 {/* MODAL DE CRIAR VOTAÇÃO */}
@@ -3122,6 +3291,46 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               {/* Hint ao passar o mouse */}
               <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
                 Exibir o QR CODE no telão
+              </div>
+            </div>
+
+            {/* 3. Botão Ícone: Exibir Resultados em Tempo Real no Celular dos Votantes (Visão Privilegiada) */}
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  const nextVal = !session.showLiveResultsOnMobile;
+                  saveSession({
+                    ...session,
+                    showLiveResultsOnMobile: nextVal,
+                  });
+                  showNotification(
+                    'success',
+                    nextVal
+                      ? 'Visão Privilegiada ATIVADA: Votantes acompanham a apuração em tempo real no celular!'
+                      : 'Visão Privilegiada DESATIVADA: Celulares exibem aviso de Votação em Andamento.'
+                  );
+                }}
+                className={`p-2 rounded-xl border transition-all duration-200 cursor-pointer active:scale-90 flex items-center justify-center ${
+                  session.showLiveResultsOnMobile
+                    ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300 shadow-[0_0_14px_rgba(16,185,129,0.35)]'
+                    : 'bg-[#0b0d13] hover:bg-[#141721] border-white/[0.1] text-slate-400 hover:text-slate-200 hover:border-white/[0.2] shadow-sm'
+                }`}
+                title={
+                  session.showLiveResultsOnMobile
+                    ? 'Resultados em tempo real liberados no celular (Clique para restringir)'
+                    : 'Liberar visão em tempo real para os celulares dos votantes'
+                }
+                aria-label="Liberar visão em tempo real nos celulares"
+              >
+                <Smartphone className="w-4 h-4" />
+              </button>
+
+              {/* Hint ao passar o mouse */}
+              <div className="absolute top-full right-0 mt-2 hidden group-hover:flex items-center px-2.5 py-1 bg-[#141721] border border-white/[0.12] text-slate-200 text-[11px] font-medium rounded-lg shadow-xl whitespace-nowrap z-50 pointer-events-none">
+                {session.showLiveResultsOnMobile
+                  ? 'Celular: Resultados em Tempo Real (Ativado)'
+                  : 'Celular: Resultados em Tempo Real (Desativado)'}
               </div>
             </div>
           </div>
@@ -3671,8 +3880,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                               className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
                                             >
                                               <div className="flex items-center gap-1.5 min-w-0">
-                                                <span className="font-mono text-[10px] text-emerald-400 font-bold shrink-0">
-                                                  #{cIdx + 1}
+                                                <span className="font-mono text-[13px] text-emerald-400 font-bold shrink-0">
+                                                  {cIdx + 1}º
                                                 </span>
                                                 <span className="text-slate-100 font-medium truncate">
                                                   {c.name}
@@ -4276,17 +4485,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             }}
                             className="absolute inset-0 z-50 rounded-lg bg-[#064e3b] border border-emerald-400 px-3 py-1.5 text-white flex items-center justify-between gap-2 shadow-[0_8px_20px_rgba(0,0,0,0.8),0_0_12px_rgba(16,185,129,0.35)] cursor-pointer select-none"
                           >
-                            <div className="flex items-center gap-2 min-w-0">
-                              <AlertCircle className="w-4 h-4 shrink-0 text-emerald-300 drop-shadow" />
-                              <span className="font-black text-xs sm:text-sm tracking-wide uppercase text-white flex items-center gap-1">
-                                <span>VOCÊ JÁ ESCOLHEU</span>
-                                <span className="text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
-                                  {tieWarningModal.replace('VOCÊ JÁ ESCOLHEU ', '')}
+                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-wrap">
+                              <AlertCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 text-emerald-300 drop-shadow" />
+                              <div className="flex items-center gap-1 flex-wrap">
+                                <span className="font-bold text-[10px] sm:text-[11px] tracking-wide text-white">
+                                  Já escolheu
                                 </span>
-                              </span>
-                              <span className="text-[11px] sm:text-xs text-emerald-200 font-medium normal-case hidden sm:inline">
-                                • Para escolher outro, desmarque algum.
-                              </span>
+                                <span className="text-yellow-300 font-mono font-black text-xs sm:text-sm leading-none">
+                                  {tieWarningModal.replace('VOCÊ JÁ ESCOLHEU ', '').trim()}
+                                </span>
+                                <span className="text-[10px] sm:text-[11px] text-emerald-200 font-medium normal-case">
+                                  , desmarque para escolher outro.
+                                </span>
+                              </div>
                             </div>
                             <span className="text-[10px] text-emerald-300/80 font-mono shrink-0 hover:text-white">
                               ✕

@@ -98,10 +98,6 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     session.status !== 'CLOSED' &&
     hasVoted(session.id, currentRound, session.votingIteration || 1);
 
-  // Após votar, mostra "SEU VOTO FOI COMPUTADO" por 2.5s e depois os resultados em tempo real
-  const [showLiveResults, setShowLiveResults] = useState(false);
-  const hasVotedNow = alreadyVoted || submitSuccess;
-
   // Confere no servidor se a trava local corresponde a uma cédula real.
   // Se a trava existir só no aparelho (voto nunca chegou ao servidor), libera para votar de verdade.
   const [, forceRerender] = useState(0);
@@ -120,31 +116,6 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
       cancelled = true;
     };
   }, [alreadyVoted, session.id, currentRound, session.votingIteration]);
-  useEffect(() => {
-    if (!hasVotedNow) {
-      setShowLiveResults(false);
-      return;
-    }
-    const timer = setTimeout(() => setShowLiveResults(true), 2500);
-    return () => clearTimeout(timer);
-  }, [hasVotedNow]);
-
-  // Se todos já votaram e houver empate, avança imediatamente para exibir o alerta de empate no celular
-  useEffect(() => {
-    if (hasVotedNow && session.resolverEmpates !== false && detectVotingTies(session).length > 0) {
-      const totalLimit =
-        session?.totalVotersConnected && session.totalVotersConnected > 0
-          ? session.totalVotersConnected
-          : (session?.allowedVoterIds?.length || 0);
-      const totalVoted =
-        session?.status === 'TIE_BREAK'
-          ? session?.tieBreakVotersCount || 0
-          : session?.mainVotersCount || 0;
-      if (totalLimit > 0 && totalVoted >= totalLimit) {
-        setShowLiveResults(true);
-      }
-    }
-  }, [hasVotedNow, session]);
 
   const myDeviceId = getDeviceId();
   const isLocked = Boolean(session.accessLocked);
@@ -666,9 +637,86 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     );
   }
 
-  // 2. VOTAÇÃO ENCERRADA -> MOSTRA OS RESULTADOS COMPLETOS NO MOBILE!
+  // Helper: Tela de espera com círculo girando e pulsando no centro da tela ("VOTAÇÃO EM ANDAMENTO")
+  const renderInProgressWaiting = (subtitle?: string) => (
+    <div className="min-h-[85vh] flex items-center justify-center p-4">
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', damping: 20 }}
+        className="max-w-md w-full bg-[#001f47] border border-blue-700/60 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden"
+      >
+        {/* Brilho suave de fundo */}
+        <div className="absolute -top-24 -right-24 w-56 h-56 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-24 -left-24 w-56 h-56 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Círculo girando e pulsando no centro da tela */}
+        <div className="relative w-36 h-36 mx-auto mb-6 flex items-center justify-center">
+          {/* Halo externo pulsante suave */}
+          <motion.div
+            animate={{
+              scale: [1, 1.25, 1],
+              opacity: [0.25, 0.6, 0.25],
+            }}
+            transition={{
+              duration: 2.8,
+              repeat: Infinity,
+              ease: 'easeInOut',
+            }}
+            className="absolute inset-0 rounded-full bg-gradient-to-tr from-emerald-500/20 via-blue-400/20 to-emerald-400/20 border-2 border-emerald-400/40"
+          />
+
+          {/* Anel girando em sentido horário */}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
+            className="absolute inset-2 rounded-full border-4 border-transparent border-t-emerald-400 border-r-emerald-300"
+          />
+
+          {/* Anel girando em sentido anti-horário */}
+          <motion.div
+            animate={{ rotate: -360 }}
+            transition={{ duration: 3.2, repeat: Infinity, ease: 'linear' }}
+            className="absolute inset-5 rounded-full border-2 border-dashed border-[#d4af37]/70"
+          />
+
+          {/* Centro com checkmark */}
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', damping: 14, stiffness: 180, delay: 0.15 }}
+            className="w-16 h-16 bg-gradient-to-tr from-emerald-600/30 to-blue-600/30 border-2 border-emerald-400 rounded-full flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+          >
+            <CheckCircle2 className="w-9 h-9 text-emerald-400" />
+          </motion.div>
+        </div>
+
+        <span className="text-[11px] font-bold uppercase tracking-widest text-emerald-400 block mb-1">
+          Voto Registrado
+        </span>
+
+        <h2 className="text-2xl sm:text-3xl font-black text-white mb-3 font-serif uppercase tracking-wide">
+          Votação em Andamento
+        </h2>
+
+        <p className="text-xs sm:text-sm text-blue-200/90 leading-relaxed mb-4">
+          {subtitle || 'Seu voto foi computado com sucesso! Aguarde a conclusão da apuração pelo coordenador.'}
+        </p>
+
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-950/80 border border-blue-700/60 text-[11px] text-blue-300 font-mono">
+          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+          <span>Aguardando apuração final</span>
+        </div>
+      </motion.div>
+    </div>
+  );
+
+  // 2. VOTAÇÃO ENCERRADA -> MOSTRA OS RESULTADOS NO MOBILE APENAS SE AUTORIZADO PELO ADMIN
   if (session.status === 'CLOSED') {
-    return renderResults(false);
+    if (session.showLiveResultsOnMobile) {
+      return renderResults(false);
+    }
+    return renderInProgressWaiting('Aguarde a liberação dos resultados pelo coordenador.');
   }
 
   // 3. SALA DE ESPERA (Aguardando Admin Iniciar)
@@ -754,64 +802,15 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     );
   }
 
-  // 4. VOTO JÁ COMPUTADO NESTA RODADA -> CÍRCULO GIRANDO + MENSAGEM, E APÓS 5s ENTRA NOS RESULTADOS
+  // 4. VOTO JÁ COMPUTADO NESTA RODADA
   if (alreadyVoted || submitSuccess) {
-    if (showLiveResults) {
+    // Se o admin liberou a visualização em tempo real nos celulares (Visão Privilegiada):
+    if (session.showLiveResultsOnMobile) {
       return renderResults(true);
     }
 
-    return (
-      <div className="min-h-[90vh] flex items-center justify-center p-4">
-        <motion.div
-          initial={{ scale: 0.9, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          transition={{ type: 'spring', damping: 20 }}
-          className="max-w-md w-full bg-[#001f47] border border-emerald-500/40 rounded-3xl p-8 text-center shadow-2xl relative overflow-hidden"
-        >
-          <div className="absolute -top-20 -right-20 w-48 h-48 bg-emerald-500/20 rounded-full blur-3xl pointer-events-none" />
-
-          {/* Círculo com efeito de giro */}
-          <div className="relative w-28 h-28 mx-auto mb-6 flex items-center justify-center">
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-              className="absolute inset-0 rounded-full border-4 border-emerald-400/20 border-t-emerald-400 border-r-emerald-300"
-            />
-            <motion.div
-              animate={{ rotate: -360 }}
-              transition={{ duration: 2.2, repeat: Infinity, ease: 'linear' }}
-              className="absolute inset-3 rounded-full border-2 border-dashed border-[#d4af37]/60"
-            />
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: 'spring', damping: 12, stiffness: 160, delay: 0.2 }}
-              className="w-16 h-16 bg-emerald-500/20 border-2 border-emerald-400 rounded-full flex items-center justify-center shadow-xl"
-            >
-              <CheckCircle2 className="w-10 h-10 text-emerald-400" />
-            </motion.div>
-          </div>
-
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-white mb-3 font-serif uppercase tracking-wide">
-            SEU VOTO FOI COMPUTADO
-          </h2>
-
-          <p className="text-xs text-blue-300/80 mt-4 italic">
-            Abrindo os resultados em tempo real...
-          </p>
-
-          {/* Barra de progresso reduzida pela metade (2.5 segundos) */}
-          <div className="mt-3 h-1.5 w-full bg-blue-950 rounded-full overflow-hidden">
-            <motion.div
-              initial={{ width: '0%' }}
-              animate={{ width: '100%' }}
-              transition={{ duration: 2.5, ease: 'linear' }}
-              className="h-full bg-gradient-to-r from-emerald-500 to-emerald-300"
-            />
-          </div>
-        </motion.div>
-      </div>
-    );
+    // Se o admin desmarcou a visão privilegiada: exibe "VOTAÇÃO EM ANDAMENTO" com círculo girando e pulsando no centro da tela
+    return renderInProgressWaiting('Seu voto foi computado com sucesso! Aguarde a conclusão da apuração pelo coordenador.');
   }
 
   // 5. TELA DE VOTAÇÃO ATIVA (Cards grandes para toques precisos)
@@ -820,116 +819,148 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
 
   return (
     <div className="w-full min-h-screen flex flex-col items-center pb-36">
-      {/* Alerta de Desempate (FICA EM CIMA DO CABEÇALHO) */}
-      {isTieBreak && (
-        <div className="w-full max-w-[660px] mx-auto px-2 pt-2.5 sm:pt-3 mb-1">
+      {/* CABEÇALHO DINÂMICO NO CELULAR: QUANDO FOR DESEMPATE SAI O ANTIGO (PRINT 1) E ENTRA O NOVO (PRINT 2) */}
+      {isTieBreak ? (
+        /* CABEÇALHO DA RODADA DE DESEMPATE (PRINT 2) */
+        <div className="w-full max-w-[660px] mx-auto px-2 pt-2.5 sm:pt-3 mb-3.5 shrink-0">
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="py-3 px-4 rounded-2xl bg-emerald-950/90 border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] text-emerald-100 flex items-center gap-3.5"
+            className="py-3 px-4 rounded-2xl bg-emerald-950/90 border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] text-emerald-100 flex items-center justify-between gap-3"
           >
-            <Flame className="w-7 h-7 text-emerald-400 shrink-0 animate-bounce" />
-            <div className="space-y-0.5">
-              <h3 className="font-bold text-xs sm:text-sm text-emerald-400 uppercase tracking-wide">
-                Rodada de Desempate!
-              </h3>
-              <p className="text-[15px] sm:text-[17px] text-amber-300 font-bold leading-snug flex items-center flex-wrap gap-1">
-                <span>Escolha apenas</span>
-                <span className="inline-flex items-center justify-center min-w-[18px] h-[24px] overflow-hidden align-middle">
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    <motion.strong
-                      key={remainingVotes}
-                      initial={{ y: -16, opacity: 0, scale: 0.5 }}
-                      animate={{ y: 0, opacity: 1, scale: [1.4, 1] }}
-                      exit={{ y: 16, opacity: 0, scale: 0.5 }}
-                      transition={{
-                        type: 'spring',
-                        stiffness: 550,
-                        damping: 22,
-                      }}
-                      className={`inline-block font-black text-lg sm:text-xl px-0.5 leading-none ${
-                        remainingVotes === 0 ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-orange-400'
-                      }`}
-                    >
-                      {remainingVotes}
-                    </motion.strong>
-                  </AnimatePresence>
-                </span>
-                <span>{remainingVotes === 1 ? 'nome.' : 'nomes.'}</span>
-              </p>
+            <div className="flex items-center gap-3.5 min-w-0">
+              <Flame className="w-7 h-7 text-emerald-400 shrink-0 animate-bounce" />
+              <div className="space-y-0.5 min-w-0">
+                <h3 className="font-bold text-xs sm:text-sm text-emerald-400 uppercase tracking-wide">
+                  Rodada de Desempate!
+                </h3>
+                <p className="text-[15px] sm:text-[17px] text-amber-300 font-bold leading-snug flex items-center flex-wrap gap-1">
+                  <span>Escolha apenas</span>
+                  <span className="inline-flex items-center justify-center min-w-[18px] h-[24px] overflow-hidden align-middle">
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      <motion.strong
+                        key={remainingVotes}
+                        initial={{ y: -16, opacity: 0, scale: 0.5 }}
+                        animate={{ y: 0, opacity: 1, scale: [1.4, 1] }}
+                        exit={{ y: 16, opacity: 0, scale: 0.5 }}
+                        transition={{
+                          type: 'spring',
+                          stiffness: 550,
+                          damping: 22,
+                        }}
+                        className={`inline-block font-black text-lg sm:text-xl px-0.5 leading-none ${
+                          remainingVotes === 0 ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-orange-400'
+                        }`}
+                      >
+                        {remainingVotes}
+                      </motion.strong>
+                    </AnimatePresence>
+                  </span>
+                  <span>{remainingVotes === 1 ? 'nome.' : 'nomes.'}</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Controles de fonte A(menor) e A(maior) no canto direito do cabeçalho de desempate */}
+            <div className="flex items-center gap-0.5 select-none shrink-0 pl-2">
+              <button
+                type="button"
+                onClick={decreaseFont}
+                disabled={fontScalePercent === 0}
+                title="Reduzir fonte dos cards"
+                className={`w-6 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 0
+                    ? 'opacity-25 cursor-not-allowed text-emerald-500/40'
+                    : 'text-emerald-200 hover:text-amber-300'
+                }`}
+              >
+                <span className="text-xs font-bold leading-none pointer-events-none">A</span>
+              </button>
+              <button
+                type="button"
+                onClick={increaseFont}
+                disabled={fontScalePercent === 24}
+                title="Aumentar fonte dos cards"
+                className={`w-6 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 24
+                    ? 'opacity-25 cursor-not-allowed text-emerald-500/40'
+                    : 'text-emerald-200 hover:text-amber-300'
+                }`}
+              >
+                <span className="text-lg font-black leading-none pointer-events-none">A</span>
+              </button>
             </div>
           </motion.div>
         </div>
-      )}
+      ) : (
+        /* CABEÇALHO NORMAL DA VOTAÇÃO (PRINT 1: EXIBIDO QUANDO NÃO FOR DESEMPATE) */
+        <div
+          className="w-full mb-3.5 px-3 sm:px-6 py-3 sm:py-3.5 border-b-[3px] border-[#e6d3a8] shadow-lg shrink-0"
+          style={{
+            fontFamily: '"Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif',
+            backgroundColor: '#0b4a4a',
+            backgroundImage:
+              'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 5px), linear-gradient(180deg, #0f5c5a 0%, #083b3c 100%)',
+          }}
+        >
+          <div className="w-full max-w-[660px] mx-auto flex items-center justify-between gap-2 text-sm sm:text-base text-white">
+            {/* Esquerda: Escolha xx nomes (diminui conforme vai escolhendo) - Fonte da linha +20% e número bold e +20% maior */}
+            <div className="flex items-center gap-1.5 font-semibold shrink-0">
+              <span>Escolha</span>
+              <span className="inline-flex items-center justify-center px-0.5 text-yellow-300 font-mono font-black text-lg sm:text-xl leading-none">
+                <motion.span
+                  key={remainingVotes}
+                  initial={{ scale: 1.3, opacity: 0.5 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  {remainingVotes}
+                </motion.span>
+              </span>
+              <span>{remainingVotes === 1 ? 'nome' : 'nomes'}</span>
+            </div>
 
-      {/* CABEÇALHO: FONTE BONITA E MENOR, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ (PEGA DE BORDA A BORDA DA JANELA) */}
-      {/* Formato: Escolha xx nomes (decrescente) | eleição do tesoureiro | A A */}
-      <div
-        className="w-full mb-3.5 px-3 sm:px-6 py-3 sm:py-3.5 border-b-[3px] border-[#e6d3a8] shadow-lg shrink-0"
-        style={{
-          fontFamily: '"Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif',
-          backgroundColor: '#0b4a4a',
-          backgroundImage:
-            'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 5px), linear-gradient(180deg, #0f5c5a 0%, #083b3c 100%)',
-        }}
-      >
-        <div className="w-full max-w-[660px] mx-auto flex items-center justify-between gap-2 text-sm sm:text-base text-white">
-          {/* Esquerda: Escolha xx nomes (diminui conforme vai escolhendo) - Fonte da linha +20% e número bold e +20% maior */}
-          <div className="flex items-center gap-1.5 font-semibold shrink-0">
-            <span>Escolha</span>
-            <span className="inline-flex items-center justify-center px-0.5 text-yellow-300 font-mono font-black text-lg sm:text-xl leading-none">
-              <motion.span
-                key={remainingVotes}
-                initial={{ scale: 1.3, opacity: 0.5 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.2 }}
+            <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
+
+            {/* Centro: Título da eleição */}
+            <div className="flex-1 min-w-0 text-center font-medium text-[#f4ead2] truncate px-1">
+              {session.title}
+            </div>
+
+            <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
+
+            {/* Direita: Botões A(menor) e A(maior) bem mais juntos (espaço de apenas 1 caractere) */}
+            <div className="flex items-center gap-0.5 select-none shrink-0">
+              <button
+                type="button"
+                onClick={decreaseFont}
+                disabled={fontScalePercent === 0}
+                title="Reduzir fonte dos cards (mínimo)"
+                className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 0
+                    ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
+                    : 'text-[#f4ead2] hover:text-amber-300'
+                }`}
               >
-                {remainingVotes}
-              </motion.span>
-            </span>
-            <span>{remainingVotes === 1 ? 'nome' : 'nomes'}</span>
-          </div>
-
-          <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
-
-          {/* Centro: Título da eleição */}
-          <div className="flex-1 min-w-0 text-center font-medium text-[#f4ead2] truncate px-1">
-            {session.title}
-          </div>
-
-          <span className="text-[#e6d3a8]/50 font-light select-none">|</span>
-
-          {/* Direita: Botões A(menor) e A(maior) bem mais juntos (espaço de apenas 1 caractere) */}
-          <div className="flex items-center gap-0.5 select-none shrink-0">
-            <button
-              type="button"
-              onClick={decreaseFont}
-              disabled={fontScalePercent === 0}
-              title="Reduzir fonte dos cards (mínimo)"
-              className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
-                fontScalePercent === 0
-                  ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
-                  : 'text-[#f4ead2] hover:text-amber-300'
-              }`}
-            >
-              <span className="text-xs font-bold leading-none pointer-events-none">A</span>
-            </button>
-            <button
-              type="button"
-              onClick={increaseFont}
-              disabled={fontScalePercent === 24}
-              title="Aumentar fonte dos cards (limite +24%)"
-              className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
-                fontScalePercent === 24
-                  ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
-                  : 'text-[#f4ead2] hover:text-amber-300'
-              }`}
-            >
-              <span className="text-lg font-black leading-none pointer-events-none">A</span>
-            </button>
+                <span className="text-xs font-bold leading-none pointer-events-none">A</span>
+              </button>
+              <button
+                type="button"
+                onClick={increaseFont}
+                disabled={fontScalePercent === 24}
+                title="Aumentar fonte dos cards (limite +24%)"
+                className={`w-5 h-7 p-0 flex items-center justify-center border-none bg-transparent outline-none transition-all active:scale-90 cursor-pointer ${
+                  fontScalePercent === 24
+                    ? 'opacity-25 cursor-not-allowed text-[#e6d3a8]/40'
+                    : 'text-[#f4ead2] hover:text-amber-300'
+                }`}
+              >
+                <span className="text-lg font-black leading-none pointer-events-none">A</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ÁREA DOS CARDS: AUMENTADA EM 15% DE LARGURA COM POUCO PADDING LATERAL NO MOBILE */}
       <div className="w-full max-w-[660px] mx-auto px-1.5 sm:px-3 flex-1 flex flex-col">
