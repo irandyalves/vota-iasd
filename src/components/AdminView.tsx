@@ -2784,19 +2784,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         )}
       </AnimatePresence>
 
-      {/* Notificação Flutuante */}
-      {notification && (
-        <div
-          className={`fixed top-16 right-4 z-50 p-3 rounded-xl shadow-xl flex items-center gap-2 border text-xs font-semibold transition-all ${
-            notification.type === 'success'
-              ? 'bg-emerald-950 border-emerald-500 text-emerald-200'
-              : 'bg-rose-950 border-rose-500 text-rose-200'
-          }`}
-        >
-          <CheckCircle className="w-4 h-4 text-current shrink-0" />
-          <span>{notification.message}</span>
-        </div>
-      )}
+      {/* Notificação Flutuante Centralizada Abaixo do Botão de Votação no Topo */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -10, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -10, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 26 }}
+            className={`fixed top-[88px] sm:top-[92px] left-1/2 -translate-x-1/2 z-[9999] px-4 py-2.5 rounded-xl shadow-[0_12px_35px_rgba(0,0,0,0.85),0_0_25px_rgba(147,51,234,0.35)] flex items-center justify-center gap-2.5 border text-xs sm:text-sm font-semibold select-none max-w-[92vw] sm:max-w-2xl text-center backdrop-blur-md ${
+              notification.type === 'success'
+                ? 'bg-[#250b38] border-[#a855f7]/70 text-white'
+                : 'bg-rose-950 border-rose-500 text-white'
+            }`}
+          >
+            <CheckCircle className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-white shrink-0 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]" />
+            <span className="text-white font-medium leading-snug">{notification.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* MODAL REUTILIZÁVEL DE CONFIGURAR VOTAÇÃO / CRIAR NOVA VOTAÇÃO */}
       {(() => null)()}
