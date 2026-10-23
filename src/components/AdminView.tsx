@@ -233,7 +233,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const detectedTies = session.resolverEmpates !== false ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
 
-  const [isHoldingTieDisplay, setIsHoldingTieDisplay] = useState(false);
   const prevDetectedTiesRef = useRef<TieInfo[]>([]);
 
   useEffect(() => {
@@ -256,7 +255,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       return orderA - orderB;
     });
   }, [detectedTies]);
-  const shouldRenderTieResolution = hasTies || isHoldingTieDisplay;
+  const shouldRenderTieResolution = hasTies;
 
   const [tieGlowingIds, setTieGlowingIds] = useState<Record<string, boolean>>({});
   const prevTieBreakActiveRef = useRef<boolean>(Boolean(session.tieBreak?.active));
@@ -307,39 +306,27 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     const isNowClosed = session.status === 'CLOSED';
     const isNowTieInactive = !session.tieBreak?.active;
 
-    // Detecta quando o desempate pelos mobiles acabou de finalizar (status mudou de TIE_BREAK para CLOSED ou active virou false)
+    // Detecta quando o último votante votou e a rodada de desempate finalizou
     const justFinishedTieBreak =
       (wasTieBreakActive || wasTieBreakStatus) &&
       (isNowClosed || isNowTieInactive) &&
       session.status !== 'TIE_BREAK';
 
-    // Também detecta caso um voto do desempate chegue enquanto em TIE_BREAK
-    const prevTieCount = prevTieVotersCountRef.current;
-    const currentTieCount = session.tieBreakVotersCount || 0;
-    const tieVoteArrived = session.status === 'TIE_BREAK' && currentTieCount > prevTieCount;
-
     if (justFinishedTieBreak) {
-      setIsHoldingTieDisplay(true);
-      const candidatesToGlow =
-        lastTieOptionIdsRef.current.length > 0
-          ? lastTieOptionIdsRef.current
-          : (session.tieBreak?.options || []).map((o) => o.id);
-      triggerTieGlow(candidatesToGlow);
-
-      setTimeout(() => {
-        setIsHoldingTieDisplay(false);
-      }, 1100);
-    } else if (tieVoteArrived) {
-      const currentTieIds = (session.tieBreak?.options || []).map((o) => o.id);
-      if (currentTieIds.length > 0) {
-        triggerTieGlow(currentTieIds);
+      // Verifica se após o último votante votar o empate AINDA PERSISTE
+      const currentTies = session.resolverEmpates !== false ? detectVotingTies(session) : [];
+      if (currentTies.length > 0) {
+        // AVISO VISUAL: O empate NÃO foi resolvido e ainda persiste!
+        // Ativa o brilho amarelo de 1s APENAS nos cards do desempate (Print 2)
+        const persistingCandidateIds = currentTies.flatMap((t) => t.tiedCandidates.map((c) => c.id));
+        triggerTieGlow(persistingCandidateIds);
       }
     }
 
     prevTieBreakActiveRef.current = Boolean(session.tieBreak?.active);
     prevTieStatusRef.current = session.status;
     prevTieVotersCountRef.current = session.tieBreakVotersCount || 0;
-  }, [session.status, session.tieBreak, session.tieBreakVotersCount]);
+  }, [session.status, session.tieBreak, session.options]);
 
   const isVotingActive = session.status === 'VOTING' || session.status === 'TIE_BREAK';
   // Bloqueio de edição de candidatos enquanto um desempate estiver sendo resolvido
@@ -449,8 +436,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       if (justAllVoted || justClosed || justTieBreakEnded) {
         setIsTieModalOpen(true);
       }
-    } else if (session.status === 'CLOSED' && !isHoldingTieDisplay) {
-      // Quando todos os empates foram solucionados (e o efeito de 1s terminou), fecha o modal
+    } else if (session.status === 'CLOSED') {
+      // Quando todos os empates foram solucionados, fecha o modal
       setIsTieModalOpen(false);
     }
     prevAllVotedRef.current = allVotedNow;
@@ -3946,7 +3933,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
                       const isFirstAfterTitulares = vacancies > 0 && idx === vacancies;
-                      const isTieGlowing = Boolean(tieGlowingIds[candidate.id]);
 
                       const activeColor = isTitular
                         ? winnerColor
@@ -3975,9 +3961,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               layout: { type: 'spring', stiffness: 240, damping: 28 },
                             }}
                             style={{
-                              borderColor: isTieGlowing
-                                ? '#facc15'
-                                : isTitular
+                              borderColor: isTitular
                                 ? hexToRgba(winnerColor, 0.55)
                                 : isSuplente1
                                 ? hexToRgba(suplenteColor, 0.5)
@@ -3985,13 +3969,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 ? hexToRgba(suplente2Color, 0.45)
                                 : 'rgba(255, 255, 255, 0.16)',
                             }}
-                            className={`relative overflow-hidden p-1.5 sm:p-2 border ${
+                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] border ${
                               isFirstAfterTitulares ? 'border-t-transparent' : ''
-                            } transition-all duration-300 flex items-center justify-between gap-1.5 shadow-sm ${
-                              isTieGlowing
-                                ? 'bg-gradient-to-r from-amber-500/25 via-yellow-400/20 to-amber-500/25 !border-amber-400 ring-2 ring-yellow-400/90 shadow-[0_0_25px_rgba(250,204,21,0.65)] scale-[1.02] z-30'
-                                : 'bg-[#0b0d13]'
-                            } ${
+                            } transition-colors duration-200 flex items-center justify-between gap-1.5 shadow-sm ${
                               idx === 0
                                 ? 'rounded-t-lg'
                                 : idx === rankedCandidates.length - 1
@@ -4857,7 +4837,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
                       .map((option) => {
                         const isEditing = editingCandidateId === option.id;
-                        const isTieGlowing = Boolean(tieGlowingIds[option.id]);
                         const isGlowing = Boolean(
                           glowingIds[option.id] ||
                             (option.createdAt && Date.now() - option.createdAt < 1500)
@@ -4869,7 +4848,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             initial={{ opacity: 0, scale: 0.82, y: -10 }}
                             animate={{
                               opacity: 1,
-                              scale: isTieGlowing ? 1.05 : isGlowing ? 1.04 : 1,
+                              scale: isGlowing ? 1.04 : 1,
                               y: 0,
                             }}
                             exit={{ opacity: 0, scale: 0.85 }}
@@ -4878,9 +4857,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               duration: 0.35,
                             }}
                             className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
-                              isTieGlowing
-                                ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20'
-                                : isGlowing
+                              isGlowing
                                 ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
                                 : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
                             }`}
@@ -4909,13 +4886,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize transition-colors duration-200 ${
                                   isResolvingTie
                                     ? 'cursor-not-allowed text-slate-400'
-                                    : 'cursor-pointer ' + (
-                                        isTieGlowing
-                                          ? 'text-yellow-100 font-bold drop-shadow-[0_0_8px_rgba(250,204,21,0.9)]'
-                                          : isGlowing
-                                          ? 'text-emerald-200'
-                                          : 'text-slate-200 hover:text-white'
-                                      )
+                                    : 'cursor-pointer ' + (isGlowing ? 'text-emerald-200' : 'text-slate-200 hover:text-white')
                                 }`}
                                 title={isResolvingTie ? option.name : `${option.name} (Clique para editar)`}
                               >
