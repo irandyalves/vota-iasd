@@ -8,7 +8,6 @@ import {
   PlayCircle,
   Loader2,
   Shuffle,
-  Sliders,
   Maximize2,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
@@ -254,55 +253,119 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Centro: Campo para digitar ou clicar para mudar a Qtde de Telas */}
-          <div className="flex items-center gap-1.5 bg-[#070e1b] border border-blue-900/60 rounded-lg px-2.5 py-1 shadow-inner">
-            <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-            <span className="text-[11px] font-semibold text-slate-300 shrink-0">
-              Qtde de telas:
-            </span>
-            <button
-              type="button"
-              onClick={() => handleSetDeviceCount(Math.max(1, deviceCount - (deviceCount > 10 ? 2 : 1)))}
-              disabled={deviceCount <= 1}
-              className="w-5 h-5 rounded bg-blue-950/90 hover:bg-blue-800 text-blue-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-xs transition cursor-pointer"
-              title="Diminuir telas"
-            >
-              -
-            </button>
-            <input
-              type="number"
-              min={1}
-              max={60}
-              value={deviceInputStr}
-              onChange={(e) => {
-                setDeviceInputStr(e.target.value);
-                const val = parseInt(e.target.value, 10);
-                if (!isNaN(val) && val >= 1 && val <= 60) {
-                  handleSetDeviceCount(val);
-                }
-              }}
-              onBlur={() => {
-                const val = parseInt(deviceInputStr, 10);
-                if (isNaN(val) || val < 1) {
-                  handleSetDeviceCount(8);
-                } else if (val > 60) {
-                  handleSetDeviceCount(60);
-                } else {
-                  handleSetDeviceCount(val);
-                }
-              }}
-              className="w-11 px-1 py-0.5 text-center bg-[#050a14] border border-blue-800 rounded text-xs font-mono font-bold text-amber-300 focus:outline-none focus:border-amber-400"
-              title="Digite ou clique nos botões para alterar a quantidade de telas"
-            />
-            <button
-              type="button"
-              onClick={() => handleSetDeviceCount(Math.min(60, deviceCount + (deviceCount >= 10 ? 2 : 1)))}
-              disabled={deviceCount >= 60}
-              className="w-5 h-5 rounded bg-blue-950/90 hover:bg-blue-800 text-blue-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-xs transition cursor-pointer"
-              title="Aumentar telas"
-            >
-              +
-            </button>
+          {/* Centro: Campo para digitar ou clicar para mudar a Qtde de Telas + Barra Esmagar na Frente */}
+          <div className="flex items-center gap-2.5 flex-wrap justify-center">
+            {/* Seção Qtde de telas */}
+            <div className="flex items-center gap-1.5 bg-[#070e1b] border border-blue-900/60 rounded-lg px-2.5 py-1 shadow-inner shrink-0">
+              <Users className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-300 shrink-0">
+                Qtde de telas:
+              </span>
+              <button
+                type="button"
+                onClick={() => handleSetDeviceCount(Math.max(1, deviceCount - (deviceCount > 10 ? 2 : 1)))}
+                disabled={deviceCount <= 1}
+                className="w-5 h-5 rounded bg-blue-950/90 hover:bg-blue-800 text-blue-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-xs transition cursor-pointer"
+                title="Diminuir telas"
+              >
+                -
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={60}
+                value={deviceInputStr}
+                onChange={(e) => {
+                  setDeviceInputStr(e.target.value);
+                  const val = parseInt(e.target.value, 10);
+                  if (!isNaN(val) && val >= 1 && val <= 60) {
+                    handleSetDeviceCount(val);
+                  }
+                }}
+                onBlur={() => {
+                  const val = parseInt(deviceInputStr, 10);
+                  if (isNaN(val) || val < 1) {
+                    handleSetDeviceCount(8);
+                  } else if (val > 60) {
+                    handleSetDeviceCount(60);
+                  } else {
+                    handleSetDeviceCount(val);
+                  }
+                }}
+                className="w-11 px-1 py-0.5 text-center bg-[#050a14] border border-blue-800 rounded text-xs font-mono font-bold text-amber-300 focus:outline-none focus:border-amber-400"
+                title="Digite ou clique nos botões para alterar a quantidade de telas"
+              />
+              <button
+                type="button"
+                onClick={() => handleSetDeviceCount(Math.min(60, deviceCount + (deviceCount >= 10 ? 2 : 1)))}
+                disabled={deviceCount >= 60}
+                className="w-5 h-5 rounded bg-blue-950/90 hover:bg-blue-800 text-blue-200 disabled:opacity-30 disabled:cursor-not-allowed flex items-center justify-center font-bold text-xs transition cursor-pointer"
+                title="Aumentar telas"
+              >
+                +
+              </button>
+            </div>
+
+            {/* Barra Esmagar / Expandir na frente da seção Qtde de Telas */}
+            <div className="flex items-center gap-2 bg-[#070e1b] border border-blue-900/60 rounded-lg px-2.5 py-1 shadow-inner shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAutoFit(false);
+                  setManualHeight((prev) => Math.max(140, prev - 20));
+                }}
+                title="Esmagar / diminuir altura"
+                className="text-[10px] uppercase font-bold text-slate-300 hover:text-amber-300 bg-blue-950/80 hover:bg-blue-900 px-2 py-0.5 rounded transition cursor-pointer shrink-0 border border-blue-900/50"
+              >
+                - ESMAGAR
+              </button>
+
+              <div className="relative w-28 sm:w-36 md:w-44 flex items-center">
+                <input
+                  type="range"
+                  min={140}
+                  max={550}
+                  step={5}
+                  value={currentTotalCardHeight}
+                  onChange={(e) => {
+                    setIsAutoFit(false);
+                    setManualHeight(Number(e.target.value));
+                  }}
+                  className="w-full h-1.5 bg-blue-950/90 border border-blue-900/60 rounded-lg appearance-none cursor-pointer accent-amber-400 hover:accent-amber-300 transition"
+                  title="Arraste para esmagar ou expandir a altura das telas"
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsAutoFit(false);
+                  setManualHeight((prev) => Math.min(550, prev + 20));
+                }}
+                title="Expandir / aumentar altura"
+                className="text-[10px] uppercase font-bold text-slate-300 hover:text-blue-300 bg-blue-950/80 hover:bg-blue-900 px-2 py-0.5 rounded transition cursor-pointer shrink-0 border border-blue-900/50"
+              >
+                + EXPANDIR
+              </button>
+
+              <span className="font-mono text-[10px] text-amber-300 font-bold px-1 bg-[#040812] rounded border border-blue-900/60">
+                {currentTotalCardHeight}px
+              </span>
+
+              <button
+                type="button"
+                onClick={() => setIsAutoFit(true)}
+                className={`ml-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold transition cursor-pointer flex items-center gap-1 border ${
+                  isAutoFit
+                    ? 'bg-blue-600/30 border-blue-400/80 text-blue-200 shadow-sm'
+                    : 'bg-slate-900/60 border-slate-700/80 text-slate-400 hover:text-white'
+                }`}
+                title="Caber 100% na janela sem barra de rolagem"
+              >
+                <Maximize2 className="w-2.5 h-2.5 text-amber-300" />
+                <span>Auto</span>
+              </button>
+            </div>
           </div>
 
           {/* Lado Direito: BOTÃO ESCOLHER ALEATÓRIO e Auto-PIN */}
@@ -341,76 +404,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
         </div>
       </header>
 
-      {/* 2. LINHA HORIZONTAL INTERATIVA PARA CLICAR E AJUSTAR A ALTURA DAS LINHAS */}
-      <div className="w-full bg-[#080f1d] border-b border-blue-900/50 px-3 py-1 shrink-0 flex items-center justify-between gap-3 text-xs select-none">
-        <div className="flex items-center gap-1.5 shrink-0 text-slate-300">
-          <Sliders className="w-3.5 h-3.5 text-blue-400" />
-          <span className="text-[11px] font-semibold text-slate-300">Altura das Linhas:</span>
-          <span className="font-mono text-[11px] text-amber-300 font-bold bg-[#040812] px-1.5 py-0.5 rounded border border-blue-900/60">
-            {currentTotalCardHeight}px
-          </span>
-        </div>
-
-        {/* Linha horizontal deslizante para esmagar ou expandir */}
-        <div className="flex-1 max-w-xl mx-2 flex items-center gap-2.5">
-          <button
-            type="button"
-            onClick={() => {
-              setIsAutoFit(false);
-              setManualHeight((prev) => Math.max(140, prev - 20));
-            }}
-            title="Esmagar / diminuir altura"
-            className="text-[10px] uppercase font-bold text-slate-400 hover:text-amber-300 bg-blue-950/60 hover:bg-blue-900/80 px-2 py-0.5 rounded transition cursor-pointer shrink-0"
-          >
-            - Esmagar
-          </button>
-
-          <div className="relative flex-1 flex items-center">
-            <input
-              type="range"
-              min={140}
-              max={550}
-              step={5}
-              value={currentTotalCardHeight}
-              onChange={(e) => {
-                setIsAutoFit(false);
-                setManualHeight(Number(e.target.value));
-              }}
-              className="w-full h-2 bg-blue-950/90 border border-blue-900/60 rounded-lg appearance-none cursor-pointer accent-amber-400 hover:accent-amber-300 transition"
-              title="Arraste ou clique nesta linha horizontal para ajustar a altura exata das telas"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setIsAutoFit(false);
-              setManualHeight((prev) => Math.min(550, prev + 20));
-            }}
-            title="Expandir / aumentar altura"
-            className="text-[10px] uppercase font-bold text-slate-400 hover:text-blue-300 bg-blue-950/60 hover:bg-blue-900/80 px-2 py-0.5 rounded transition cursor-pointer shrink-0"
-          >
-            + Expandir
-          </button>
-        </div>
-
-        {/* Botão para Auto-Ajustar e Caber na Janela */}
-        <button
-          type="button"
-          onClick={() => setIsAutoFit(true)}
-          className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 border ${
-            isAutoFit
-              ? 'bg-blue-600/30 border-blue-400/80 text-blue-200 shadow-sm'
-              : 'bg-slate-900/60 border-slate-700/80 text-slate-400 hover:text-white hover:bg-slate-800'
-          }`}
-          title="Ajustar automaticamente a altura para que todas as telas caibam 100% na janela sem barra de rolagem"
-        >
-          <Maximize2 className="w-3 h-3 text-amber-300" />
-          <span>Caber na Janela ({fittedRowHeight}px)</span>
-        </button>
-      </div>
-
-      {/* 3. GRID PRINCIPAL DE SMARTPHONES - ORGANIZADOS DENTRO DA JANELA */}
+      {/* 2. GRID PRINCIPAL DE SMARTPHONES - ORGANIZADOS DENTRO DA JANELA */}
       <main className="flex-1 min-h-0 p-2 overflow-y-auto overflow-x-hidden flex flex-col justify-center">
         <div
           className="grid gap-2 w-full mx-auto"
