@@ -4092,24 +4092,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     }}
                     className={`relative w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-l-2 border-emerald-500 border-t-0 border-b-0 border-r-0 ${
                       isSplit ? 'rounded-l-xl rounded-r-none' : 'rounded-xl'
-                    } p-3.5 sm:p-5 shadow-[0_0_35px_rgba(16,185,129,0.35)] text-white overflow-hidden space-y-3.5 will-change-[height,transform]`}
+                    } p-0 shadow-[0_0_35px_rgba(16,185,129,0.35)] text-white overflow-hidden will-change-[height,transform]`}
                   >
                     {/* Linha Verde Superior: ficando transparente da esquerda para a direita a partir de 40% */}
                     <div
-                      className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none rounded-tl-xl"
+                      className="absolute top-0 left-0 right-0 h-[2px] pointer-events-none rounded-tl-xl z-20"
                       style={{
                         background: 'linear-gradient(to right, #10b981 0%, #10b981 40%, transparent 100%)',
                       }}
                     />
-                    {/* Linha Verde Inferior: ficando transparente da esquerda para a direita a partir de 40% */}
-                    <div
-                      className="absolute bottom-0 left-0 right-0 h-[2px] pointer-events-none rounded-bl-xl"
-                      style={{
-                        background: 'linear-gradient(to right, #10b981 0%, #10b981 40%, transparent 100%)',
-                      }}
-                    />
-                    {/* Header da Seção Inline de Desempate (sem linha divisória horizontal) */}
-                    <div className="relative flex items-center justify-between pb-2 min-h-[36px]">
+
+                    {/* Conteúdo com Padding e Espaçamento Interno */}
+                    <div className="p-3.5 sm:p-5 space-y-3.5">
+                      {/* Header da Seção Inline de Desempate (sem linha divisória horizontal) */}
+                      <div className="relative flex items-center justify-between pb-2 min-h-[36px]">
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shrink-0">
                           <Star className="w-4 h-4 text-emerald-400 fill-emerald-400" />
@@ -4292,7 +4288,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         })}
                       </AnimatePresence>
                     </div>
-                  </motion.div>
+                  </div>
+
+                  {/* Linha Verde Inferior: exatamente no fundo onde arredonda os cantos */}
+                  <div
+                    className="absolute bottom-0 left-0 right-0 h-[2px] pointer-events-none rounded-bl-xl z-20"
+                    style={{
+                      background: 'linear-gradient(to right, #10b981 0%, #10b981 40%, transparent 100%)',
+                    }}
+                  />
+                </motion.div>
                 ) : (
                   <motion.div
                     key="tie-alert-card"
