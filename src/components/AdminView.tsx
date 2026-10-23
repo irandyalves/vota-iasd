@@ -745,33 +745,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
-// Garante lista de eventos (inicializando com o evento atual caso ainda não exista e eliminando duplicatas)
-  const rawEventsList: VotingEventItem[] =
-    Array.isArray(session.events) && session.events.length > 0
-      ? session.events
-      : [
-          {
-            id: session.activeEventId || 'evt_principal',
-            name: session.title || 'ESCOLHA DO TESOUREIRO',
-            options: session.options || [],
-            vacancies: session.vacancies || 1,
-            maxVotesPerVoter: session.maxVotesPerVoter || 1,
-            suplentesCount: session.suplentesCount ?? 1,
-            segundoSuplentesCount: session.segundoSuplentesCount ?? 0,
-            habilitarSuplente1: session.habilitarSuplente1 ?? true,
-            habilitarSuplente2: session.habilitarSuplente2 ?? false,
-            resolverEmpates: session.resolverEmpates !== false,
-            status: session.status,
-            tieBreak: session.tieBreak || null,
-            mainVotersCount: session.mainVotersCount || 0,
-            tieBreakVotersCount: session.tieBreakVotersCount || 0,
-            votingIteration: session.votingIteration || 1,
-            telaoMode: session.telaoMode || 'names',
-            labelTitulares: session.labelTitulares || 'Titulares',
-            labelSuplente1: session.labelSuplente1 || '1º suplente',
-            labelSuplente2: session.labelSuplente2 || '2º suplente',
-          },
-        ];
+// Lista de eventos/votações do evento geral ativo (inicia limpo se não houver cards)
+  const rawEventsList: VotingEventItem[] = Array.isArray(session.events) ? session.events : [];
 
   // Garante que cada evento tenha ID exclusivo e não existam modais duplicados
   const eventsList: VotingEventItem[] = rawEventsList.reduce<VotingEventItem[]>((acc, item) => {
@@ -953,41 +928,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     if (!target) return;
 
     const localLayout = getLocalTelaoLayout() || session.telaoLayout;
-    const defaultRules = getGlobalElectionRules();
 
-    const targetEvents = target.events && target.events.length > 0 ? target.events : [
-      {
-        id: 'evt_' + Date.now(),
-        name: target.title || 'TESOUREIRO',
-        options: target.options || [],
-        vacancies: target.vacancies ?? defaultRules.vacancies ?? 1,
-        maxVotesPerVoter: target.maxVotesPerVoter ?? defaultRules.vacancies ?? 1,
-        suplentesCount: target.suplentesCount ?? defaultRules.suplentesCount ?? 1,
-        segundoSuplentesCount: target.segundoSuplentesCount ?? defaultRules.segundoSuplentesCount ?? 0,
-        habilitarSuplente1: target.habilitarSuplente1 ?? defaultRules.habilitarSuplente1 ?? true,
-        habilitarSuplente2: target.habilitarSuplente2 ?? defaultRules.habilitarSuplente2 ?? false,
-        resolverEmpates: target.resolverEmpates ?? true,
-        totalVotersConnected: defaultRules.totalVotersConnected || 1,
-        rulesConfigured: target.rulesConfigured ?? false,
-        labelTitulares: target.labelTitulares || defaultRules.labelTitulares || 'Titulares',
-        labelSuplente1: target.labelSuplente1 || defaultRules.labelSuplente1 || '1º suplente',
-        labelSuplente2: target.labelSuplente2 || defaultRules.labelSuplente2 || '2º suplente',
-        status: target.status || 'WAITING',
-        tieBreak: target.tieBreak || null,
-        mainVotersCount: target.mainVotersCount || 0,
-        tieBreakVotersCount: target.tieBreakVotersCount || 0,
-        votingIteration: (session.votingIteration || 1) + 1,
-        telaoMode: target.telaoMode || 'names',
-      }
-    ];
-
+    const targetEvents = Array.isArray(target.events) ? target.events : [];
     const firstEvent = targetEvents.find((e) => e.id === target.activeEventId) || targetEvents[0];
 
     const updatedSession: VotingSession = {
       ...session,
       activeGeneralEventId: target.id,
       generalEventName: target.name,
-      title: firstEvent?.name || target.title || 'TESOUREIRO',
+      title: firstEvent?.name || target.title || '',
       activeEventId: firstEvent?.id,
       events: targetEvents,
       options: firstEvent?.options || target.options || [],
@@ -1003,8 +952,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       labelTitulares: firstEvent?.labelTitulares || target.labelTitulares || 'Titulares',
       labelSuplente1: firstEvent?.labelSuplente1 || target.labelSuplente1 || '1º suplente',
       labelSuplente2: firstEvent?.labelSuplente2 || target.labelSuplente2 || '2º suplente',
-      status: firstEvent?.status || target.status || 'WAITING',
-      tieBreak: firstEvent?.tieBreak || target.tieBreak || null,
+      status: firstEvent?.status || 'WAITING',
+      tieBreak: firstEvent?.tieBreak || null,
       mainVotersCount: firstEvent?.mainVotersCount ?? target.mainVotersCount ?? 0,
       tieBreakVotersCount: firstEvent?.tieBreakVotersCount ?? target.tieBreakVotersCount ?? 0,
       votingIteration: (session.votingIteration || 1) + 1,
@@ -1020,42 +969,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const handleHardResetGeneralEvent = (name: string) => {
     const cleaned = name.trim().toUpperCase() || 'COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE';
     const newGenId = 'gen_' + Date.now();
-    const initialId = 'evt_' + Date.now();
     const defaultRules = getGlobalElectionRules();
     const localLayout = getLocalTelaoLayout() || session.telaoLayout;
 
-    const initialEvent: VotingEventItem = {
-      id: initialId,
-      name: 'TESOUREIRO',
-      options: [],
-      vacancies: defaultRules.vacancies || 1,
-      maxVotesPerVoter: defaultRules.vacancies || 1,
-      suplentesCount: defaultRules.suplentesCount ?? 1,
-      segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
-      habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
-      habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
-      resolverEmpates: true,
-      totalVotersConnected: defaultRules.totalVotersConnected || 1,
-      rulesConfigured: false,
-      labelTitulares: defaultRules.labelTitulares || 'Titulares',
-      labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
-      labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
-      status: 'WAITING',
-      tieBreak: null,
-      mainVotersCount: 0,
-      tieBreakVotersCount: 0,
-      votingIteration: (session.votingIteration || 1) + 10,
-      telaoMode: 'names',
-    };
-
+    // Novo Evento Geral entra com os cards totalmente limpos (criados do zero)
     const newGenRecord: GeneralEventRecord = {
       id: newGenId,
       name: cleaned,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      events: [initialEvent],
-      activeEventId: initialId,
-      title: 'TESOUREIRO',
+      events: [],
+      activeEventId: undefined,
+      title: '',
       options: [],
       history: [],
       vacancies: defaultRules.vacancies || 1,
@@ -1084,11 +1009,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       activeGeneralEventId: newGenId,
       generalEventName: cleaned,
       generalEvents: updatedGeneralEvents,
-      title: 'TESOUREIRO',
-      activeEventId: initialId,
+      title: '',
+      activeEventId: undefined,
       status: 'WAITING',
       options: [],
-      events: [initialEvent],
+      events: [],
       history: [],
       tieBreak: null,
       mainVotersCount: 0,
@@ -1152,36 +1077,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
       if (isDeletingActive) {
         const nextEvent = remainingGenList[0];
-        const defaultRules = getGlobalElectionRules();
         const localLayout = getLocalTelaoLayout() || session.telaoLayout;
-        const targetEvents =
-          nextEvent.events && nextEvent.events.length > 0
-            ? nextEvent.events
-            : [
-                {
-                  id: 'evt_' + Date.now(),
-                  name: nextEvent.title || 'TESOUREIRO',
-                  options: nextEvent.options || [],
-                  vacancies: nextEvent.vacancies ?? defaultRules.vacancies ?? 1,
-                  maxVotesPerVoter: nextEvent.maxVotesPerVoter ?? defaultRules.vacancies ?? 1,
-                  suplentesCount: nextEvent.suplentesCount ?? defaultRules.suplentesCount ?? 1,
-                  segundoSuplentesCount: nextEvent.segundoSuplentesCount ?? defaultRules.segundoSuplentesCount ?? 0,
-                  habilitarSuplente1: nextEvent.habilitarSuplente1 ?? defaultRules.habilitarSuplente1 ?? true,
-                  habilitarSuplente2: nextEvent.habilitarSuplente2 ?? defaultRules.habilitarSuplente2 ?? false,
-                  resolverEmpates: nextEvent.resolverEmpates ?? true,
-                  totalVotersConnected: defaultRules.totalVotersConnected || 1,
-                  rulesConfigured: nextEvent.rulesConfigured ?? false,
-                  labelTitulares: nextEvent.labelTitulares || defaultRules.labelTitulares || 'Titulares',
-                  labelSuplente1: nextEvent.labelSuplente1 || defaultRules.labelSuplente1 || '1º suplente',
-                  labelSuplente2: nextEvent.labelSuplente2 || defaultRules.labelSuplente2 || '2º suplente',
-                  status: nextEvent.status || ('WAITING' as const),
-                  tieBreak: nextEvent.tieBreak || null,
-                  mainVotersCount: nextEvent.mainVotersCount || 0,
-                  tieBreakVotersCount: nextEvent.tieBreakVotersCount || 0,
-                  votingIteration: (session.votingIteration || 1) + 1,
-                  telaoMode: nextEvent.telaoMode || ('names' as const),
-                },
-              ];
+        const targetEvents = Array.isArray(nextEvent.events) ? nextEvent.events : [];
         const firstEvent = targetEvents.find((e) => e.id === nextEvent.activeEventId) || targetEvents[0];
 
         const updatedSession: VotingSession = {
@@ -1189,7 +1086,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           activeGeneralEventId: nextEvent.id,
           generalEventName: nextEvent.name,
           generalEvents: remainingGenList,
-          title: firstEvent?.name || nextEvent.title || 'TESOUREIRO',
+          title: firstEvent?.name || nextEvent.title || '',
           activeEventId: firstEvent?.id,
           events: targetEvents,
           options: firstEvent?.options || nextEvent.options || [],
@@ -1223,40 +1120,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     } else {
       // Se não sobrou nenhum evento na lista, cria um evento limpo inicial
       const newGenId = 'gen_' + Date.now();
-      const initialId = 'evt_' + Date.now();
       const defaultRules = getGlobalElectionRules();
       const localLayout = getLocalTelaoLayout() || session.telaoLayout;
-      const initialEvent: VotingEventItem = {
-        id: initialId,
-        name: 'TESOUREIRO',
-        options: [],
-        vacancies: defaultRules.vacancies || 1,
-        maxVotesPerVoter: defaultRules.vacancies || 1,
-        suplentesCount: defaultRules.suplentesCount ?? 1,
-        segundoSuplentesCount: defaultRules.segundoSuplentesCount ?? 0,
-        habilitarSuplente1: defaultRules.habilitarSuplente1 ?? true,
-        habilitarSuplente2: defaultRules.habilitarSuplente2 ?? false,
-        resolverEmpates: true,
-        totalVotersConnected: defaultRules.totalVotersConnected || 1,
-        rulesConfigured: false,
-        labelTitulares: defaultRules.labelTitulares || 'Titulares',
-        labelSuplente1: defaultRules.labelSuplente1 || '1º suplente',
-        labelSuplente2: defaultRules.labelSuplente2 || '2º suplente',
-        status: 'WAITING',
-        tieBreak: null,
-        mainVotersCount: 0,
-        tieBreakVotersCount: 0,
-        votingIteration: (session.votingIteration || 1) + 10,
-        telaoMode: 'names',
-      };
+
       const newGenRecord: GeneralEventRecord = {
         id: newGenId,
         name: 'COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE',
         createdAt: Date.now(),
         updatedAt: Date.now(),
-        events: [initialEvent],
-        activeEventId: initialId,
-        title: 'TESOUREIRO',
+        events: [],
+        activeEventId: undefined,
+        title: '',
         options: [],
         history: [],
         vacancies: defaultRules.vacancies || 1,
@@ -1282,11 +1156,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         activeGeneralEventId: newGenId,
         generalEventName: 'COMISSÃO DA IGREJA ADVENTISTA DA ASA NORTE',
         generalEvents: [newGenRecord],
-        title: 'TESOUREIRO',
-        activeEventId: initialId,
+        title: '',
+        activeEventId: undefined,
         status: 'WAITING',
         options: [],
-        events: [initialEvent],
+        events: [],
         history: [],
         tieBreak: null,
         mainVotersCount: 0,
@@ -2811,7 +2685,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       )}
 
       {/* CARD: EVENTOS GERAIS ONLINE (LISTBOX + NOVO EVENTO À ESQUERDA, HISTÓRICO + ENGRENAGEM SEM FUNDO À DIREITA) */}
-      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative ${isHistoryMenuOpen || isGeneralEventMenuOpen ? "z-[100]" : "z-30"}`}>
+      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 mb-0 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-t border-b border-amber-500/30 rounded-t-xl rounded-b-none shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative ${isHistoryMenuOpen || isGeneralEventMenuOpen ? "z-[100]" : "z-30"}`}>
         {/* Esquerda: Grupo Comissão (sem borda, fica bold no hover) + Lápis, Excluir e Add esmaecidos que voltam à vida da esq para a dir em cores */}
         <div className="group flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
           <div className="flex items-center justify-center shrink-0 p-1">
@@ -3133,11 +3007,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         </div>
       </div>
 
-      {/* BARRA DE EVENTOS: LAYOUT ESTÚDIO MODERNO COM CORES SUAVES E SEM CAIXA ALTA */}
-      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative ${isCreatingNewEvent || editingEventId ? 'z-[100]' : 'z-10'}`}>
-        <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
-          {/* LINHA CENTRALIZADA VERTICALMENTE: "EVENTOS" + "+ CRIAR VOTAÇÃO" À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
-          <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
+      {/* BARRA DE EVENTOS: VOTAÇÃO (COLADA NA SEÇÃO DE CIMA, SEM CANTO SUPERIOR ARREDONDADO, EFEITO CORTINA AO ALTERNAR EVENTO GERAL) */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentGeneralEventId}
+          initial={{ opacity: 0, y: -10, scaleY: 0.95 }}
+          animate={{ opacity: 1, y: 0, scaleY: 1 }}
+          exit={{ opacity: 0, y: -10, scaleY: 0.95 }}
+          transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+          style={{ transformOrigin: 'top' }}
+          className={`-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-b border-x border-white/[0.08] rounded-b-xl rounded-t-none border-t-0 shadow-lg mb-3 mt-0 flex items-stretch justify-between min-h-[58px] relative ${isCreatingNewEvent || editingEventId ? 'z-[100]' : 'z-10'}`}
+        >
+          <div className="flex-1 min-w-0 flex items-stretch justify-between pl-8 sm:pl-10 lg:pl-12 pr-4 sm:pr-6 lg:pr-8 gap-3">
+            {/* LINHA CENTRALIZADA VERTICALMENTE: "VOTAÇÃO" + "+ CRIAR" INDENTADO À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
+            <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
             {/* FAIXA SUTIL DE "VOTAÇÕES" (EDITÁVEL COM LAPIZINHO, SALVO NA MÁQUINA) ATÉ O BOTÃO "+ CRIAR VOTAÇÃO" */}
             <div className="self-stretch flex items-center shrink-0 pr-1.5 sm:pr-2.5 py-2">
               {isEditingVotacoesTitle ? (
@@ -3230,7 +3113,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             />
 
             {/* EVENTOS CRIADOS COM BORDA DESIGNER DIRECIONAL */}
-            {eventsList.map((evt, index) => {
+            {eventsList.length === 0 ? (
+              <span className="text-[11.5px] text-slate-400/70 italic pl-1.5 select-none flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400/50" />
+                Nenhuma votação criada ainda • Clique em "+ Criar" para começar do zero
+              </span>
+            ) : (
+              eventsList.map((evt, index) => {
               const isSelected = evt.id === currentActiveEventId;
               const count = isSelected ? session.options.length : (evt.options?.length || 0);
               const displayName = isSelected ? (session.title || evt.name) : evt.name;
@@ -3320,7 +3209,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   </AnimatePresence>
                 </div>
               );
-            })}
+            }))}
           </div>
 
           {/* CANTO DIREITO: TELÃO (NOMES & QR) + ENGRENAGEM */}
@@ -3424,7 +3313,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
+    </AnimatePresence>
 
 
 
