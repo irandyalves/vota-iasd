@@ -4077,7 +4077,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           if (!hasTies) return null;
 
           return (
-            <div className="space-y-2">
+            <div className="space-y-2 relative z-20">
               <AnimatePresence initial={false} mode="wait">
                 {isTieModalOpen ? (
                   <motion.div
@@ -4090,9 +4090,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       scaleY: { duration: 0.75, ease: [0.12, 1, 0.2, 1] },
                       opacity: { duration: 0.5, ease: 'easeOut' },
                     }}
-                    className={`relative w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-l-2 border-emerald-500 border-t-0 border-b-0 border-r-0 ${
+                    className={`relative z-20 w-full bg-gradient-to-b from-[#002657] to-[#07132a] border-l-2 border-emerald-500 border-t-0 border-b-0 border-r-0 ${
                       isSplit ? 'rounded-l-xl rounded-r-none' : 'rounded-xl'
-                    } p-0 shadow-[0_0_35px_rgba(16,185,129,0.35)] text-white overflow-hidden will-change-[height,transform]`}
+                    } p-0 shadow-[0_28px_60px_-10px_rgba(0,0,0,0.95),0_16px_32px_-5px_rgba(0,0,0,0.85),0_0_35px_rgba(16,185,129,0.25)] text-white overflow-hidden will-change-[height,transform]`}
                   >
                     {/* Linha Verde Superior: ficando transparente da esquerda para a direita a partir de 40% */}
                     <div
