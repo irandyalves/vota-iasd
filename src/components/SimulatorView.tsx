@@ -71,7 +71,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             ...evt,
             totalVotersConnected: clamped,
             ...(current.status === 'TIE_BREAK'
-              ? { mainVotersCount: Math.max(evt.mainVotersCount || 0, clamped) }
+              ? { mainVotersCount: clamped }
               : {}),
           };
         }
@@ -82,7 +82,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
         ...current,
         totalVotersConnected: clamped,
         ...(current.status === 'TIE_BREAK'
-          ? { mainVotersCount: Math.max(current.mainVotersCount || 0, clamped) }
+          ? { mainVotersCount: clamped }
           : {}),
         events: updatedEvents,
         updatedAt: Date.now(),
@@ -172,17 +172,17 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     const current = getLocalSession();
     if (current) {
       const needsSync =
-        (current.totalVotersConnected || 0) < deviceCount ||
-        (current.status === 'TIE_BREAK' && (current.mainVotersCount || 0) < deviceCount);
+        current.totalVotersConnected !== deviceCount ||
+        (current.status === 'TIE_BREAK' && current.mainVotersCount !== deviceCount);
 
       if (needsSync) {
         const updatedEvents = (current.events || []).map((evt) => {
           if (evt.id === current.activeEventId) {
             return {
               ...evt,
-              totalVotersConnected: Math.max(evt.totalVotersConnected || 0, deviceCount),
+              totalVotersConnected: deviceCount,
               ...(current.status === 'TIE_BREAK'
-                ? { mainVotersCount: Math.max(evt.mainVotersCount || 0, deviceCount) }
+                ? { mainVotersCount: deviceCount }
                 : {}),
             };
           }
@@ -191,9 +191,9 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
 
         const syncedSession: VotingSession = {
           ...current,
-          totalVotersConnected: Math.max(current.totalVotersConnected || 0, deviceCount),
+          totalVotersConnected: deviceCount,
           ...(current.status === 'TIE_BREAK'
-            ? { mainVotersCount: Math.max(current.mainVotersCount || 0, deviceCount) }
+            ? { mainVotersCount: deviceCount }
             : {}),
           events: updatedEvents,
           updatedAt: Date.now(),

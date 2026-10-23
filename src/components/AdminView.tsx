@@ -581,23 +581,31 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   useEffect(() => {
     // Para TIE_BREAK: o limite de votantes é a quantidade de votantes que participaram da rodada principal (mainVotersCount).
-    // Se 2 pessoas votaram na principal, o desempate conclui automaticamente assim que essas 2 pessoas votarem.
+    // Se 24 pessoas votaram na principal, o desempate conclui automaticamente assim que essas 24 pessoas votarem.
+    const tieBreakVotesSum = (session.tieBreak?.options || []).reduce(
+      (acc, opt) => acc + Math.floor(opt.votesCount || 0),
+      0
+    );
+    const tieBreakMaxVotes = session.tieBreak?.maxVotesPerVoter || 1;
+    const tieCalculatedVoters =
+      tieBreakMaxVotes > 0
+        ? Math.round(tieBreakVotesSum / tieBreakMaxVotes)
+        : tieBreakVotesSum;
+
     const totalLimit =
       session.status === 'TIE_BREAK'
-        ? Math.max(
-            session.mainVotersCount || 0,
-            session?.totalVotersConnected || 0,
-            connectedVotersCount,
-            session?.allowedVoterIds?.length || 0,
-            1
-          )
+        ? (session.mainVotersCount && session.mainVotersCount > 0
+            ? session.mainVotersCount
+            : (session?.totalVotersConnected && session.totalVotersConnected > 0
+                ? session.totalVotersConnected
+                : 1))
         : (session?.totalVotersConnected && session.totalVotersConnected > 0
             ? session.totalVotersConnected
             : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0));
 
     const totalVoted =
       session.status === 'TIE_BREAK'
-        ? session.tieBreakVotersCount || 0
+        ? Math.max(session.tieBreakVotersCount || 0, tieCalculatedVoters)
         : session.mainVotersCount || 0;
 
     const allVotedNow = totalLimit > 0 && totalVoted >= totalLimit;
@@ -676,8 +684,29 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
     const vacancies = Math.max(1, Math.min(tie.vacanciesInDispute, tieOptions.length - 1));
 
+    const updatedEvents = (session.events || []).map((evt) => {
+      if (evt.id === session.activeEventId) {
+        return {
+          ...evt,
+          status: 'TIE_BREAK' as const,
+          tieBreak: {
+            active: true,
+            title: `Desempate - ${tie.label}`,
+            vacancies: vacancies,
+            maxVotesPerVoter: Math.min(vacancies, tieOptions.length),
+            options: tieOptions,
+            startRank: tie.startRank,
+            endRank: tie.endRank,
+          },
+          tieBreakVotersCount: 0,
+        };
+      }
+      return evt;
+    });
+
     saveSession({
       ...session,
+      events: updatedEvents,
       status: 'TIE_BREAK',
       telaoMode: 'voting',
       votingIteration: (session.votingIteration || 1) + 1,
