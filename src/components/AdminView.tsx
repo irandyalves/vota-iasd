@@ -35,7 +35,6 @@ import {
   CheckCircle2,
   Smartphone,
   FlaskConical,
-  Minimize2,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
@@ -89,7 +88,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
-  const [isTieBreakModalMinimized, setIsTieBreakModalMinimized] = useState<boolean>(false);
   // Filtro de exibição do histórico de votações (Só titulares / Titulares + demais / Completo)
   const [historyFilter, setHistoryFilter] = useState<'titulares' | 'titulares_demais' | 'completo'>('completo');
   const [isHistoryMenuOpen, setIsHistoryMenuOpen] = useState<boolean>(false);
@@ -248,6 +246,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   };
   const detectedTies = session.resolverEmpates !== false ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
+  const tiedCandidateIdsSet = useMemo(() => {
+    return new Set(detectedTies.flatMap((t) => t.tiedCandidates.map((c) => c.id)));
+  }, [detectedTies]);
 
   const [isTieAlertDismissed, setIsTieAlertDismissed] = useState(false);
   const prevDetectedTiesRef = useRef<TieInfo[]>([]);
@@ -435,15 +436,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const concludeTieBreakRound = React.useCallback(() => {
     if (!session.tieBreak?.active || session.status !== 'TIE_BREAK') return;
 
-    const tieVotesMap = new Map(session.tieBreak?.options?.map((t) => [t.id, Math.floor(t.votesCount || 0)]) || []);
-    // NÃO CONTA PARA O GERAL: votesCount permanece íntegro e inalterado!
-    // Registra os votos do desempate exclusivamente em tieBreakVotes para definir classificação
+    const tieOptions = session.tieBreak?.options || [];
+    const tieSorted = [...tieOptions].sort((a, b) => Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0));
+    const vacanciesInDispute = session.tieBreak?.vacancies || 1;
+
+    // Identifica os vencedores do desempate (top vagas em disputa que tiveram mais votos)
+    const winnerIds = new Set<string>();
+    if (tieSorted.length >= 2) {
+      for (let i = 0; i < vacanciesInDispute && i < tieSorted.length; i++) {
+        const candidate = tieSorted[i];
+        const nextCandidate = tieSorted[i + 1];
+        if (candidate && Math.floor(candidate.votesCount || 0) > Math.floor(nextCandidate?.votesCount || 0)) {
+          winnerIds.add(candidate.id);
+        } else if (candidate && Math.floor(candidate.votesCount || 0) > 0 && !nextCandidate) {
+          winnerIds.add(candidate.id);
+        }
+      }
+    }
+
+    // O nome vencedor do desempate recebe +1 voto e troca e sobe no ranking!
     const updatedOptions = (session.options || []).map((opt) => {
-      const tieVotes = tieVotesMap.get(opt.id);
-      if (tieVotes !== undefined) {
+      if (winnerIds.has(opt.id)) {
         return {
           ...opt,
-          tieBreakVotes: tieVotes,
+          votesCount: Math.floor(opt.votesCount || 0) + 1,
         };
       }
       return opt;
@@ -605,7 +621,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         options: tieOptions,
       },
     });
-    setIsTieBreakModalMinimized(false);
     setSelectedTieCandidateIds([]);
     showNotification('success', `Votação de desempate iniciada com ${tieOptions.length} candidatos! Aguardando votos...`);
   };
@@ -2277,200 +2292,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   return (
     <div className="w-full flex-1 flex flex-col px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100 min-h-0">
-      {/* MODAL DE VOTAÇÃO DE DESEMPATE EM TEMPO REAL (CAI AO CLICAR PARA VOTAR E RECOLHE AO TERMINAR) */}
-      <AnimatePresence>
-        {session.status === 'TIE_BREAK' && session.tieBreak?.active && (
-          isTieBreakModalMinimized ? (
-            /* Pill minimizada flutuante */
-            <motion.div
-              key="tie-break-minimized-pill"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: 20 }}
-              onClick={() => setIsTieBreakModalMinimized(false)}
-              className="fixed bottom-4 right-4 z-[9990] bg-[#07132a] border-2 border-amber-400 text-white px-4 py-2.5 rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.4)] cursor-pointer flex items-center gap-2.5 hover:scale-105 transition active:scale-95 select-none"
-            >
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
-              <div className="text-left">
-                <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider block">
-                  Desempate em Votação (Clique para Abrir)
-                </span>
-                <span className="text-xs font-semibold text-white">
-                  {session.tieBreak?.title} • {session.tieBreakVotersCount || 0} votaram
-                </span>
-              </div>
-            </motion.div>
-          ) : (
-            /* Modal completo que cai ao iniciar a votação de desempate */
-            <motion.div
-              key="tie-break-live-modal"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              className="fixed inset-0 z-[9990] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: -25 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.92, y: -20 }}
-                transition={{ type: 'spring', stiffness: 340, damping: 26 }}
-                className="relative w-full max-w-2xl bg-gradient-to-b from-[#0a1628] via-[#07132a] to-[#040a17] border-2 border-amber-400/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_50px_rgba(245,158,11,0.3),0_25px_60px_rgba(0,0,0,0.95)] text-white overflow-hidden flex flex-col max-h-[90vh]"
-              >
-                {/* Brilho decorativo superior âmbar */}
-                <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-80 h-28 bg-amber-500/20 blur-3xl pointer-events-none" />
-
-                {/* Linha de borda superior reluzente */}
-                <div
-                  className="absolute top-0 left-0 right-0 h-[2.5px] pointer-events-none"
-                  style={{
-                    background: 'linear-gradient(90deg, transparent 0%, #fbbf24 30%, #f59e0b 70%, transparent 100%)',
-                  }}
-                />
-
-                {/* CABEÇALHO DO MODAL */}
-                <div className="pb-3 border-b border-white/10 flex items-start justify-between gap-3 shrink-0">
-                  <div className="space-y-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 font-bold text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 shadow-sm animate-pulse">
-                        <span className="w-2 h-2 rounded-full bg-amber-400" />
-                        Desempate em Votação
-                      </span>
-                      <span className="text-xs text-slate-400 font-mono">
-                        {session.title || 'Eleição'}
-                      </span>
-                    </div>
-                    <h2 className="text-base sm:text-xl font-black text-white uppercase tracking-wide truncate">
-                      {session.tieBreak?.title || 'Resolução de Empate'}
-                    </h2>
-                    <p className="text-xs text-amber-200/80">
-                      Esta votação é exclusiva para resolver o empate e não altera os votos gerais da eleição.
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    {/* Votantes Conectados / Participando */}
-                    <div className="text-right bg-white/[0.04] border border-white/10 rounded-xl px-3 py-1.5">
-                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Votantes</span>
-                      <div className="text-xs sm:text-sm font-mono font-black text-amber-300">
-                        {session.tieBreakVotersCount || 0}
-                        <span className="text-slate-500 font-normal">
-                          /
-                          {session.mainVotersCount && session.mainVotersCount > 0
-                            ? session.mainVotersCount
-                            : (session.totalVotersConnected || connectedVotersCount || 1)}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Botão Minimizar */}
-                    <button
-                      type="button"
-                      onClick={() => setIsTieBreakModalMinimized(true)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
-                      title="Minimizar janela para visualizar painel de fundo"
-                    >
-                      <Minimize2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-
-                {/* CORPO DO MODAL: CARDS DOS CANDIDATOS E PROGRESSÕES */}
-                <div className="py-4 space-y-3 overflow-y-auto flex-1 pr-1">
-                  {(() => {
-                    const tieOptions = session.tieBreak?.options || [];
-                    const totalTieVotes = tieOptions.reduce((acc, c) => acc + Math.floor(c.votesCount || 0), 0);
-                    const maxTieVotes = Math.max(...tieOptions.map((c) => Math.floor(c.votesCount || 0)), 1);
-
-                    return tieOptions.map((c, cIdx) => {
-                      const votes = Math.floor(c.votesCount || 0);
-                      const percent = totalTieVotes > 0 ? Math.round((votes / totalTieVotes) * 100) : 0;
-                      const barWidth = totalTieVotes > 0 ? (votes / maxTieVotes) * 100 : 0;
-                      const isLeading = votes > 0 && votes === maxTieVotes;
-
-                      return (
-                        <div
-                          key={c.id || cIdx}
-                          className={`p-3 rounded-xl border transition-all duration-300 relative overflow-hidden bg-[#0d1627] ${
-                            isLeading
-                              ? 'border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/40'
-                              : 'border-white/10 hover:border-white/20'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-3 mb-2">
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              {c.photoUrl ? (
-                                <img
-                                  src={c.photoUrl}
-                                  alt={c.name}
-                                  className="w-8 h-8 rounded-lg object-cover border border-white/20 shrink-0"
-                                />
-                              ) : (
-                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0">
-                                  {c.name.slice(0, 2).toUpperCase()}
-                                </div>
-                              )}
-                              <div className="min-w-0">
-                                <span className="font-bold text-xs sm:text-sm text-white uppercase truncate block">
-                                  {c.name}
-                                </span>
-                                {c.subtitle && (
-                                  <span className="text-[10.5px] text-slate-400 truncate block">
-                                    {c.subtitle}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Votos do Desempate e % */}
-                            <div className="text-right shrink-0">
-                              <span className="font-mono text-base sm:text-lg font-black text-amber-300">
-                                {votes} {votes === 1 ? 'voto' : 'votos'}
-                              </span>
-                              <span className="text-xs font-mono font-bold text-orange-400 ml-1.5">
-                                ({percent}%)
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Barra de Progresso do Desempate */}
-                          <div className="w-full h-3.5 bg-black/50 rounded-full border border-white/10 overflow-hidden relative shadow-inner">
-                            <motion.div
-                              initial={false}
-                              animate={{ width: `${barWidth}%` }}
-                              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-                              className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 shadow-[0_0_10px_rgba(251,191,36,0.6)]"
-                            />
-                          </div>
-                        </div>
-                      );
-                    });
-                  })()}
-                </div>
-
-                {/* RODAPÉ DO MODAL */}
-                <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3 shrink-0">
-                  <div className="flex items-center gap-2 text-xs text-slate-400">
-                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                    <span>Aguardando conclusão de todos os votantes...</span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={concludeTieBreakRound}
-                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs uppercase tracking-wider transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.4)] flex items-center gap-1.5"
-                    title="Encerrar desempate agora com os votos recebidos"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Concluir Desempate</span>
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )
-        )}
-      </AnimatePresence>
-
       {/* MODAL BONITO DE CONFIRMAÇÃO (SUBSTITUI O CONFIRM NATIVO DO NAVEGADOR) */}
       <AnimatePresence>
         {confirmModal && (
@@ -4347,8 +4168,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
                       const isFirstAfterTitulares = vacancies > 0 && idx === vacancies;
+                      const isTiedCandidate = tiedCandidateIdsSet.has(candidate.id);
 
-                      const activeColor = isTitular
+                      const activeColor = isTiedCandidate
+                        ? '#f43f5e'
+                        : isTitular
                         ? winnerColor
                         : isSuplente1
                         ? suplenteColor
@@ -4375,7 +4199,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               layout: { type: 'spring', stiffness: 240, damping: 28 },
                             }}
                             style={{
-                              borderColor: isTitular
+                              borderColor: isTiedCandidate
+                                ? 'rgba(244, 63, 94, 0.65)'
+                                : isTitular
                                 ? hexToRgba(winnerColor, 0.55)
                                 : isSuplente1
                                 ? hexToRgba(suplenteColor, 0.5)
@@ -4383,7 +4209,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 ? hexToRgba(suplente2Color, 0.45)
                                 : 'rgba(255, 255, 255, 0.16)',
                             }}
-                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] border ${
+                            className={`relative overflow-hidden p-1.5 sm:p-2 ${
+                              isTiedCandidate
+                                ? 'bg-[#180d14] shadow-[0_0_15px_rgba(244,63,94,0.22)] ring-1 ring-rose-500/30'
+                                : 'bg-[#0b0d13]'
+                            } border ${
                               isFirstAfterTitulares ? 'border-t-transparent' : ''
                             } transition-colors duration-200 flex items-center justify-between gap-1.5 shadow-sm ${
                               idx === 0
@@ -4426,7 +4256,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
                             {/* Cargo */}
                             <div className="w-[72px] shrink-0 flex items-center">
-                              {isTitular ? (
+                              {isTiedCandidate ? (
+                                <span
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase border border-rose-500/60 bg-rose-500/20 text-rose-300 inline-flex items-center gap-1 shadow-xs animate-pulse"
+                                  title="Empatado na linha de corte"
+                                >
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                                  Empate
+                                </span>
+                              ) : isTitular ? (
                                 <span
                                   style={{
                                     backgroundColor: hexToRgba(winnerColor, 0.2),
@@ -4770,9 +4608,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     <span>Bloqueado • Resolva {activeTiesToRender[0]?.label ? getTieCategoryStyles(activeTiesToRender[0].type, activeTiesToRender[0].label).title : 'Titular'}</span>
                                   </div>
                                 ) : isThisTieVotingNow ? (
-                                  <div className="shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
+                                  <div className="shrink-0 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
                                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
-                                    <span>EM VOTAÇÃO ({session.tieBreakVotersCount || 0})</span>
+                                    <span>EM VOTAÇÃO ({session.tieBreakVotersCount || 0}/{session.mainVotersCount && session.mainVotersCount > 0 ? session.mainVotersCount : (session.totalVotersConnected || connectedVotersCount || 1)})</span>
                                   </div>
                                 ) : (
                                   <button
@@ -4798,76 +4636,143 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 )}
                               </div>
 
-                              {/* Cards dos Candidatos Empatados: Altura aumentada em 15% (py-2.5, min-h-[42px]) */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                {tie.tiedCandidates.map((c) => {
-                                  const isSelected = selectedTieCandidateIds.includes(c.id);
-                                  const isTieGlowing = Boolean(tieGlowingIds[c.id]);
+                              {/* Cards dos Candidatos Empatados: se estiver em votação ativa, exibe os cards com as devidas progressões em tempo real */}
+                              {isThisTieVotingNow ? (
+                                <div className="grid grid-cols-1 gap-2.5">
+                                  {(() => {
+                                    const liveTieOptions = session.tieBreak?.options || [];
+                                    const totalTieVotes = liveTieOptions.reduce((acc, opt) => acc + Math.floor(opt.votesCount || 0), 0);
+                                    const maxTieVotes = Math.max(...liveTieOptions.map((opt) => Math.floor(opt.votesCount || 0)), 1);
 
-                                  return (
-                                    <div
-                                      key={c.id}
-                                      onClick={() => !isLockedByPriorTie && !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
-                                      className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-300 select-none flex items-center justify-between gap-2 shadow-sm ${
-                                        isLockedByPriorTie
-                                          ? 'opacity-60 cursor-not-allowed bg-[#0b0e14] border-white/5 pointer-events-none'
-                                          : isTieGlowing
-                                          ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20 cursor-pointer active:scale-95'
-                                          : isSelected
-                                          ? `${styles.cardSelected} cursor-pointer active:scale-95`
-                                          : `${styles.cardBase} cursor-pointer active:scale-95`
-                                      } ${isThisTieVotingNow && !isTieGlowing ? 'opacity-85 pointer-events-none' : ''}`}
-                                    >
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        {c.photoUrl && (
-                                          <img
-                                            src={c.photoUrl}
-                                            alt={c.name}
-                                            className={`w-7 h-7 rounded-md object-cover border shrink-0 transition-all ${
-                                              isTieGlowing
-                                                ? 'border-amber-300 shadow-[0_0_10px_rgba(250,204,21,0.7)]'
-                                                : 'border-white/20'
-                                            }`}
-                                          />
-                                        )}
-                                        <div className="min-w-0">
-                                          <h5
-                                            className={`font-black text-xs sm:text-[13px] uppercase truncate leading-tight transition-colors ${
-                                              isTieGlowing
-                                                ? 'text-yellow-100 drop-shadow-[0_0_8px_rgba(250,204,21,0.9)]'
-                                                : 'text-white'
-                                            }`}
-                                          >
-                                            {c.name}
-                                          </h5>
+                                    return liveTieOptions.map((c, cIdx) => {
+                                      const votes = Math.floor(c.votesCount || 0);
+                                      const percent = totalTieVotes > 0 ? Math.round((votes / totalTieVotes) * 100) : 0;
+                                      const barWidth = totalTieVotes > 0 ? (votes / maxTieVotes) * 100 : 0;
+                                      const isLeading = votes > 0 && votes === maxTieVotes;
+
+                                      return (
+                                        <div
+                                          key={c.id || cIdx}
+                                          className={`p-2.5 sm:p-3 rounded-xl border transition-all duration-300 relative overflow-hidden bg-[#0d1627] ${
+                                            isLeading
+                                              ? 'border-amber-400/80 shadow-[0_0_15px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/40'
+                                              : 'border-white/10'
+                                          }`}
+                                        >
+                                          <div className="flex items-center justify-between gap-2.5 mb-1.5">
+                                            <div className="flex items-center gap-2 min-w-0">
+                                              {c.photoUrl ? (
+                                                <img
+                                                  src={c.photoUrl}
+                                                  alt={c.name}
+                                                  className="w-7 h-7 rounded-md object-cover border border-white/20 shrink-0"
+                                                />
+                                              ) : (
+                                                <div className="w-7 h-7 rounded-md bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0">
+                                                  {c.name.slice(0, 2).toUpperCase()}
+                                                </div>
+                                              )}
+                                              <span className="font-bold text-xs sm:text-sm text-white uppercase truncate">
+                                                {c.name}
+                                              </span>
+                                            </div>
+
+                                            {/* Votos do Desempate e % */}
+                                            <div className="text-right shrink-0">
+                                              <span className="font-mono text-sm sm:text-base font-black text-amber-300">
+                                                {votes} {votes === 1 ? 'voto' : 'votos'}
+                                              </span>
+                                              <span className="text-xs font-mono font-bold text-orange-400 ml-1.5">
+                                                ({percent}%)
+                                              </span>
+                                            </div>
+                                          </div>
+
+                                          {/* Barra de Progresso do Desempate */}
+                                          <div className="w-full h-3 bg-black/50 rounded-full border border-white/10 overflow-hidden relative shadow-inner">
+                                            <motion.div
+                                              initial={false}
+                                              animate={{ width: `${barWidth}%` }}
+                                              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                                              className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
+                                            />
+                                          </div>
+                                        </div>
+                                      );
+                                    });
+                                  })()}
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                  {tie.tiedCandidates.map((c) => {
+                                    const isSelected = selectedTieCandidateIds.includes(c.id);
+                                    const isTieGlowing = Boolean(tieGlowingIds[c.id]);
+
+                                    return (
+                                      <div
+                                        key={c.id}
+                                        onClick={() => !isLockedByPriorTie && !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
+                                        className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-300 select-none flex items-center justify-between gap-2 shadow-sm ${
+                                          isLockedByPriorTie
+                                            ? 'opacity-60 cursor-not-allowed bg-[#0b0e14] border-white/5 pointer-events-none'
+                                            : isTieGlowing
+                                            ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20 cursor-pointer active:scale-95'
+                                            : isSelected
+                                            ? `${styles.cardSelected} cursor-pointer active:scale-95`
+                                            : `${styles.cardBase} cursor-pointer active:scale-95`
+                                        } ${isThisTieVotingNow && !isTieGlowing ? 'opacity-85 pointer-events-none' : ''}`}
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          {c.photoUrl && (
+                                            <img
+                                              src={c.photoUrl}
+                                              alt={c.name}
+                                              className={`w-7 h-7 rounded-md object-cover border shrink-0 transition-all ${
+                                                isTieGlowing
+                                                  ? 'border-amber-300 shadow-[0_0_10px_rgba(250,204,21,0.7)]'
+                                                  : 'border-white/20'
+                                              }`}
+                                            />
+                                          )}
+                                          <div className="min-w-0">
+                                            <h5
+                                              className={`font-black text-xs sm:text-[13px] uppercase truncate leading-tight transition-colors ${
+                                                isTieGlowing
+                                                  ? 'text-yellow-100 drop-shadow-[0_0_8px_rgba(250,204,21,0.9)]'
+                                                  : 'text-white'
+                                              }`}
+                                            >
+                                              {c.name}
+                                            </h5>
+                                          </div>
+                                        </div>
+
+                                        {/* Indicador de Seleção Circular Compacto */}
+                                        <div
+                                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                            isLockedByPriorTie
+                                              ? 'border-slate-700 bg-slate-900/40 text-slate-600'
+                                              : isTieGlowing
+                                              ? 'border-amber-400 bg-amber-400/40 shadow-[0_0_12px_rgba(250,204,21,0.85)]'
+                                              : isSelected
+                                              ? styles.circleSelected
+                                              : 'border-slate-600 bg-slate-900/60'
+                                          }`}
+                                        >
+                                          {isLockedByPriorTie ? (
+                                            <Lock className="w-2 h-2 text-slate-500 stroke-[2]" />
+                                          ) : (
+                                            isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />
+                                          )}
+                                          {isTieGlowing && !isSelected && !isLockedByPriorTie && (
+                                            <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-ping" />
+                                          )}
                                         </div>
                                       </div>
-
-                                      {/* Indicador de Seleção Circular Compacto */}
-                                      <div
-                                        className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                          isLockedByPriorTie
-                                            ? 'border-slate-700 bg-slate-900/40 text-slate-600'
-                                            : isTieGlowing
-                                            ? 'border-amber-400 bg-amber-400/40 shadow-[0_0_12px_rgba(250,204,21,0.85)]'
-                                            : isSelected
-                                            ? styles.circleSelected
-                                            : 'border-slate-600 bg-slate-900/60'
-                                        }`}
-                                      >
-                                        {isLockedByPriorTie ? (
-                                          <Lock className="w-2 h-2 text-slate-500 stroke-[2]" />
-                                        ) : (
-                                          isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />
-                                        )}
-                                        {isTieGlowing && !isSelected && !isLockedByPriorTie && (
-                                          <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-ping" />
-                                        )}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
                             </motion.div>
                           );
                         })}
