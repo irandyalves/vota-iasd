@@ -250,13 +250,22 @@ export function generateAtaPdf(record: VotingHistoryRecord): void {
     doc.text(`3. DEMAIS CANDIDATOS VOTADOS (${record.naoClassificados.length})`, marginLeft, currentY);
     currentY += 2;
 
-    const naoClassificadosRows = record.naoClassificados.map((c, i) => [
-      String(i + 1),
-      c.name,
-      String(c.votesCount),
-      `${c.percentage}%`,
-      'NÃO CLASSIFICADO',
-    ]);
+    const naoClassificadosRows = record.naoClassificados.map((c, i) => {
+      const isDeclined = c.acceptStatus === 'Declinou';
+      const nameText = isDeclined
+        ? `${c.name} (DECLINOU DO CONVITE${c.declinedOriginalRank ? ` - ${c.declinedOriginalRank}º lugar original` : ''})`
+        : c.tieBreakDisputeWith
+        ? `${c.name} (em desempate com ${c.tieBreakDisputeWith})`
+        : c.name;
+      const classifText = isDeclined ? 'DECLINOU CONVITE' : 'NÃO CLASSIFICADO';
+      return [
+        String(i + 1),
+        nameText,
+        String(c.votesCount),
+        `${c.percentage}%`,
+        classifText,
+      ];
+    });
 
     autoTable(doc, {
       startY: currentY,

@@ -7,6 +7,8 @@ export interface VotingOption {
   createdAt?: number;
   tieBreakVotes?: number;
   tieBreakDisputeWith?: string;
+  acceptStatus?: 'Aceito' | 'Pensará' | 'Declinou';
+  declinedOriginalRank?: number;
 }
 
 export type SessionStatus = 'WAITING' | 'VOTING' | 'CLOSED' | 'TIE_BREAK';
@@ -150,6 +152,8 @@ export interface HistoryCandidateResult {
   percentage: number;
   photoUrl?: string;
   tieBreakDisputeWith?: string;
+  acceptStatus?: 'Aceito' | 'Pensará' | 'Declinou';
+  declinedOriginalRank?: number;
 }
 
 export interface VotingHistoryRecord {

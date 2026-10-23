@@ -6,6 +6,9 @@ export interface TieInfo {
   votesCount: number;
   tiedCandidates: VotingOption[];
   vacanciesInDispute: number;
+  priority: number; // Menor número = resolve primeiro
+  startRank?: number;
+  endRank?: number;
 }
 
 export function getEffectiveSuplentes(session: VotingSession) {
@@ -17,123 +20,127 @@ export function getEffectiveSuplentes(session: VotingSession) {
 }
 
 /**
- * Detecta empates que impedem a definição clara de Titulares, 1º Suplentes ou 2º Suplentes.
- * Um empate só é relevante quando ocorre no limiar (fronteira) entre eleito e não-eleito.
+ * Detecta todos os empates da eleição com rankeamento completo e priorização:
+ * 1. Empate no corte entre Titulares e Suplentes (resolve PRIMEIRO quem entra como titular)
+ * 2. Empate no corte de Suplentes e Demais
+ * 3. Empates internos dentro dos Titulares (ex: 4º vs 5º lugar, 7º vs 8º lugar)
+ * 4. Empates internos dentro dos Suplentes (ex: 1º vs 2º suplente)
  */
 export function detectVotingTies(session: VotingSession): TieInfo[] {
   if (session.resolverEmpates === false) {
     return [];
   }
-  const ties: TieInfo[] = [];
-  const options = [...session.options].sort((a, b) => {
-    const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
-    if (diff !== 0) return diff;
-    const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
-    if (tieDiff !== 0) return tieDiff;
-    return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
-  });
+
+  // Candidatos que recusaram/declinaram vão para o fim da lista e não disputam desempates
+  const activeOptions = [...session.options]
+    .filter((o) => o.acceptStatus !== 'Declinou')
+    .sort((a, b) => {
+      const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
+      if (diff !== 0) return diff;
+      const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
+      if (tieDiff !== 0) return tieDiff;
+      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+    });
 
   const V = session.vacancies || 1;
   const { s1Count, s2Count } = getEffectiveSuplentes(session);
+  const totalSuplentes = s1Count + s2Count;
+  const cutoffTitularIndex = V - 1; // Último titular
+  const cutoffSuplenteIndex = V + totalSuplentes - 1; // Último suplente
 
-  // 1. Empate na fronteira de Titulares
-  if (options.length > V && V > 0) {
-    const lastTitular = options[V - 1];
-    const firstNonTitular = options[V];
-    const cutoffVotes = Math.floor(lastTitular?.votesCount || 0);
-    const firstNonTitularVotes = Math.floor(firstNonTitular?.votesCount || 0);
+  const ties: TieInfo[] = [];
 
-    const isTieResolvedByTieBreak =
-      (lastTitular?.tieBreakVotes !== undefined || firstNonTitular?.tieBreakVotes !== undefined) &&
-      Math.floor(lastTitular?.tieBreakVotes || 0) !== Math.floor(firstNonTitular?.tieBreakVotes || 0);
+  // Agrupa blocos contíguos de candidatos com mesmo número de votos e mesmos tieBreakVotes
+  let i = 0;
+  while (i < activeOptions.length) {
+    const startIdx = i;
+    const currentOpt = activeOptions[startIdx];
+    const votes = Math.floor(currentOpt.votesCount || 0);
+    const tieVotes = Math.floor(currentOpt.tieBreakVotes || 0);
 
-    if (cutoffVotes > 0 && cutoffVotes === firstNonTitularVotes && !isTieResolvedByTieBreak) {
-      const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter(
-        (o) =>
-          Math.floor(o.votesCount || 0) === cutoffVotes &&
-          (o.tieBreakVotes === undefined || o.tieBreakVotes === lastTitular.tieBreakVotes)
-      );
-      const vacanciesInDispute = Math.max(1, V - candidatesWithHigherVotes.length);
-
-      ties.push({
-        type: 'TITULAR',
-        label: 'Empate para Vaga de Titular',
-        votesCount: cutoffVotes,
-        tiedCandidates,
-        vacanciesInDispute,
-      });
-    }
-  }
-
-  // 2. Empate na fronteira de 1º Suplente
-  const boundaryS1 = V + s1Count;
-  if (s1Count > 0 && options.length > boundaryS1) {
-    const lastS1 = options[boundaryS1 - 1];
-    const firstNonS1 = options[boundaryS1];
-    const cutoffVotes = Math.floor(lastS1?.votesCount || 0);
-    const firstNonS1Votes = Math.floor(firstNonS1?.votesCount || 0);
-
-    const isTieResolvedByTieBreak =
-      (lastS1?.tieBreakVotes !== undefined || firstNonS1?.tieBreakVotes !== undefined) &&
-      Math.floor(lastS1?.tieBreakVotes || 0) !== Math.floor(firstNonS1?.tieBreakVotes || 0);
-
-    const titularTie = ties.find((t) => t.type === 'TITULAR');
-    if (
-      cutoffVotes > 0 &&
-      cutoffVotes === firstNonS1Votes &&
-      !isTieResolvedByTieBreak &&
-      (!titularTie || titularTie.votesCount !== cutoffVotes)
+    // Encontra todos os empatados consecutivos com a mesma pontuação
+    while (
+      i + 1 < activeOptions.length &&
+      Math.floor(activeOptions[i + 1].votesCount || 0) === votes &&
+      Math.floor(activeOptions[i + 1].tieBreakVotes || 0) === tieVotes
     ) {
-      const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter(
-        (o) =>
-          Math.floor(o.votesCount || 0) === cutoffVotes &&
-          (o.tieBreakVotes === undefined || o.tieBreakVotes === lastS1.tieBreakVotes)
-      );
-      const vacanciesInDispute = Math.max(1, boundaryS1 - candidatesWithHigherVotes.length);
-
-      ties.push({
-        type: 'SUPLENTE_1',
-        label: 'Empate para 1º Suplente',
-        votesCount: cutoffVotes,
-        tiedCandidates,
-        vacanciesInDispute,
-      });
+      i++;
     }
+    const endIdx = i;
+    const groupCount = endIdx - startIdx + 1;
+
+    // Se há 2 ou mais empatados com votos computados (> 0)
+    if (groupCount > 1 && votes > 0) {
+      const tiedCandidates = activeOptions.slice(startIdx, endIdx + 1);
+      const startRank = startIdx + 1;
+      const endRank = endIdx + 1;
+
+      // 1. O bloco cruza a fronteira do corte de Titulares (ex: 8º e 9º/1º suplente)?
+      // Esse empate tem PRIORIDADE MÁXIMA (resolve primeiro quem é titular!)
+      const crossesTitularCutoff = startIdx <= cutoffTitularIndex && endIdx > cutoffTitularIndex;
+
+      // 2. O bloco cruza a fronteira do corte de Suplentes?
+      const crossesSuplenteCutoff =
+        totalSuplentes > 0 &&
+        startIdx <= cutoffSuplenteIndex &&
+        endIdx > cutoffSuplenteIndex &&
+        !crossesTitularCutoff;
+
+      if (crossesTitularCutoff) {
+        const vacanciesInDispute = Math.max(1, cutoffTitularIndex - startIdx + 1);
+        ties.push({
+          type: 'TITULAR',
+          label: `Empate no Corte: Vaga de Titular (${startRank}º ao ${endRank}º)`,
+          votesCount: votes,
+          tiedCandidates,
+          vacanciesInDispute,
+          priority: 1, // Prioridade máxima
+          startRank,
+          endRank,
+        });
+      } else if (crossesSuplenteCutoff) {
+        const vacanciesInDispute = Math.max(1, cutoffSuplenteIndex - startIdx + 1);
+        ties.push({
+          type: 'SUPLENTE_1',
+          label: `Empate no Corte: Vaga de Suplente (${startRank}º ao ${endRank}º)`,
+          votesCount: votes,
+          tiedCandidates,
+          vacanciesInDispute,
+          priority: 2, // Segunda maior prioridade
+          startRank,
+          endRank,
+        });
+      } else if (endIdx < V) {
+        // Empate INTERNO entre Titulares (ex: 4º e 5º lugar, ou 7º e 8º lugar)
+        ties.push({
+          type: 'TITULAR',
+          label: `Desempate para ${startRank}º e ${endRank}º Lugar`,
+          votesCount: votes,
+          tiedCandidates,
+          vacanciesInDispute: 1,
+          priority: 10 + startRank, // Ranks menores (mais acima) vêm primeiro: 4º/5º antes de 7º/8º
+          startRank,
+          endRank,
+        });
+      } else if (startIdx >= V && endIdx < V + totalSuplentes) {
+        // Empate INTERNO entre Suplentes (ex: ordem dos suplentes)
+        ties.push({
+          type: 'SUPLENTE_1',
+          label: `Desempate para Posição de Suplente (${startRank}º e ${endRank}º)`,
+          votesCount: votes,
+          tiedCandidates,
+          vacanciesInDispute: 1,
+          priority: 50 + startRank,
+          startRank,
+          endRank,
+        });
+      }
+    }
+
+    i++;
   }
 
-  // 3. Empate na fronteira de 2º Suplente
-  const boundaryS2 = V + s1Count + s2Count;
-  if (s2Count > 0 && options.length > boundaryS2) {
-    const lastS2 = options[boundaryS2 - 1];
-    const firstNonS2 = options[boundaryS2];
-    const cutoffVotes = Math.floor(lastS2?.votesCount || 0);
-    const firstNonS2Votes = Math.floor(firstNonS2?.votesCount || 0);
-
-    const isTieResolvedByTieBreak =
-      (lastS2?.tieBreakVotes !== undefined || firstNonS2?.tieBreakVotes !== undefined) &&
-      Math.floor(lastS2?.tieBreakVotes || 0) !== Math.floor(firstNonS2?.tieBreakVotes || 0);
-
-    const priorTie = ties.find((t) => t.votesCount === cutoffVotes);
-    if (cutoffVotes > 0 && cutoffVotes === firstNonS2Votes && !isTieResolvedByTieBreak && !priorTie) {
-      const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter(
-        (o) =>
-          Math.floor(o.votesCount || 0) === cutoffVotes &&
-          (o.tieBreakVotes === undefined || o.tieBreakVotes === lastS2.tieBreakVotes)
-      );
-      const vacanciesInDispute = Math.max(1, boundaryS2 - candidatesWithHigherVotes.length);
-
-      ties.push({
-        type: 'SUPLENTE_2',
-        label: 'Empate para 2º Suplente',
-        votesCount: cutoffVotes,
-        tiedCandidates,
-        vacanciesInDispute,
-      });
-    }
-  }
-
-  return ties;
+  // Ordena os empates estritamente por prioridade:
+  // Corte de Titular (1) -> Corte de Suplente (2) -> Ranks de Titulares (14, 17...) -> Suplentes (59...)
+  return ties.sort((a, b) => a.priority - b.priority);
 }

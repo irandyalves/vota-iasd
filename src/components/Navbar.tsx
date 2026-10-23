@@ -298,10 +298,18 @@ export const Navbar: React.FC<NavbarProps> = ({
       });
     }
 
-    // 1. Calcular apuração final: Eleitos, Suplentes, Não Classificados
-    const sortedOptions = [...optionsToClassify].sort(
-      (a, b) => (b.votesCount || 0) - (a.votesCount || 0)
-    );
+    // 1. Calcular apuração final: Eleitos, Suplentes, Não Classificados (Candidatos que declinaram vão pro final)
+    const sortedOptions = [...optionsToClassify].sort((a, b) => {
+      const aDeclined = a.acceptStatus === 'Declinou';
+      const bDeclined = b.acceptStatus === 'Declinou';
+      if (aDeclined && !bDeclined) return 1;
+      if (!aDeclined && bDeclined) return -1;
+      const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
+      if (diff !== 0) return diff;
+      const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
+      if (tieDiff !== 0) return tieDiff;
+      return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+    });
 
     const totalVotes = optionsToClassify.reduce(
       (sum, o) => sum + Math.floor(o.votesCount || 0),
@@ -325,6 +333,8 @@ export const Navbar: React.FC<NavbarProps> = ({
         percentage: totalVotes > 0 ? Number(((realVotes / totalVotes) * 100).toFixed(1)) : 0,
         photoUrl: opt.photoUrl,
         tieBreakDisputeWith: opt.tieBreakDisputeWith,
+        acceptStatus: opt.acceptStatus,
+        declinedOriginalRank: opt.declinedOriginalRank,
       };
     };
 

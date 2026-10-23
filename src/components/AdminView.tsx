@@ -39,7 +39,7 @@ import {
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
 import { generateAtaPdf } from '../utils/ataPdfGenerator';
-import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord, GeneralEventRecord } from '../types';
+import type { VotingSession, VotingOption, VotingEventItem, VotingHistoryRecord, GeneralEventRecord, HistoryCandidateResult } from '../types';
 import { saveSession, subscribeToConnectedVoters, applyBallotToSession, getLocalSession, isFirestoreQuotaExceeded, getLocalTelaoLayout } from '../services/votingService';
 import { startAdminPeerHost } from '../services/peerSyncService';
 import { parseImportFile } from '../utils/fileImporter';
@@ -244,6 +244,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       setSelectedTieCandidateIds((prev) => [...prev, id]);
     }
   };
+  void handleToggleTieCandidate;
   const detectedTies = session.resolverEmpates !== false ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
   const tiedCandidateIdsSet = useMemo(() => {
@@ -359,12 +360,69 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   }, [session.options]);
 
   const rankedCandidates = [...activeOptions].sort((a, b) => {
+    // Candidatos que declinaram vão SEMPRE para o final da lista!
+    const aDeclined = a.acceptStatus === 'Declinou';
+    const bDeclined = b.acceptStatus === 'Declinou';
+    if (aDeclined && !bDeclined) return 1;
+    if (!aDeclined && bDeclined) return -1;
+
     const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
     if (diff !== 0) return diff;
     const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
     if (tieDiff !== 0) return tieDiff;
     return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
   });
+
+  // Modal para confirmação de recusa de convite (Declinou)
+  const [declineModal, setDeclineModal] = useState<{
+    candidateId: string;
+    candidateName: string;
+    originalRank: number;
+  } | null>(null);
+
+  const handleCandidateStatusChange = (
+    candidate: VotingOption,
+    newStatus: 'Aceito' | 'Pensará' | 'Declinou',
+    currentRank: number
+  ) => {
+    if (newStatus === 'Declinou') {
+      setDeclineModal({
+        candidateId: candidate.id,
+        candidateName: candidate.name,
+        originalRank: currentRank,
+      });
+      return;
+    }
+    const updatedOptions = (session.options || []).map((opt) => {
+      if (opt.id === candidate.id) {
+        return {
+          ...opt,
+          acceptStatus: newStatus,
+          declinedOriginalRank: undefined,
+        };
+      }
+      return opt;
+    });
+    saveSession({ ...session, options: updatedOptions });
+    showNotification('success', `${candidate.name} marcado como "${newStatus}".`);
+  };
+
+  const handleConfirmDecline = () => {
+    if (!declineModal) return;
+    const updatedOptions = (session.options || []).map((opt) => {
+      if (opt.id === declineModal.candidateId) {
+        return {
+          ...opt,
+          acceptStatus: 'Declinou' as const,
+          declinedOriginalRank: declineModal.originalRank,
+        };
+      }
+      return opt;
+    });
+    saveSession({ ...session, options: updatedOptions });
+    showNotification('success', `${declineModal.candidateName} declinou do convite (estava em ${declineModal.originalRank}º lugar) e foi para o final da lista.`);
+    setDeclineModal(null);
+  };
 
   const totalVotesCast = activeOptions.reduce((acc: number, curr: VotingOption) => acc + Math.floor(curr.votesCount || 0), 0);
   const maxVotesRecorded = Math.max(...activeOptions.map((o: VotingOption) => Math.floor(o.votesCount || 0)), 1);
@@ -600,11 +658,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   }, [session, connectedVotersCount, concludeTieBreakRound]);
 
   const handleStartTieBreak = (tie: TieInfo) => {
-    // Critério próprio do admin: se clicou em candidatos (ex: CARLA e SIONEIDE), desempata entre eles
-    const candidates =
-      selectedTieCandidateIds.length >= 2
-        ? tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id))
-        : tie.tiedCandidates;
+    // Todos os candidatos empatados vão diretamente e automaticamente para o desempate
+    const candidates = tie.tiedCandidates;
 
     const tieOptions: VotingOption[] = candidates.map((c) => ({
       ...c,
@@ -629,7 +684,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       },
     });
     setSelectedTieCandidateIds([]);
-    showNotification('success', `Votação de desempate iniciada com ${tieOptions.length} candidatos! Aguardando votos...`);
+    showNotification('success', `Desempate enviado para os celulares: ${tie.label}`);
   };
 
   // Concluir votação: acionado pelo botão no topo (antes do histórico) ou pela detecção do último votante
@@ -1959,17 +2014,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   };
 
   const handleCopyHistoryAta = (record: VotingHistoryRecord) => {
+    const formatCandidate = (c: HistoryCandidateResult, i: number) => {
+      if (c.acceptStatus === 'Declinou') {
+        return `${i + 1}. ${c.name} (DECLINOU DO CONVITE - ${c.declinedOriginalRank || '?'}º lugar original) - ${c.votesCount} votos (${c.percentage}%)`;
+      }
+      const tieInfo = c.tieBreakDisputeWith ? ` (em desempate com ${c.tieBreakDisputeWith})` : '';
+      return `${i + 1}. ${c.name}${tieInfo} - ${c.votesCount} votos (${c.percentage}%)`;
+    };
+
     const eleitosText = record.eleitos && record.eleitos.length > 0
-      ? record.eleitos.map((c, i) => `${i + 1}. ${c.name}${c.tieBreakDisputeWith ? ` (em desempate com ${c.tieBreakDisputeWith})` : ''} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      ? record.eleitos.map((c, i) => formatCandidate(c, i)).join('\n')
       : 'Nenhum';
 
     const suplentesAll = [...(record.suplentes || []), ...(record.segundoSuplentes || [])];
     const suplentesText = suplentesAll.length > 0
-      ? suplentesAll.map((c, i) => `${i + 1}. ${c.name}${c.tieBreakDisputeWith ? ` (em desempate com ${c.tieBreakDisputeWith})` : ''} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      ? suplentesAll.map((c, i) => formatCandidate(c, i)).join('\n')
       : 'Nenhum';
 
     const naoClassificadosText = record.naoClassificados && record.naoClassificados.length > 0
-      ? record.naoClassificados.map((c, i) => `${i + 1}. ${c.name} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      ? record.naoClassificados.map((c, i) => formatCandidate(c, i)).join('\n')
       : 'Nenhum';
 
     const text = [
@@ -2371,6 +2434,80 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                     <span>{confirmModal.confirmLabel || 'Excluir'}</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL DE CONFIRMAÇÃO DE DECLÍNIO DE CONVITE */}
+      <AnimatePresence>
+        {declineModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            onClick={() => setDeclineModal(null)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setDeclineModal(null);
+            }}
+            tabIndex={-1}
+            className="fixed inset-0 z-[9999] bg-black/80 backdrop-blur-md flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 14 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 10 }}
+              transition={{ type: 'spring', stiffness: 360, damping: 26 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative w-full max-w-md bg-gradient-to-b from-[#1c1316] to-[#0c090c] border-2 border-rose-500/80 rounded-2xl p-6 shadow-[0_0_40px_rgba(244,63,94,0.35),0_20px_50px_rgba(0,0,0,0.85)] text-white overflow-hidden"
+            >
+              <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-56 h-28 bg-rose-500/20 blur-2xl pointer-events-none" />
+
+              <button
+                type="button"
+                onClick={() => setDeclineModal(null)}
+                className="absolute top-3.5 right-3.5 p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                title="Fechar"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="flex flex-col items-center text-center">
+                <div className="w-14 h-14 rounded-2xl bg-rose-500/20 border-2 border-rose-400/80 shadow-[0_0_20px_rgba(244,63,94,0.4)] flex items-center justify-center mb-3.5">
+                  <AlertCircle className="w-7 h-7 text-rose-400" />
+                </div>
+
+                <h3 className="text-base sm:text-lg font-black uppercase tracking-wider text-white mb-2">
+                  Confirmar Declínio
+                </h3>
+
+                <p className="text-sm sm:text-base text-slate-200 leading-relaxed mb-2">
+                  Tem certeza que <strong className="text-rose-300 uppercase underline decoration-rose-500">{declineModal.candidateName}</strong> DECLINOU?
+                </p>
+
+                <p className="text-xs text-slate-400 mb-6">
+                  O candidato estava em <strong>{declineModal.originalRank}º lugar</strong> e será movido para o final da lista, constando como recusa na ata oficial.
+                </p>
+
+                <div className="flex items-center justify-center gap-3 w-full">
+                  <button
+                    type="button"
+                    onClick={() => setDeclineModal(null)}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 hover:text-white font-black text-xs uppercase tracking-wider transition cursor-pointer active:scale-95"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={handleConfirmDecline}
+                    className="flex-1 py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 border border-rose-300 text-white font-black text-xs uppercase tracking-wider shadow-[0_0_18px_rgba(244,63,94,0.5)] hover:shadow-[0_0_25px_rgba(244,63,94,0.75)] transition cursor-pointer active:scale-95 flex items-center justify-center gap-1.5"
+                  >
+                    Sim, Declinou
                   </button>
                 </div>
               </div>
@@ -4064,8 +4201,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                 key={c.id || cIdx}
                                                 className="flex items-center justify-between gap-1.5 bg-[#0b0d13]/80 px-2 py-1 rounded text-xs"
                                               >
-                                                <span className="text-slate-400 font-medium truncate">
-                                                  {c.name}
+                                                <span className="text-slate-400 font-medium truncate flex items-center gap-1">
+                                                  <span className={c.acceptStatus === 'Declinou' ? 'line-through text-slate-500' : ''}>{c.name}</span>
+                                                  {c.acceptStatus === 'Declinou' && (
+                                                    <span className="text-rose-400 font-bold text-[9.5px] uppercase">
+                                                      (DECLINOU DO CONVITE - {c.declinedOriginalRank || '?'}º lugar original)
+                                                    </span>
+                                                  )}
                                                 </span>
                                                 <span className="text-slate-400 font-mono text-[10.5px] shrink-0">
                                                   {c.votesCount} {c.votesCount === 1 ? 'voto' : 'votos'} <span className="text-orange-400 font-bold">({c.percentage}%)</span>
@@ -4222,6 +4364,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <div className="min-w-[42px] text-center shrink-0">
                       <span>Votos</span>
                     </div>
+
+                    {/* 7. Convite (Aceito / Pensará / Declinou) */}
+                    <div className="w-[88px] text-center shrink-0">
+                      <span>Convite</span>
+                    </div>
                   </div>
 
                   <LayoutGroup id="admin-realtime-ranking">
@@ -4234,6 +4381,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
                       const isFirstAfterTitulares = vacancies > 0 && idx === vacancies;
                       const isTiedCandidate = tiedCandidateIdsSet.has(candidate.id);
+                      const isThinking = candidate.acceptStatus === 'Pensará';
+                      const isDeclined = candidate.acceptStatus === 'Declinou';
 
                       const activeColor = isTiedCandidate
                         ? '#f43f5e'
@@ -4275,7 +4424,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 : 'rgba(255, 255, 255, 0.16)',
                             }}
                             className={`relative overflow-hidden p-1.5 sm:p-2 ${
-                              isTiedCandidate
+                              isDeclined
+                                ? 'bg-[#150f14] border-rose-950/60 opacity-60'
+                                : isThinking
+                                ? 'bg-[#121622] border-slate-600/90 text-slate-300 shadow-[0_0_12px_rgba(100,116,139,0.3)]'
+                                : isTiedCandidate
                                 ? 'bg-[#180d14] shadow-[0_0_15px_rgba(244,63,94,0.22)] ring-1 ring-rose-500/30'
                                 : 'bg-[#0b0d13]'
                             } border ${
@@ -4317,11 +4470,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               className="w-[130px] sm:w-[170px] shrink-0 truncate"
                               title={candidate.tieBreakDisputeWith ? `${candidate.name} (em desempate com ${candidate.tieBreakDisputeWith})` : candidate.name}
                             >
-                              <span className="font-bold text-xs text-slate-100 uppercase truncate block">
+                              <span className={`font-bold text-xs uppercase truncate block ${
+                                isDeclined ? 'line-through text-slate-500' : isThinking ? 'text-slate-300' : 'text-slate-100'
+                              }`}>
                                 {candidate.name}
-                                {candidate.tieBreakDisputeWith && (
+                                {candidate.tieBreakDisputeWith && !isDeclined && (
                                   <span className="text-amber-300 font-normal text-[10px] lowercase ml-1">
                                     (em desempate com {candidate.tieBreakDisputeWith})
+                                  </span>
+                                )}
+                                {isDeclined && (
+                                  <span className="text-rose-400 font-bold text-[9px] uppercase ml-1">
+                                    (declinou - {candidate.declinedOriginalRank || '?'}º orig.)
+                                  </span>
+                                )}
+                                {isThinking && (
+                                  <span className="text-slate-400 font-normal text-[9px] italic ml-1">
+                                    (pensará...)
                                   </span>
                                 )}
                               </span>
@@ -4423,6 +4588,38 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               >
                                 {votes}
                               </span>
+                            </div>
+
+                            {/* 7. Convite (Aceito / Pensará / Declinou) */}
+                            <div className="w-[88px] shrink-0 flex items-center justify-center">
+                              <select
+                                value={candidate.acceptStatus || 'Aceito'}
+                                onChange={(e) =>
+                                  handleCandidateStatusChange(
+                                    candidate,
+                                    e.target.value as 'Aceito' | 'Pensará' | 'Declinou',
+                                    idx + 1
+                                  )
+                                }
+                                disabled={isVotingActive}
+                                className={`w-full text-[10.5px] font-bold py-1 px-1 rounded border transition-all cursor-pointer ${
+                                  candidate.acceptStatus === 'Declinou'
+                                    ? 'bg-rose-950/80 border-rose-500/60 text-rose-300'
+                                    : candidate.acceptStatus === 'Pensará'
+                                    ? 'bg-slate-800 border-slate-500 text-slate-200 shadow-[0_0_8px_rgba(148,163,184,0.3)]'
+                                    : 'bg-emerald-950/70 border-emerald-500/40 text-emerald-300'
+                                } disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-1 focus:ring-emerald-400`}
+                              >
+                                <option value="Aceito" className="bg-[#0f172a] text-emerald-300">
+                                  Aceito
+                                </option>
+                                <option value="Pensará" className="bg-[#0f172a] text-slate-300">
+                                  Pensará
+                                </option>
+                                <option value="Declinou" className="bg-[#0f172a] text-rose-300">
+                                  Declinou
+                                </option>
+                              </select>
                             </div>
                           </motion.div>
                         </React.Fragment>
@@ -4625,11 +4822,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       <AnimatePresence initial={false}>
                         {activeTiesToRender.map((tie, index) => {
                           const isLockedByPriorTie = index > 0;
-                          const maxAllowed = tie.vacanciesInDispute + 1;
                           const styles = getTieCategoryStyles(tie.type, tie.label);
-                          const selectedInThisTie = tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id)).length;
-                          const remainingToChoose = Math.max(0, maxAllowed - selectedInThisTie);
-                          const isReady = remainingToChoose === 0;
 
                           const isTieBreakActive = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
                           const activeTieCandidateIds = session.tieBreak?.options?.map((o) => o.id) || [];
@@ -4652,28 +4845,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   isLockedByPriorTie ? 'opacity-40 grayscale-[35%] select-none' : ''
                                 }`}
                               >
-                                {/* Header do Grupo: Escolha xx nomes xx vagas e BOTÃO ENVIAR à direita */}
+                                {/* Header do Grupo: Categoria, Nomes Empatados, Vagas e BOTÃO ENVIAR à direita */}
                                 <div className="flex items-center justify-between gap-3 pb-1">
                                   <div className="min-w-0 flex-1 flex items-center flex-wrap gap-2">
-                                    {/* Linha: Escolha xx nome(s) xx vaga(s) */}
-                                    <div className="flex items-center flex-wrap gap-1 text-white font-medium text-xs sm:text-sm select-none leading-tight">
-                                      <span>Escolha</span>
-                                      <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
-                                        {String(remainingToChoose).padStart(2, '0')}
+                                    <div className="flex items-center flex-wrap gap-1.5 text-white font-medium text-xs sm:text-sm select-none leading-tight">
+                                      <span className="font-bold text-amber-300">{styles.title || tie.label}</span>
+                                      <span className="text-slate-400">•</span>
+                                      <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-200 font-mono font-bold text-xs">
+                                        {tie.tiedCandidates.length} nomes empatados
                                       </span>
-                                      <span>{remainingToChoose === 1 ? 'nome' : 'nomes'}</span>
-                                      <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none ml-1.5">
-                                        {String(tie.vacanciesInDispute).padStart(2, '0')}
+                                      <span className="text-slate-400">•</span>
+                                      <span className="text-xs text-slate-300">
+                                        Disputa de <strong className="text-yellow-300 font-mono">{tie.vacanciesInDispute}</strong> {tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}
                                       </span>
-                                      <span>{tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}</span>
                                     </div>
-
-                                    {/* Se houver múltiplos grupos de empate, exibe também a categoria inline */}
-                                    {activeTiesToRender.length > 1 && (
-                                      <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
-                                        {styles.title}
-                                      </span>
-                                    )}
                                   </div>
 
                                   {/* Botão ENVIAR no lado direito: se estiver bloqueado aguardando o grupo acima, avisa */}
@@ -4686,26 +4871,24 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                       <span>BLOQUEADO</span>
                                     </div>
                                   ) : isThisTieVotingNow ? (
-                                    <div className="shrink-0 px-3 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
-                                      <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                                    <div className="shrink-0 px-3 py-1.5 rounded-lg font-bold text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 select-none shadow-[0_0_12px_rgba(16,185,129,0.3)] animate-pulse">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
                                       <span>VOTANDO ({session.tieBreakVotersCount || 0}/{session.mainVotersCount && session.mainVotersCount > 0 ? session.mainVotersCount : (session.totalVotersConnected || connectedVotersCount || 1)})</span>
                                     </div>
                                   ) : (
                                     <button
                                       type="button"
-                                      disabled={!isReady || isTieBreakActive}
-                                      onClick={() => isReady && !isTieBreakActive && handleStartTieBreak(tie)}
+                                      disabled={isTieBreakActive}
+                                      onClick={() => !isTieBreakActive && handleStartTieBreak(tie)}
                                       title={
                                         isTieBreakActive
                                           ? 'Aguarde a votação de desempate atual terminar'
-                                          : isReady
-                                          ? `Iniciar votação de desempate para ${styles.title}`
-                                          : `Selecione mais ${remainingToChoose} ${remainingToChoose === 1 ? 'nome' : 'nomes'} para enviar`
+                                          : `Enviar os ${tie.tiedCandidates.length} candidatos empatados para os celulares`
                                       }
-                                      className={`shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-200 select-none ${
-                                        isReady && !isTieBreakActive
-                                          ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_14px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95'
-                                          : 'bg-[#1c212e] border border-white/10 text-slate-400 cursor-not-allowed opacity-75'
+                                      className={`shrink-0 px-4 py-1.5 rounded-lg font-bold text-xs sm:text-sm tracking-wider uppercase flex items-center gap-1.5 transition-all duration-200 select-none ${
+                                        !isTieBreakActive
+                                          ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.5)] cursor-pointer active:scale-95'
+                                          : 'bg-emerald-950/60 border border-emerald-800/40 text-emerald-400/60 cursor-not-allowed opacity-75'
                                       }`}
                                     >
                                       <span>ENVIAR</span>
@@ -4777,76 +4960,49 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     })()}
                                   </div>
                                 ) : (
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                  {tie.tiedCandidates.map((c) => {
-                                    const isSelected = selectedTieCandidateIds.includes(c.id);
-                                    const isTieGlowing = Boolean(tieGlowingIds[c.id]);
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                    {tie.tiedCandidates.map((c) => {
+                                      const isTieGlowing = Boolean(tieGlowingIds[c.id]);
 
-                                    return (
-                                      <div
-                                        key={c.id}
-                                        onClick={() => !isLockedByPriorTie && !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
-                                        className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-300 select-none flex items-center justify-between gap-2 shadow-sm ${
-                                          isLockedByPriorTie
-                                            ? 'opacity-60 cursor-not-allowed bg-[#0b0e14] border-white/5 pointer-events-none'
-                                            : isTieGlowing
-                                            ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20 cursor-pointer active:scale-95'
-                                            : isSelected
-                                            ? `${styles.cardSelected} cursor-pointer active:scale-95`
-                                            : `${styles.cardBase} cursor-pointer active:scale-95`
-                                        } ${isThisTieVotingNow && !isTieGlowing ? 'opacity-85 pointer-events-none' : ''}`}
-                                      >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          {c.photoUrl && (
-                                            <img
-                                              src={c.photoUrl}
-                                              alt={c.name}
-                                              className={`w-7 h-7 rounded-md object-cover border shrink-0 transition-all ${
-                                                isTieGlowing
-                                                  ? 'border-amber-300 shadow-[0_0_10px_rgba(250,204,21,0.7)]'
-                                                  : 'border-white/20'
-                                              }`}
-                                            />
-                                          )}
-                                          <div className="min-w-0">
-                                            <h5
-                                              className={`font-black text-xs sm:text-[13px] uppercase truncate leading-tight transition-colors ${
-                                                isTieGlowing
-                                                  ? 'text-yellow-100 drop-shadow-[0_0_8px_rgba(250,204,21,0.9)]'
-                                                  : 'text-white'
-                                              }`}
-                                            >
-                                              {c.name}
-                                            </h5>
-                                          </div>
-                                        </div>
-
-                                        {/* Indicador de Seleção Circular Compacto */}
+                                      return (
                                         <div
-                                          className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
+                                          key={c.id}
+                                          className={`py-2 px-3 min-h-[40px] rounded-lg border transition-all duration-300 select-none flex items-center justify-between gap-2 shadow-sm ${
                                             isLockedByPriorTie
-                                              ? 'border-slate-700 bg-slate-900/40 text-slate-600'
+                                              ? "opacity-60 bg-[#0b0e14] border-white/5 pointer-events-none"
                                               : isTieGlowing
-                                              ? 'border-amber-400 bg-amber-400/40 shadow-[0_0_12px_rgba(250,204,21,0.85)]'
-                                              : isSelected
-                                              ? styles.circleSelected
-                                              : 'border-slate-600 bg-slate-900/60'
+                                              ? "bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.02] z-20"
+                                              : "bg-[#0b1322] border-emerald-500/30"
                                           }`}
                                         >
-                                          {isLockedByPriorTie ? (
-                                            <Lock className="w-2 h-2 text-slate-500 stroke-[2]" />
-                                          ) : (
-                                            isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />
-                                          )}
-                                          {isTieGlowing && !isSelected && !isLockedByPriorTie && (
-                                            <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-ping" />
-                                          )}
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            {c.photoUrl && (
+                                              <img
+                                                src={c.photoUrl}
+                                                alt={c.name}
+                                                className="w-7 h-7 rounded-md object-cover border border-white/20 shrink-0"
+                                              />
+                                            )}
+                                            <div className="min-w-0">
+                                              <h5 className="font-bold text-xs sm:text-[13px] uppercase truncate text-white leading-tight">
+                                                {c.name}
+                                              </h5>
+                                            </div>
+                                          </div>
+
+                                          <div className="flex items-center gap-2 shrink-0">
+                                            <span className="text-[11px] font-mono font-bold text-amber-300">
+                                              {c.votesCount || 0} {c.votesCount === 1 ? "voto" : "votos"}
+                                            </span>
+                                            <span className="px-1.5 py-0.5 rounded text-[9.5px] font-bold uppercase bg-emerald-500/20 border border-emerald-500/30 text-emerald-300">
+                                              Pronto
+                                            </span>
+                                          </div>
                                         </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
+                                      );
+                                    })}
+                                  </div>
+                                )}
                             </motion.div>
                           </React.Fragment>
                         );
