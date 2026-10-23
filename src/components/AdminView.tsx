@@ -2018,7 +2018,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       if (c.acceptStatus === 'Declinou') {
         return `${i + 1}. ${c.name} (DECLINOU DO CONVITE - ${c.declinedOriginalRank || '?'}º lugar original) - ${c.votesCount} votos (${c.percentage}%)`;
       }
-      const tieInfo = c.tieBreakDisputeWith ? ` (em desempate com ${c.tieBreakDisputeWith})` : '';
+      const tieInfo = c.tieBreakDisputeWith ? ` - desempate com ${c.tieBreakDisputeWith}` : '';
       return `${i + 1}. ${c.name}${tieInfo} - ${c.votesCount} votos (${c.percentage}%)`;
     };
 
@@ -4103,7 +4103,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                   {c.name}
                                                   {c.tieBreakDisputeWith && (
                                                     <span className="text-amber-300 font-normal text-[10.5px] ml-1">
-                                                      (em desempate com {c.tieBreakDisputeWith})
+                                                      desempate com {c.tieBreakDisputeWith}
                                                     </span>
                                                   )}
                                                 </span>
@@ -4147,7 +4147,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                       {c.name}
                                                       {c.tieBreakDisputeWith && (
                                                         <span className="text-amber-300 font-normal text-[10.5px] ml-1">
-                                                          (em desempate com {c.tieBreakDisputeWith})
+                                                          desempate com {c.tieBreakDisputeWith}
                                                         </span>
                                                       )}
                                                     </span>
@@ -4170,7 +4170,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                       {c.name}
                                                       {c.tieBreakDisputeWith && (
                                                         <span className="text-amber-300 font-normal text-[10.5px] ml-1">
-                                                          (em desempate com {c.tieBreakDisputeWith})
+                                                          desempate com {c.tieBreakDisputeWith}
                                                         </span>
                                                       )}
                                                     </span>
@@ -4348,7 +4348,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <div className="w-7 text-center shrink-0" />
 
                     {/* 2. Nome */}
-                    <div className="w-[130px] sm:w-[155px] shrink-0 text-left truncate">
+                    <div className="w-[185px] sm:w-[230px] shrink-0 text-left truncate">
                       Nome
                     </div>
 
@@ -4473,8 +4473,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
                             {/* Nome */}
                             <div
-                              className="w-[130px] sm:w-[170px] shrink-0 truncate"
-                              title={candidate.tieBreakDisputeWith ? `${candidate.name} (em desempate com ${candidate.tieBreakDisputeWith})` : candidate.name}
+                              className="w-[185px] sm:w-[230px] shrink-0 truncate"
+                              title={candidate.tieBreakDisputeWith ? `${candidate.name} desempate com ${candidate.tieBreakDisputeWith}` : candidate.name}
                             >
                               <span className={`font-bold text-xs uppercase truncate block ${
                                 isDeclined ? 'line-through text-slate-500' : isThinking ? 'text-slate-300' : 'text-slate-100'
@@ -4482,7 +4482,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 {candidate.name}
                                 {candidate.tieBreakDisputeWith && !isDeclined && (
                                   <span className="text-amber-300 font-normal text-[10px] lowercase ml-1">
-                                    (em desempate com {candidate.tieBreakDisputeWith})
+                                    desempate com {candidate.tieBreakDisputeWith}
                                   </span>
                                 )}
                                 {isDeclined && (
