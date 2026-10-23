@@ -232,6 +232,101 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const detectedTies = session.resolverEmpates !== false ? detectVotingTies(session) : [];
   const hasTies = detectedTies.length > 0;
 
+  const [isHoldingTieDisplay, setIsHoldingTieDisplay] = useState(false);
+  const prevDetectedTiesRef = useRef<TieInfo[]>([]);
+
+  useEffect(() => {
+    if (detectedTies.length > 0) {
+      prevDetectedTiesRef.current = detectedTies;
+    }
+  }, [detectedTies]);
+
+  const activeTiesToRender = detectedTies.length > 0 ? detectedTies : prevDetectedTiesRef.current;
+  const shouldRenderTieResolution = hasTies || isHoldingTieDisplay;
+
+  const [tieGlowingIds, setTieGlowingIds] = useState<Record<string, boolean>>({});
+  const prevTieBreakActiveRef = useRef<boolean>(Boolean(session.tieBreak?.active));
+  const prevTieStatusRef = useRef<string>(session.status);
+  const prevTieVotersCountRef = useRef<number>(session.tieBreakVotersCount || 0);
+  const lastTieOptionIdsRef = useRef<string[]>([]);
+
+  useEffect(() => {
+    if (session.tieBreak?.options && session.tieBreak.options.length > 0) {
+      lastTieOptionIdsRef.current = session.tieBreak.options.map((o) => o.id);
+    }
+  }, [session.tieBreak?.options]);
+
+  // Ativa o brilho amarelo de 1s nos cards de candidatos do desempate quando o mobile finaliza
+  const triggerTieGlow = (ids?: string[]) => {
+    const targetIds =
+      ids && ids.length > 0
+        ? ids
+        : lastTieOptionIdsRef.current.length > 0
+        ? lastTieOptionIdsRef.current
+        : (session.tieBreak?.options || []).map((o) => o.id);
+
+    if (targetIds.length === 0) return;
+
+    setTieGlowingIds((prev) => {
+      const next = { ...prev };
+      targetIds.forEach((id) => {
+        next[id] = true;
+      });
+      return next;
+    });
+
+    setTimeout(() => {
+      setTieGlowingIds((prev) => {
+        const next = { ...prev };
+        targetIds.forEach((id) => {
+          delete next[id];
+        });
+        return next;
+      });
+    }, 1000);
+  };
+
+  // Monitora o encerramento da votação de desempate vindo dos mobiles
+  useEffect(() => {
+    const wasTieBreakActive = prevTieBreakActiveRef.current;
+    const wasTieBreakStatus = prevTieStatusRef.current === 'TIE_BREAK';
+    const isNowClosed = session.status === 'CLOSED';
+    const isNowTieInactive = !session.tieBreak?.active;
+
+    // Detecta quando o desempate pelos mobiles acabou de finalizar (status mudou de TIE_BREAK para CLOSED ou active virou false)
+    const justFinishedTieBreak =
+      (wasTieBreakActive || wasTieBreakStatus) &&
+      (isNowClosed || isNowTieInactive) &&
+      session.status !== 'TIE_BREAK';
+
+    // Também detecta caso um voto do desempate chegue enquanto em TIE_BREAK
+    const prevTieCount = prevTieVotersCountRef.current;
+    const currentTieCount = session.tieBreakVotersCount || 0;
+    const tieVoteArrived = session.status === 'TIE_BREAK' && currentTieCount > prevTieCount;
+
+    if (justFinishedTieBreak) {
+      setIsHoldingTieDisplay(true);
+      const candidatesToGlow =
+        lastTieOptionIdsRef.current.length > 0
+          ? lastTieOptionIdsRef.current
+          : (session.tieBreak?.options || []).map((o) => o.id);
+      triggerTieGlow(candidatesToGlow);
+
+      setTimeout(() => {
+        setIsHoldingTieDisplay(false);
+      }, 1100);
+    } else if (tieVoteArrived) {
+      const currentTieIds = (session.tieBreak?.options || []).map((o) => o.id);
+      if (currentTieIds.length > 0) {
+        triggerTieGlow(currentTieIds);
+      }
+    }
+
+    prevTieBreakActiveRef.current = Boolean(session.tieBreak?.active);
+    prevTieStatusRef.current = session.status;
+    prevTieVotersCountRef.current = session.tieBreakVotersCount || 0;
+  }, [session.status, session.tieBreak, session.tieBreakVotersCount]);
+
   const isVotingActive = session.status === 'VOTING' || session.status === 'TIE_BREAK';
   // Bloqueio de edição de candidatos enquanto um desempate estiver sendo resolvido
   const isResolvingTie =
@@ -329,8 +424,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       if (justAllVoted || justClosed || justTieBreakEnded) {
         setIsTieModalOpen(true);
       }
-    } else if (session.status === 'CLOSED') {
-      // Quando todos os empates foram solucionados, fecha o modal
+    } else if (session.status === 'CLOSED' && !isHoldingTieDisplay) {
+      // Quando todos os empates foram solucionados (e o efeito de 1s terminou), fecha o modal
       setIsTieModalOpen(false);
     }
     prevAllVotedRef.current = allVotedNow;
@@ -348,6 +443,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       ...c,
       votesCount: 0,
     }));
+    lastTieOptionIdsRef.current = tieOptions.map((c) => c.id);
 
     const vacancies = Math.max(1, Math.min(tie.vacanciesInDispute, tieOptions.length - 1));
 
@@ -3825,6 +3921,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
                       const isFirstAfterTitulares = vacancies > 0 && idx === vacancies;
+                      const isTieGlowing = Boolean(tieGlowingIds[candidate.id]);
 
                       const activeColor = isTitular
                         ? winnerColor
@@ -3853,7 +3950,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               layout: { type: 'spring', stiffness: 240, damping: 28 },
                             }}
                             style={{
-                              borderColor: isTitular
+                              borderColor: isTieGlowing
+                                ? '#facc15'
+                                : isTitular
                                 ? hexToRgba(winnerColor, 0.55)
                                 : isSuplente1
                                 ? hexToRgba(suplenteColor, 0.5)
@@ -3861,9 +3960,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 ? hexToRgba(suplente2Color, 0.45)
                                 : 'rgba(255, 255, 255, 0.16)',
                             }}
-                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] border ${
+                            className={`relative overflow-hidden p-1.5 sm:p-2 border ${
                               isFirstAfterTitulares ? 'border-t-transparent' : ''
-                            } transition-colors duration-200 flex items-center justify-between gap-1.5 shadow-sm ${
+                            } transition-all duration-300 flex items-center justify-between gap-1.5 shadow-sm ${
+                              isTieGlowing
+                                ? 'bg-gradient-to-r from-amber-500/25 via-yellow-400/20 to-amber-500/25 !border-amber-400 ring-2 ring-yellow-400/90 shadow-[0_0_25px_rgba(250,204,21,0.65)] scale-[1.02] z-30'
+                                : 'bg-[#0b0d13]'
+                            } ${
                               idx === 0
                                 ? 'rounded-t-lg'
                                 : idx === rankedCandidates.length - 1
@@ -4074,7 +4177,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
         // Seção Inline de Resolução de Empates (Nasce diretamente na coluna de nomes sem modal)
         const renderTieResolutionSection = (isSplit: boolean) => {
-          if (!hasTies) return null;
+          if (!shouldRenderTieResolution || activeTiesToRender.length === 0) return null;
 
           return (
             <div className="space-y-2 relative z-20">
@@ -4113,7 +4216,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white truncate flex items-center gap-2 flex-wrap">
                             <span>VOTAÇÃO PARA DESEMPATAR</span>
                             <span className="text-slate-400 font-normal">•</span>
-                            {detectedTies.map((t) => {
+                            {activeTiesToRender.map((t) => {
                               const st = getTieCategoryStyles(t.type, t.label);
                               return (
                                 <span
@@ -4178,7 +4281,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     {/* Lista de Grupos de Empate com Animação de Contração ao Resolver */}
                     <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                       <AnimatePresence initial={false}>
-                        {detectedTies.map((tie) => {
+                        {activeTiesToRender.map((tie) => {
                           const maxAllowed = tie.vacanciesInDispute + 1;
                           const styles = getTieCategoryStyles(tie.type, tie.label);
                           const selectedInThisTie = tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id)).length;
@@ -4216,7 +4319,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   </div>
 
                                   {/* Se houver múltiplos grupos de empate, exibe também a categoria inline */}
-                                  {detectedTies.length > 1 && (
+                                  {activeTiesToRender.length > 1 && (
                                     <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
                                       {styles.title}
                                     </span>
@@ -4257,25 +4360,40 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {tie.tiedCandidates.map((c) => {
                                   const isSelected = selectedTieCandidateIds.includes(c.id);
+                                  const isTieGlowing = Boolean(tieGlowingIds[c.id]);
 
                                   return (
                                     <div
                                       key={c.id}
                                       onClick={() => !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
-                                      className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
-                                        isSelected ? styles.cardSelected : styles.cardBase
-                                      } ${isThisTieVotingNow ? 'opacity-85 pointer-events-none' : ''}`}
+                                      className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-300 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
+                                        isTieGlowing
+                                          ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20'
+                                          : isSelected
+                                          ? styles.cardSelected
+                                          : styles.cardBase
+                                      } ${isThisTieVotingNow && !isTieGlowing ? 'opacity-85 pointer-events-none' : ''}`}
                                     >
                                       <div className="flex items-center gap-2 min-w-0">
                                         {c.photoUrl && (
                                           <img
                                             src={c.photoUrl}
                                             alt={c.name}
-                                            className="w-7 h-7 rounded-md object-cover border border-white/20 shrink-0"
+                                            className={`w-7 h-7 rounded-md object-cover border shrink-0 transition-all ${
+                                              isTieGlowing
+                                                ? 'border-amber-300 shadow-[0_0_10px_rgba(250,204,21,0.7)]'
+                                                : 'border-white/20'
+                                            }`}
                                           />
                                         )}
                                         <div className="min-w-0">
-                                          <h5 className="font-black text-xs sm:text-[13px] text-white uppercase truncate leading-tight">
+                                          <h5
+                                            className={`font-black text-xs sm:text-[13px] uppercase truncate leading-tight transition-colors ${
+                                              isTieGlowing
+                                                ? 'text-yellow-100 drop-shadow-[0_0_8px_rgba(250,204,21,0.9)]'
+                                                : 'text-white'
+                                            }`}
+                                          >
                                             {c.name}
                                           </h5>
                                         </div>
@@ -4284,12 +4402,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                       {/* Indicador de Seleção Circular Compacto */}
                                       <div
                                         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                          isSelected
+                                          isTieGlowing
+                                            ? 'border-amber-400 bg-amber-400/40 shadow-[0_0_12px_rgba(250,204,21,0.85)]'
+                                            : isSelected
                                             ? styles.circleSelected
                                             : 'border-slate-600 bg-slate-900/60'
                                         }`}
                                       >
                                         {isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />}
+                                        {isTieGlowing && !isSelected && (
+                                          <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-ping" />
+                                        )}
                                       </div>
                                     </div>
                                   );
@@ -4329,7 +4452,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           Temos Empates Para Resolver
                         </h4>
                         <p className="text-[11px] text-rose-200/80">
-                          {detectedTies.length} {detectedTies.length === 1 ? 'grupo em disputa' : 'grupos em disputa'} na linha de corte.
+                          {activeTiesToRender.length} {activeTiesToRender.length === 1 ? 'grupo em disputa' : 'grupos em disputa'} na linha de corte.
                         </p>
                       </div>
                     </div>
@@ -4681,6 +4804,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
                       .map((option) => {
                         const isEditing = editingCandidateId === option.id;
+                        const isTieGlowing = Boolean(tieGlowingIds[option.id]);
                         const isGlowing = Boolean(
                           glowingIds[option.id] ||
                             (option.createdAt && Date.now() - option.createdAt < 1500)
@@ -4692,7 +4816,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             initial={{ opacity: 0, scale: 0.82, y: -10 }}
                             animate={{
                               opacity: 1,
-                              scale: isGlowing ? 1.04 : 1,
+                              scale: isTieGlowing ? 1.05 : isGlowing ? 1.04 : 1,
                               y: 0,
                             }}
                             exit={{ opacity: 0, scale: 0.85 }}
@@ -4701,7 +4825,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               duration: 0.35,
                             }}
                             className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
-                              isGlowing
+                              isTieGlowing
+                                ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20'
+                                : isGlowing
                                 ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
                                 : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
                             }`}
@@ -4730,7 +4856,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize transition-colors duration-200 ${
                                   isResolvingTie
                                     ? 'cursor-not-allowed text-slate-400'
-                                    : 'cursor-pointer ' + (isGlowing ? 'text-emerald-200' : 'text-slate-200 hover:text-white')
+                                    : 'cursor-pointer ' + (
+                                        isTieGlowing
+                                          ? 'text-yellow-100 font-bold drop-shadow-[0_0_8px_rgba(250,204,21,0.9)]'
+                                          : isGlowing
+                                          ? 'text-emerald-200'
+                                          : 'text-slate-200 hover:text-white'
+                                      )
                                 }`}
                                 title={isResolvingTie ? option.name : `${option.name} (Clique para editar)`}
                               >
@@ -4794,7 +4926,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   className="w-full flex flex-col space-y-3 min-w-0 shrink-0"
                 >
                   {/* SEÇÃO INLINE DE DESEMPATE (REVELA DIRETAMENTE NA COLUNA ESQUERDA SEM MODAL) */}
-                  {hasTies && renderTieResolutionSection(true)}
+                  {shouldRenderTieResolution && renderTieResolutionSection(true)}
 
                   {/* DIGITAÇÃO, IMPORTAÇÃO E GESTÃO DE NOMES */}
                   {renderCandidateManagement(true)}
@@ -4845,7 +4977,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
             ) : (
               <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
-                {hasTies && renderTieResolutionSection(false)}
+                {shouldRenderTieResolution && renderTieResolutionSection(false)}
                 {renderCandidateManagement(false)}
               </div>
             )}
