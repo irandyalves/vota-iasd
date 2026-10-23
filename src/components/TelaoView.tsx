@@ -731,18 +731,18 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           >
                             {option.name}
                             {option.tieBreakDisputeWith && !isDeclined && (
-                              <span className="text-amber-300 font-normal text-[9px] sm:text-[10px] ml-1">
+                              <span className="text-amber-300 font-normal text-[8px] sm:text-[8.5px] ml-1">
                                 &gt; desempate com {option.tieBreakDisputeWith}
                               </span>
                             )}
                             {isThinking && (
-                              <span className="text-slate-400 font-normal text-[9px] sm:text-[10px] lowercase italic ml-1.5">
-                                (pensando...)
+                              <span className="text-sky-400 font-bold text-[8px] sm:text-[8.5px] uppercase ml-1.5">
+                                ESTÁ PENSANDO
                               </span>
                             )}
                             {isDeclined && (
-                              <span className="text-rose-400 font-bold text-[8.5px] uppercase ml-1.5 not-italic inline-block no-underline">
-                                (declinou{option.declinedOriginalRank ? ` - ${option.declinedOriginalRank}º orig.` : ''})
+                              <span className="text-rose-400 font-bold text-[8px] sm:text-[8.5px] uppercase ml-1.5 not-italic inline-block no-underline">
+                                declinou{option.declinedOriginalRank ? ` - ${option.declinedOriginalRank}º orig.` : ''}
                               </span>
                             )}
                           </h4>
@@ -760,9 +760,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               Declinou
                             </span>
                           ) : isThinking ? (
-                            <span className="inline-flex items-center gap-1 text-[8px] px-2 py-0.5 rounded-full font-bold border border-slate-500 bg-slate-800 text-slate-200 whitespace-nowrap shadow-xs">
-                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
-                              Pensando
+                            <span className="inline-flex items-center gap-1 text-[8px] px-2 py-0.5 rounded-full font-bold border border-sky-500/50 bg-sky-950/80 text-sky-300 whitespace-nowrap shadow-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-sky-400 animate-pulse" />
+                              Está Pensando
                             </span>
                           ) : (
                             <>

@@ -4491,23 +4491,23 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               className="w-[185px] sm:w-[230px] shrink-0 truncate"
                               title={candidate.tieBreakDisputeWith ? `${candidate.name} > desempate com ${candidate.tieBreakDisputeWith}` : candidate.name}
                             >
-                              <span className={`font-bold text-xs uppercase truncate block ${
+                              <span className={`font-bold text-[10.5px] uppercase truncate block ${
                                 isDeclined ? 'line-through text-slate-500' : isThinking ? 'text-slate-300' : 'text-slate-100'
                               }`}>
                                 {candidate.name}
                                 {candidate.tieBreakDisputeWith && !isDeclined && (
-                                  <span className="text-amber-300 font-normal text-[10px] ml-1">
+                                  <span className="text-amber-300 font-normal text-[8px] ml-1">
                                     &gt; desempate com {candidate.tieBreakDisputeWith}
                                   </span>
                                 )}
-                                {isDeclined && (
-                                  <span className="text-rose-400 font-bold text-[9px] uppercase ml-1">
-                                    (declinou - {candidate.declinedOriginalRank || '?'}º orig.)
+                                {isThinking && (
+                                  <span className="text-sky-400 font-bold text-[8px] uppercase ml-1.5">
+                                    ESTÁ PENSANDO
                                   </span>
                                 )}
-                                {isThinking && (
-                                  <span className="text-slate-400 font-normal text-[9px] italic ml-1">
-                                    (pensará...)
+                                {isDeclined && (
+                                  <span className="text-rose-400 font-bold text-[8px] uppercase ml-1.5">
+                                    declinou - {candidate.declinedOriginalRank || '?'}º orig.
                                   </span>
                                 )}
                               </span>
