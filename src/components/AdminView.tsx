@@ -23,7 +23,6 @@ import {
   X,
   Star,
   ExternalLink,
-  TrendingUp,
   Users,
   Activity,
   Award,
@@ -288,7 +287,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     return unsub;
   }, [session?.id]);
 
-  const isSessionLocked = Boolean(session.accessLocked);
   const currentVotersVoted = session.status === 'TIE_BREAK' ? (session.tieBreakVotersCount || 0) : (session.mainVotersCount || 0);
   const displayVotersCount = Math.max(session.mainVotersCount || 0, connectedVotersCount);
   const totalVotersLimit =
@@ -3980,167 +3978,93 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         // Painel de Apuração em Tempo Real (Só Admin Vê - Fica Visível o Tempo Todo)
         const renderRealtimeResultsPanel = () => (
           <div className={`bg-[#141721] border border-white/[0.12] ${isSplitLayout ? 'rounded-r-xl rounded-l-none border-l-0' : 'rounded-xl'} px-3.5 sm:px-4 py-3.5 shadow-2xl space-y-3 flex-1 flex flex-col min-h-0`}>
-            {/* Header do Painel de Apuração */}
-            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.08]">
+{/* Header Compacto com Apuração em Tempo Real + Telemetria Esmagada na Mesma Linha */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-2 border-b border-white/[0.08]">
+              {/* Esquerda: Título Apuração em Verde Brilho */}
               <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                  <Activity className="w-3.5 h-3.5 animate-pulse" />
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 shrink-0 shadow-[0_0_12px_rgba(16,185,129,0.35)]">
+                  <Activity className="w-3.5 h-3.5 animate-pulse text-emerald-300" />
                 </div>
                 <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-100 text-xs sm:text-sm tracking-wide truncate">
-                      Apuração em Tempo Real
-                    </h3>
-                    <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 flex items-center gap-1" title="Visível apenas para o administrador nesta tela">
-                      <span>🔒 Só Admin</span>
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-slate-400 truncate">
+                  <h3 className="font-bold text-xs sm:text-sm tracking-wide truncate text-emerald-400 drop-shadow-[0_0_10px_rgba(52,211,153,0.7)]">
+                    Apuração em Tempo Real
+                  </h3>
+                  <p className="text-[10.5px] text-slate-400 truncate font-light">
                     {session.title || 'Votação em Andamento'}
                   </p>
                 </div>
               </div>
 
-              {/* Status da Votação */}
-              <div className="flex items-center gap-1.5 shrink-0">
-                <span
-                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 ${
-                    isVotingActive
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse'
-                      : 'bg-slate-700/50 text-slate-300 border border-white/10'
-                  }`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${isVotingActive ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-                  {isVotingActive ? 'Ao Vivo' : 'Encerrada'}
-                </span>
-              </div>
-            </div>
-
-            {/* Grid 2x2 de Telemetria / KPIs */}
-            <div className="grid grid-cols-2 gap-2">
-              {/* 1. Votantes */}
-              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center justify-between gap-1.5 shadow-sm">
-                <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
-                    <Users className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-1">
-                      <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                        Votantes
+              {/* Direita: Telemetria Esmagada (Título em cima, Número em baixo, separados por |) */}
+              <div className="flex items-center gap-2 sm:gap-3 bg-[#0b0d13] border border-white/[0.08] px-2.5 sm:px-3 py-1 rounded-lg shrink-0">
+                {/* 1. Votantes (limpo, só número) */}
+                <div className="text-center min-w-[48px]">
+                  <span className="block text-[8.5px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                    Votantes
+                  </span>
+                  <span className="font-mono font-black text-xs sm:text-sm text-slate-100 leading-tight block mt-0.5">
+                    {currentVotersVoted}
+                    {session.totalVotersConnected && session.totalVotersConnected > 0 ? (
+                      <span className="text-[10px] font-normal text-slate-400 font-mono ml-0.5">
+                        /{session.totalVotersConnected}
                       </span>
-                      {isVotingActive && (
-                        <span
-                          className={`text-[8px] font-bold px-1 rounded uppercase ${
-                            isSessionLocked
-                              ? 'text-rose-300 bg-rose-950/80 border border-rose-500/30'
-                              : 'text-emerald-300 bg-emerald-950/80 border border-emerald-500/30'
-                          }`}
-                        >
-                          {isSessionLocked ? '🔒' : '🔓'}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-xl sm:text-2xl font-black text-slate-100 font-mono leading-none tracking-tight block mt-0.5">
-                      {currentVotersVoted}
-                      {session.totalVotersConnected && session.totalVotersConnected > 0 ? (
-                        <span className="text-xs font-normal text-slate-400 font-mono ml-0.5">
-                          /{session.totalVotersConnected}
-                        </span>
-                      ) : null}
-                    </span>
-                  </div>
+                    ) : null}
+                  </span>
                 </div>
 
-                {/* Ajuste rápido de votantes */}
-                {isVotingActive && (
-                  <div className="flex items-center gap-0.5 bg-[#141721] p-0.5 rounded-lg border border-white/[0.08] shrink-0">
-                    <button
-                      type="button"
-                      disabled={isSessionLocked || (session.totalVotersConnected || 0) <= currentVotersVoted}
-                      onClick={() => {
-                        const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
-                        const next = Math.max(currentVotersVoted, cur - 1);
-                        saveSession({ ...session, totalVotersConnected: next });
-                      }}
-                      title={isSessionLocked ? 'Abra a sessão no cadeado para alterar' : 'Diminuir limite (-1)'}
-                      className="w-4.5 h-4.5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      -
-                    </button>
-                    <button
-                      type="button"
-                      disabled={isSessionLocked}
-                      onClick={() => {
-                        const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
-                        const next = cur + 1;
-                        saveSession({ ...session, totalVotersConnected: next });
-                      }}
-                      title={isSessionLocked ? 'Abra a sessão no cadeado para alterar' : 'Adicionar votante atrasado (+1)'}
-                      className="w-4.5 h-4.5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      +
-                    </button>
-                  </div>
-                )}
-              </div>
+                <div className="w-px h-5 bg-white/[0.12] shrink-0" />
 
-              {/* 2. Total de Votos */}
-              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center gap-2 shadow-sm">
-                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                  <Activity className="w-4 h-4 animate-pulse" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                {/* 2. Total Votos */}
+                <div className="text-center min-w-[48px]">
+                  <span className="block text-[8.5px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">
                     Total Votos
                   </span>
-                  <span className="text-xl sm:text-2xl font-black text-emerald-300 font-mono leading-none tracking-tight block mt-0.5">
+                  <span className="font-mono font-black text-xs sm:text-sm text-emerald-300 leading-tight block mt-0.5">
                     {totalVotesCast}
                   </span>
                 </div>
-              </div>
 
-              {/* 3. Corte Titulares */}
-              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center gap-2 shadow-sm">
-                <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
-                  <Award className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                    Corte Tit. ({vacancies}v)
+                <div className="w-px h-5 bg-white/[0.12] shrink-0" />
+
+                {/* 3. Corte Titular (ou outro nome configurado) */}
+                <div className="text-center min-w-[52px]" title={`Corte ${session.labelTitulares || 'Titular'} (${vacancies} vaga${vacancies === 1 ? '' : 's'})`}>
+                  <span className="block text-[8.5px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none truncate max-w-[85px]">
+                    Corte {session.labelTitulares ? session.labelTitulares : 'Titular'}
                   </span>
-                  <span className="text-xl sm:text-2xl font-black text-purple-300 font-mono leading-none tracking-tight block mt-0.5">
+                  <span className="font-mono font-black text-xs sm:text-sm text-purple-300 leading-tight block mt-0.5">
                     {cutoffVotes}
                   </span>
                 </div>
-              </div>
 
-              {/* 4. Corte 1º Suplente */}
-              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center gap-2 shadow-sm">
-                <div className="w-8 h-8 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
-                  <TrendingUp className="w-4 h-4" />
-                </div>
-                <div className="min-w-0">
-                  <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                    Corte Sup. ({s1Count}v)
-                  </span>
-                  <span className="text-xl sm:text-2xl font-black text-sky-300 font-mono leading-none tracking-tight block mt-0.5">
-                    {cutoffSuplente1}
-                  </span>
-                </div>
+                {/* 4. Corte Suplente (se houver) */}
+                {s1Count > 0 && (
+                  <>
+                    <div className="w-px h-5 bg-white/[0.12] shrink-0" />
+                    <div className="text-center min-w-[50px]" title={`Corte 1º Suplente (${s1Count} vaga${s1Count === 1 ? '' : 's'})`}>
+                      <span className="block text-[8.5px] sm:text-[9px] font-bold text-slate-400 uppercase tracking-wider leading-none">
+                        Corte Supl.
+                      </span>
+                      <span className="font-mono font-black text-xs sm:text-sm text-sky-300 leading-tight block mt-0.5">
+                        {cutoffSuplente1}
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
-            {/* Progresso Geral de Votação */}
+            {/* Progresso Geral de Votação (Linha Fina Discreta) */}
             {totalVoters > 0 && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px] text-slate-400">
-                  <span>Progresso dos votantes</span>
-                  <span className="font-mono text-emerald-300 font-bold">{currentVotersVoted} de {totalVoters} ({voterProgressPercent}%)</span>
+              <div className="space-y-0.5 -mt-1">
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>Progresso</span>
+                  <span className="font-mono text-emerald-300 font-bold text-[10px]">
+                    {currentVotersVoted} de {totalVoters} ({voterProgressPercent}%)
+                  </span>
                 </div>
-                <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/[0.08]">
+                <div className="h-1 w-full bg-black/40 rounded-full overflow-hidden border border-white/[0.06]">
                   <motion.div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"
                     initial={{ width: 0 }}
                     animate={{ width: `${voterProgressPercent}%` }}
                     transition={{ duration: 0.5, ease: 'easeOut' }}
