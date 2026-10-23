@@ -3188,7 +3188,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         </div>
       </div>
 
-      {/* BARRA DE EVENTOS: VOTAÇÃO (COLADA NA SEÇÃO DE CIMA, SEM CANTO SUPERIOR ARREDONDADO, EFEITO CORTINA AO ALTERNAR EVENTO GERAL) */}
+      {/* BARRA DE EVENTOS: VOTAÇÃO (COLADA NA SEÇÃO DE CIMA, SEM CANTO SUPERIOR ARREDONDADO, BORDA ALINHADA COM AS DEMAIS SEÇÕES) */}
       <AnimatePresence mode="wait">
         <motion.div
           key={currentGeneralEventId}
@@ -3197,9 +3197,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           exit={{ opacity: 0, y: -10, scaleY: 0.95 }}
           transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
           style={{ transformOrigin: 'top' }}
-          className={`-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-b border-x border-white/[0.08] rounded-b-xl rounded-t-none border-t-0 shadow-lg mb-3 mt-0 flex items-stretch justify-between min-h-[58px] relative ${isCreatingNewEvent || editingEventId ? 'z-[100]' : 'z-10'}`}
+          className={`bg-[#141721] border-b border-x border-white/[0.08] rounded-b-xl rounded-t-none border-t-0 shadow-lg mb-3 mt-0 flex items-stretch justify-between min-h-[58px] relative ${isCreatingNewEvent || editingEventId ? 'z-[100]' : 'z-10'}`}
         >
-          <div className="flex-1 min-w-0 flex items-stretch justify-between pl-8 sm:pl-10 lg:pl-12 pr-4 sm:pr-6 lg:pr-8 gap-3">
+          <div className="flex-1 min-w-0 flex items-stretch justify-between pl-3.5 sm:pl-4 pr-3.5 sm:pr-4 gap-3">
             {/* LINHA CENTRALIZADA VERTICALMENTE: "VOTAÇÃO" + "+ CRIAR" INDENTADO À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
             <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
             {/* FAIXA SUTIL DE "VOTAÇÕES" (EDITÁVEL COM LAPIZINHO, SALVO NA MÁQUINA) ATÉ O BOTÃO "+ CRIAR VOTAÇÃO" */}

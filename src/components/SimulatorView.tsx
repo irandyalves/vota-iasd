@@ -220,9 +220,9 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
       await submitBallot(session, selectedIds, currentRound, devId);
       setRefreshTrigger((prev) => prev + 1);
 
-      // Intervalo de exatamente 0,5 segundo entre cada confirmação
+      // Intervalo de exatamente 250ms (0,25 segundo) entre cada confirmação
       if (i < pendingDevices.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 250));
       }
     }
 
@@ -471,7 +471,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
                   ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 active:scale-95 shadow-emerald-500/20 ring-1 ring-emerald-400/40'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-40 shadow-none'
               }`}
-              title="Disparar confirmação para todos os aparelhos a cada 0,5 segundo"
+              title="Disparar confirmação para todos os aparelhos a cada 250ms (0,25s)"
             >
               {isAutoVoting ? (
                 <>
