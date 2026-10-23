@@ -29,7 +29,7 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
     return [];
   }
   const ties: TieInfo[] = [];
-  const options = [...session.options].sort((a, b) => (b.votesCount || 0) - (a.votesCount || 0));
+  const options = [...session.options].sort((a, b) => Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0));
 
   const V = session.vacancies || 1;
   const { s1Count, s2Count } = getEffectiveSuplentes(session);
@@ -38,17 +38,18 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
   if (options.length > V && V > 0) {
     const lastTitular = options[V - 1];
     const firstNonTitular = options[V];
-    const cutoffVotes = lastTitular?.votesCount || 0;
+    const cutoffVotes = Math.floor(lastTitular?.votesCount || 0);
+    const firstNonTitularVotes = Math.floor(firstNonTitular?.votesCount || 0);
 
-    if (cutoffVotes > 0 && cutoffVotes === (firstNonTitular?.votesCount || 0)) {
-      const candidatesWithHigherVotes = options.filter((o) => (o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter((o) => (o.votesCount || 0) === cutoffVotes);
+    if (cutoffVotes > 0 && cutoffVotes === firstNonTitularVotes) {
+      const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
+      const tiedCandidates = options.filter((o) => Math.floor(o.votesCount || 0) === cutoffVotes);
       const vacanciesInDispute = Math.max(1, V - candidatesWithHigherVotes.length);
 
       ties.push({
         type: 'TITULAR',
         label: 'Empate para Vaga de Titular',
-        votesCount: Math.floor(cutoffVotes),
+        votesCount: cutoffVotes,
         tiedCandidates,
         vacanciesInDispute,
       });
@@ -60,22 +61,23 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
   if (s1Count > 0 && options.length > boundaryS1) {
     const lastS1 = options[boundaryS1 - 1];
     const firstNonS1 = options[boundaryS1];
-    const cutoffVotes = lastS1?.votesCount || 0;
+    const cutoffVotes = Math.floor(lastS1?.votesCount || 0);
+    const firstNonS1Votes = Math.floor(firstNonS1?.votesCount || 0);
 
     const titularTie = ties.find((t) => t.type === 'TITULAR');
     if (
       cutoffVotes > 0 &&
-      cutoffVotes === (firstNonS1?.votesCount || 0) &&
+      cutoffVotes === firstNonS1Votes &&
       (!titularTie || titularTie.votesCount !== cutoffVotes)
     ) {
-      const candidatesWithHigherVotes = options.filter((o) => (o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter((o) => (o.votesCount || 0) === cutoffVotes);
+      const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
+      const tiedCandidates = options.filter((o) => Math.floor(o.votesCount || 0) === cutoffVotes);
       const vacanciesInDispute = Math.max(1, boundaryS1 - candidatesWithHigherVotes.length);
 
       ties.push({
         type: 'SUPLENTE_1',
         label: 'Empate para 1º Suplente',
-        votesCount: Math.floor(cutoffVotes),
+        votesCount: cutoffVotes,
         tiedCandidates,
         vacanciesInDispute,
       });
@@ -87,18 +89,19 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
   if (s2Count > 0 && options.length > boundaryS2) {
     const lastS2 = options[boundaryS2 - 1];
     const firstNonS2 = options[boundaryS2];
-    const cutoffVotes = lastS2?.votesCount || 0;
+    const cutoffVotes = Math.floor(lastS2?.votesCount || 0);
+    const firstNonS2Votes = Math.floor(firstNonS2?.votesCount || 0);
 
-    const priorTie = ties.find((t) => t.votesCount === Math.floor(cutoffVotes));
-    if (cutoffVotes > 0 && cutoffVotes === (firstNonS2?.votesCount || 0) && !priorTie) {
-      const candidatesWithHigherVotes = options.filter((o) => (o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter((o) => (o.votesCount || 0) === cutoffVotes);
+    const priorTie = ties.find((t) => t.votesCount === cutoffVotes);
+    if (cutoffVotes > 0 && cutoffVotes === firstNonS2Votes && !priorTie) {
+      const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
+      const tiedCandidates = options.filter((o) => Math.floor(o.votesCount || 0) === cutoffVotes);
       const vacanciesInDispute = Math.max(1, boundaryS2 - candidatesWithHigherVotes.length);
 
       ties.push({
         type: 'SUPLENTE_2',
         label: 'Empate para 2º Suplente',
-        votesCount: Math.floor(cutoffVotes),
+        votesCount: cutoffVotes,
         tiedCandidates,
         vacanciesInDispute,
       });

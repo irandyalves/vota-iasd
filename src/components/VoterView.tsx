@@ -312,12 +312,12 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
     const hasTies = detectedTies.length > 0;
 
     const sortedOptions = [...resultOptions].sort((a, b) => {
-      const diff = (b.votesCount || 0) - (a.votesCount || 0);
+      const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
       if (diff !== 0) return diff;
       return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
     });
-    const maxVotesRecorded = Math.max(...resultOptions.map((o) => o.votesCount || 0), 1);
-    const totalVotesCast = resultOptions.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+    const maxVotesRecorded = Math.max(...resultOptions.map((o) => Math.floor(o.votesCount || 0)), 1);
+    const totalVotesCast = resultOptions.reduce((acc, curr) => acc + Math.floor(curr.votesCount || 0), 0);
 
     return (
       <div className="max-w-xl mx-auto px-3 py-3 pb-12 min-h-[90vh]">

@@ -201,13 +201,13 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   // Ordena opções por contagem de votos (decrescente) e, quando zerados/empatados, por ordem alfabética (A-Z)
   const sortedOptions = [...optionsToDisplay].sort((a, b) => {
-    const diff = (b.votesCount || 0) - (a.votesCount || 0);
+    const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
     if (diff !== 0) return diff;
     return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
   });
 
-  const maxVotesRecorded = Math.max(...optionsToDisplay.map((o) => o.votesCount || 0), 1);
-  const totalVotesCast = optionsToDisplay.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
+  const maxVotesRecorded = Math.max(...optionsToDisplay.map((o) => Math.floor(o.votesCount || 0)), 1);
+  const totalVotesCast = optionsToDisplay.reduce((acc, curr) => acc + Math.floor(curr.votesCount || 0), 0);
   const maxVotesPerBallot = isTieBreak
     ? (session.tieBreak?.maxVotesPerVoter || 1)
     : (session.maxVotesPerVoter || 1);

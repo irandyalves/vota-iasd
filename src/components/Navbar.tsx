@@ -220,14 +220,9 @@ export const Navbar: React.FC<NavbarProps> = ({
         }
 
         const updatedOptions = session.options.map((opt) => {
-          const tieOptIndex = sortedTie.findIndex((t) => t.id === opt.id);
-          if (tieOptIndex !== -1) {
-            const tieVotes = sortedTie[tieOptIndex].votesCount || 0;
-            const isWinner = winnerIds.includes(opt.id);
-            const bonus = (tieVotes * 0.01) + (isWinner ? 0.005 : 0) + ((sortedTie.length - tieOptIndex) * 0.0001);
-            return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + bonus };
-          }
-          return opt;
+          const isWinner = winnerIds.includes(opt.id);
+          const extraVote = isWinner ? 1 : 0;
+          return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extraVote };
         });
 
         onSaveSession({
@@ -310,14 +305,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       }
 
       optionsToClassify = session.options.map((opt) => {
-        const tieOptIndex = sortedTie.findIndex((t) => t.id === opt.id);
-        if (tieOptIndex !== -1) {
-          const tieVotes = sortedTie[tieOptIndex].votesCount || 0;
-          const isWinner = winnerIds.includes(opt.id);
-          const bonus = (tieVotes * 0.01) + (isWinner ? 0.005 : 0) + ((sortedTie.length - tieOptIndex) * 0.0001);
-          return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + bonus };
-        }
-        return opt;
+        const isWinner = winnerIds.includes(opt.id);
+        const extraVote = isWinner ? 1 : 0;
+        return { ...opt, votesCount: Math.floor(opt.votesCount || 0) + extraVote };
       });
     }
 

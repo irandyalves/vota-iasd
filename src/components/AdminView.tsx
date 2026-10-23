@@ -239,13 +239,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       : session.options || [];
 
   const rankedCandidates = [...activeOptions].sort((a, b) => {
-    const diff = (b.votesCount || 0) - (a.votesCount || 0);
+    const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
     if (diff !== 0) return diff;
     return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
   });
 
-  const totalVotesCast = activeOptions.reduce((acc, curr) => acc + (curr.votesCount || 0), 0);
-  const maxVotesRecorded = Math.max(...activeOptions.map((o) => o.votesCount || 0), 1);
+  const totalVotesCast = activeOptions.reduce((acc, curr) => acc + Math.floor(curr.votesCount || 0), 0);
+  const maxVotesRecorded = Math.max(...activeOptions.map((o) => Math.floor(o.votesCount || 0)), 1);
   const vacancies = session.vacancies || 1;
   const s1Count = session.habilitarSuplente1 !== false ? (session.suplentesCount ?? 1) : 0;
   const s2Count = session.habilitarSuplente2 === true ? (session.segundoSuplentesCount ?? 1) : 0;
