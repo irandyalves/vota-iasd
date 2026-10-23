@@ -896,16 +896,16 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mb-3.5 py-3.5 px-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 shadow-lg text-amber-100 flex items-center gap-3.5 min-h-[72px]"
+            className="mb-3.5 py-3.5 px-4 rounded-2xl bg-emerald-950/80 border-2 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.25)] text-emerald-100 flex items-center gap-3.5 min-h-[72px]"
           >
-            <Flame className="w-8 h-8 text-amber-400 shrink-0 animate-bounce" />
+            <Flame className="w-8 h-8 text-emerald-400 shrink-0 animate-bounce" />
             <div className="space-y-0.5">
-              <h3 className="font-bold text-sm sm:text-base text-amber-300 uppercase tracking-wide">
+              <h3 className="font-bold text-sm sm:text-base text-emerald-400 uppercase tracking-wide">
                 Rodada de Desempate!
               </h3>
-              <p className="text-[13px] sm:text-sm text-amber-200/90 leading-snug">
+              <p className="text-[13px] sm:text-sm text-emerald-200/90 leading-snug">
                 Escolha apenas{' '}
-                <strong className="text-white font-black text-base sm:text-lg underline decoration-amber-400 decoration-2 px-0.5">
+                <strong className="text-white font-black text-base sm:text-lg px-0.5">
                   {maxVotes}
                 </strong>{' '}
                 {maxVotes === 1 ? 'nome' : 'nomes'} entre os candidatos abaixo.
