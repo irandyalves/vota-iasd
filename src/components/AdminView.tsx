@@ -89,6 +89,74 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
+  // Split ratio (largura % da coluna da esquerda - Nomes). Por padrão: 40% (Apuração: 60%)
+  const [splitRatio, setSplitRatio] = useState<number>(() => {
+    const saved = localStorage.getItem('vota_iasd_split_ratio');
+    if (saved) {
+      const num = parseFloat(saved);
+      if (!isNaN(num) && num >= 20 && num <= 80) return num;
+    }
+    return 40;
+  });
+  const [isDraggingSplit, setIsDraggingSplit] = useState<boolean>(false);
+  const [isLgScreen, setIsLgScreen] = useState<boolean>(() => typeof window !== 'undefined' && window.innerWidth >= 1024);
+  const splitContainerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const checkScreen = () => {
+      setIsLgScreen(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
+  }, []);
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const newRatio = ((e.clientX - rect.left) / rect.width) * 100;
+      const clamped = Math.min(75, Math.max(20, newRatio));
+      setSplitRatio(clamped);
+    };
+
+    const handleMouseUp = () => {
+      setIsDraggingSplit(false);
+      localStorage.setItem('vota_iasd_split_ratio', String(splitRatio));
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDraggingSplit, splitRatio]);
+
+  useEffect(() => {
+    if (!isDraggingSplit) return;
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (!splitContainerRef.current || !e.touches[0]) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const newRatio = ((e.touches[0].clientX - rect.left) / rect.width) * 100;
+      const clamped = Math.min(75, Math.max(20, newRatio));
+      setSplitRatio(clamped);
+    };
+
+    const handleTouchEnd = () => {
+      setIsDraggingSplit(false);
+      localStorage.setItem('vota_iasd_split_ratio', String(splitRatio));
+    };
+
+    window.addEventListener('touchmove', handleTouchMove);
+    window.addEventListener('touchend', handleTouchEnd);
+    return () => {
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchend', handleTouchEnd);
+    };
+  }, [isDraggingSplit, splitRatio]);
   const [selectedTieCandidateIds, setSelectedTieCandidateIds] = useState<string[]>([]);
   const [tieWarningModal, setTieWarningModal] = useState<string | null>(null);
   const [tieWarningTrigger, setTieWarningTrigger] = useState<number>(0);
@@ -3738,7 +3806,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
         // Painel de Apuração em Tempo Real (Só Admin Vê - Fica Visível o Tempo Todo)
         const renderRealtimeResultsPanel = () => (
-          <div className="bg-[#141721] border border-white/[0.12] rounded-xl px-3.5 sm:px-4 py-3.5 shadow-2xl space-y-3 flex-1 flex flex-col min-h-0">
+          <div className={`bg-[#141721] border border-white/[0.12] ${isSplitLayout ? 'rounded-r-xl rounded-l-none border-l-0' : 'rounded-xl'} px-3.5 sm:px-4 py-3.5 shadow-2xl space-y-3 flex-1 flex flex-col min-h-0`}>
             {/* Header do Painel de Apuração */}
             <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.08]">
               <div className="flex items-center gap-2 min-w-0">
@@ -4102,7 +4170,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         const renderCandidateManagement = (isSplit: boolean) => (
           <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
             {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ NO TOPO */}
-            <div className={`bg-[#141721] shadow-lg ${isSplit ? 'rounded-xl border border-white/[0.08] p-3 sm:p-4' : 'border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4'}`}>
+            <div className={`bg-[#141721] shadow-lg ${isSplit ? 'rounded-l-xl rounded-r-none border border-white/[0.08] border-r-0 p-3 sm:p-4' : 'border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4'}`}>
               <div className="flex flex-col justify-between gap-3 min-w-0">
                 {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
                 <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
@@ -4300,7 +4368,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
             {/* 2. NOMES PARA ESCOLHA (EXIBIDO APENAS QUANDO HÁ NOMES CADASTRADOS) */}
             {session.options.length > 0 && (
-              <div className={`bg-[#141721] shadow-lg flex-1 ${isSplit ? 'rounded-xl border border-white/[0.08] p-3 sm:p-4' : 'border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4'}`}>
+              <div className={`bg-[#141721] shadow-lg flex-1 ${isSplit ? 'rounded-l-xl rounded-r-none border border-white/[0.08] border-r-0 p-3 sm:p-4' : 'border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4'}`}>
                 <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
                   <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
                     <span>
@@ -4375,7 +4443,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   </div>
                 </div>
 
-                <div className={`grid gap-2 ${isSplit ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
+                <div className={`grid gap-2 ${isSplit ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
                   <AnimatePresence mode="popLayout">
                     {[...session.options]
                       .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
@@ -4474,14 +4542,22 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               onChange={(e) => handleFileImport(e, 'replace')}
             />
 
-            {/* RENDERIZAÇÃO: SPLIT OU FULL-WIDTH */}
+            {/* RENDERIZAÇÃO: SPLIT COM LINHA DRAG & MOVE OU FULL-WIDTH */}
             {isSplitLayout ? (
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 flex-1 min-h-0 px-2 sm:px-3">
+              <div
+                ref={splitContainerRef}
+                className={`flex flex-col lg:flex-row flex-1 min-h-0 w-full px-2 sm:px-3 ${
+                  isDraggingSplit ? 'select-none cursor-col-resize' : ''
+                }`}
+              >
                 {/* COLUNA ESQUERDA: DESEMPATES + NOVA VOTAÇÃO / ENTRADA E LISTA DE NOMES */}
-                <div className="lg:col-span-7 flex flex-col space-y-3.5 min-w-0">
+                <div
+                  style={isLgScreen ? { width: `${splitRatio}%`, flexBasis: `${splitRatio}%` } : undefined}
+                  className="w-full flex flex-col space-y-3 min-w-0 shrink-0"
+                >
                   {/* CARD DE DESEMPATE NO TOPO DA COLUNA ESQUERDA (SE HOUVER EMPATES DETECTADOS) */}
                   {hasTies && (
-                    <div className="bg-[#141721] border border-rose-500/80 rounded-xl p-3 sm:p-4 shadow-[0_0_20px_rgba(244,63,94,0.25)] flex items-center justify-between gap-3">
+                    <div className="bg-[#141721] border border-rose-500/80 rounded-l-xl rounded-r-none border-r-0 p-3 sm:p-4 shadow-[0_0_20px_rgba(244,63,94,0.25)] flex items-center justify-between gap-3">
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
                           <Star className="w-4 h-4 text-rose-400 fill-rose-400 animate-pulse" />
@@ -4510,8 +4586,46 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   {renderCandidateManagement(true)}
                 </div>
 
+                {/* LINHA DRAG & MOVE DIVISÓRIA (JUNTA UMA SEÇÃO NA OUTRA COM ARRASTO ESQ / DIR) */}
+                <div
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    setIsDraggingSplit(true);
+                  }}
+                  onTouchStart={() => setIsDraggingSplit(true)}
+                  className="hidden lg:flex w-2.5 hover:w-2.5 cursor-col-resize items-center justify-center group relative z-30 shrink-0 select-none -mx-[1px]"
+                  title="Arraste para redimensionar (Esquerda: Nomes | Direita: Apuração)"
+                >
+                  {/* Linha vertical central */}
+                  <div
+                    className={`w-[2px] h-full transition-colors duration-150 ${
+                      isDraggingSplit
+                        ? 'bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.9)]'
+                        : 'bg-white/[0.18] group-hover:bg-emerald-400/80'
+                    }`}
+                  />
+
+                  {/* Puxador com ícone/grip central */}
+                  <div
+                    className={`absolute top-1/2 -translate-y-1/2 w-4 h-8 rounded-full border flex items-center justify-center transition-all ${
+                      isDraggingSplit
+                        ? 'bg-emerald-950 border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.6)] scale-110'
+                        : 'bg-[#141721] border-white/20 group-hover:border-emerald-400 group-hover:bg-[#1c2233]'
+                    }`}
+                  >
+                    <div className="flex flex-col gap-0.5 pointer-events-none">
+                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300" />
+                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300" />
+                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300" />
+                    </div>
+                  </div>
+                </div>
+
                 {/* COLUNA DIREITA: RESULTADO EM TEMPO REAL / APURAÇÃO (QUE SÓ O ADMIN VÊ - VISÍVEL O TEMPO TODO) */}
-                <div className="lg:col-span-5 flex flex-col min-w-0">
+                <div
+                  style={isLgScreen ? { width: `${100 - splitRatio}%`, flexBasis: `${100 - splitRatio}%` } : undefined}
+                  className="w-full flex flex-col min-w-0 shrink-0"
+                >
                   {renderRealtimeResultsPanel()}
                 </div>
               </div>
