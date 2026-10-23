@@ -3427,6 +3427,37 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
                 return (
                   <div className="space-y-2.5 select-none">
+                    {/* BARRA DE CONFIGURAÇÃO DO NOME DO SISTEMA NO TOPO */}
+                    <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-2 flex items-center justify-between flex-wrap gap-2.5 shadow-md">
+                      <div className="flex items-center gap-2">
+                        <div className="w-5 h-5 rounded-md bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        </div>
+                        <span className="text-xs font-medium text-slate-200">
+                          Nome do Sistema (Topo):
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder="VOTA IASD"
+                          value={session.systemName || ''}
+                          onChange={(e) => saveSession({ ...session, systemName: e.target.value })}
+                          className="px-2.5 py-1 bg-[#0b0d13] border border-white/[0.12] focus:border-emerald-500/60 rounded-lg text-xs text-white placeholder-slate-500 outline-none w-44 sm:w-52 transition font-medium"
+                        />
+                        {Boolean(session.systemName) && (
+                          <button
+                            type="button"
+                            onClick={() => saveSession({ ...session, systemName: '' })}
+                            className="text-[10.5px] text-slate-400 hover:text-rose-400 underline cursor-pointer"
+                            title="Restaurar padrão 'VOTA IASD'"
+                          >
+                            Padrão
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                     {/* CARD 1: TELÃO (PROJEÇÃO PRINCIPAL) - ESMAGADO EM LINHA ÚNICA COM CORES À DIREITA */}
                     <div className="bg-[#141721] border border-white/[0.08] rounded-xl px-3.5 py-3.5 space-y-2.5 shadow-lg">
                       {/* Cabeçalho Compacto: Configuração de como será exibido os elementos no Telão [público] + Botão Projetar 2ª Tela */}
@@ -5400,7 +5431,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               Parâmetros da Sessão de Votação
             </h3>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
+              <div>
+                <label className="text-[11px] font-semibold text-blue-200 block mb-1">Nome do Sistema (Topo):</label>
+                <input
+                  type="text"
+                  placeholder="VOTA IASD"
+                  value={session.systemName || ''}
+                  onChange={(e) => saveSession({ ...session, systemName: e.target.value })}
+                  className="w-full px-2.5 py-1.5 bg-[#07132a] border border-blue-700 rounded-lg text-xs text-white"
+                />
+              </div>
+
               <div>
                 <label className="text-[11px] font-semibold text-blue-200 block mb-1">Título da Pauta:</label>
                 <input

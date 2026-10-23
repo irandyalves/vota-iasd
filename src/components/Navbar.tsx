@@ -461,43 +461,55 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          <div className="leading-tight">
-            <span
-              className="font-extrabold tracking-wider text-white text-sm sm:text-base block select-none"
-              style={{
-                fontFamily:
-                  '"Varela Round", "Nunito", "Quicksand", ui-rounded, "Segoe UI", system-ui, sans-serif',
-              }}
-            >
-              VOTA <span className="text-[#d4af37]">IASD</span>
-            </span>
-            <span className="text-[10px] text-blue-300/80 font-semibold tracking-wider uppercase block mt-0.5 select-none">
-              SISTEMA ELEITORAL
-            </span>
+          <div className="leading-tight flex flex-col justify-center">
+            {/* LINHA 1: VOTA IASD • SISTEMA ELEITORAL */}
+            <div className="flex items-center gap-1.5 select-none">
+              <span
+                className="font-extrabold tracking-wider text-white text-xs sm:text-sm select-none"
+                style={{
+                  fontFamily:
+                    '"Varela Round", "Nunito", "Quicksand", ui-rounded, "Segoe UI", system-ui, sans-serif',
+                }}
+              >
+                {(() => {
+                  const configuredSystemName = session?.systemName?.trim() || 'VOTA IASD';
+                  if (configuredSystemName === 'VOTA IASD') {
+                    return (
+                      <>
+                        VOTA <span className="text-[#d4af37]">IASD</span>
+                      </>
+                    );
+                  }
+                  const parts = configuredSystemName.split(' ');
+                  if (parts.length > 1 && parts[parts.length - 1].toUpperCase() === 'IASD') {
+                    return (
+                      <>
+                        {parts.slice(0, -1).join(' ')} <span className="text-[#d4af37]">{parts[parts.length - 1]}</span>
+                      </>
+                    );
+                  }
+                  return configuredSystemName;
+                })()}
+              </span>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0 shadow-[0_0_6px_rgba(52,211,153,0.8)]"
+                title="Sistema Conectado"
+              />
+              <span className="text-[9px] sm:text-[10px] text-blue-200/90 font-bold tracking-wider uppercase">
+                SISTEMA ELEITORAL
+              </span>
+            </div>
 
-            {/* Barra de Progresso da Escuta / Leituras Nuvem Firebase (Limite Diário 50.000) */}
+            {/* LINHA DE BAIXO: consumo   xxx % embaixo a barra de progresso */}
             <div
-              className="mt-1 flex flex-col gap-0.5 select-none"
-              title={`Operações na Nuvem hoje: ${quotaStats.count.toLocaleString('pt-BR')} de ${quotaStats.max.toLocaleString('pt-BR')} gratuitas/dia (${quotaStats.percent}%)`}
+              className="mt-0.5 flex flex-col gap-0.5 select-none w-full max-w-[170px]"
+              title={`Consumo na Nuvem hoje: ${quotaStats.count.toLocaleString('pt-BR')} de ${quotaStats.max.toLocaleString('pt-BR')} gratuitas/dia (${quotaStats.percent}%)`}
             >
-              <div className="flex items-center justify-between text-[9px] font-mono text-blue-200/70 leading-none gap-2">
-                <span className="flex items-center gap-1">
-                  <span
-                    className={`inline-block w-1.5 h-1.5 rounded-full ${
-                      quotaStats.percent > 90
-                        ? 'bg-red-400 animate-pulse'
-                        : quotaStats.percent > 70
-                        ? 'bg-amber-400'
-                        : 'bg-emerald-400'
-                    }`}
-                  />
-                  Escuta Nuvem
-                </span>
-                <span className="font-semibold text-white/90">
-                  {quotaStats.count > 1000 ? `${(quotaStats.count / 1000).toFixed(1)}k` : quotaStats.count}/50k
-                </span>
+              <div className="flex items-center justify-between text-[9px] font-mono text-blue-200/70 leading-none">
+                <span className="lowercase">consumo</span>
+                <span className="font-semibold text-white/90">{quotaStats.percent}%</span>
               </div>
-              <div className="w-[110px] sm:w-[124px] h-[3.5px] bg-white/10 rounded-full overflow-hidden">
+              <div className="w-full h-[3.5px] bg-white/10 rounded-full overflow-hidden">
                 <div
                   className={`h-full rounded-full transition-all duration-300 ${
                     quotaStats.percent > 90

@@ -95,6 +95,7 @@ export interface GeneralEventRecord {
 export interface VotingSession {
   id: string;
   title: string;
+  systemName?: string; // Nome do sistema exibido no topo (Padrão: "VOTA IASD")
   generalEventName?: string; // Nome do Evento Geral / Assembleia (Ex: "Comissão da Igreja Adventista da Asa Norte")
   generalEvents?: GeneralEventRecord[]; // Lista de todos os Eventos Gerais salvos online no banco
   activeGeneralEventId?: string; // ID do Evento Geral atualmente ativo
