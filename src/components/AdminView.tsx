@@ -2626,7 +2626,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               {isHistoryMenuOpen && (
                 <>
                   <div
-                    className="fixed inset-0 z-[998] bg-black/40 backdrop-blur-[0.5px]"
+                    className="fixed inset-0 z-[998] bg-transparent"
                     onClick={() => setIsHistoryMenuOpen(false)}
                   />
                   <motion.div
@@ -2861,7 +2861,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     }
                   }}
                   title="Criar nova votação / evento"
-                  className="px-3 py-1.5 min-h-[34px] rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
+                  className="px-3 py-1.5 min-h-[34px] rounded-lg bg-transparent hover:bg-emerald-500/20 border border-transparent hover:border-emerald-500/40 text-emerald-400 hover:text-emerald-300 font-bold text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer active:scale-95"
                 >
                   <FolderPlus className="w-3.5 h-3.5 text-emerald-400" />
                   <span>+ Criar votação</span>

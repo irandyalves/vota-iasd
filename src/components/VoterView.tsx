@@ -819,34 +819,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
   const remainingVotes = Math.max(0, maxVotes - selectedIds.length);
 
   return (
-    <div className="max-w-xl mx-auto px-4 py-5 pb-36">
-      {/* Alerta de Desempate (se aplicável) - Fica em cima do título verde com altura e fontes ampliadas */}
-      {isTieBreak && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 py-4 px-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 shadow-lg text-amber-100 flex items-center gap-3.5 min-h-[76px]"
-        >
-          <Flame className="w-8 h-8 text-amber-400 shrink-0 animate-bounce" />
-          <div className="space-y-0.5">
-            <h3 className="font-bold text-sm sm:text-base text-amber-300 uppercase tracking-wide">
-              Rodada de Desempate!
-            </h3>
-            <p className="text-[13px] sm:text-sm text-amber-200/90 leading-snug">
-              Escolha apenas{' '}
-              <strong className="text-white font-black text-base sm:text-lg underline decoration-amber-400 decoration-2 px-0.5">
-                {maxVotes}
-              </strong>{' '}
-              {maxVotes === 1 ? 'nome' : 'nomes'} entre os candidatos abaixo.
-            </p>
-          </div>
-        </motion.div>
-      )}
-
-      {/* CABEÇALHO: FONTE BONITA E MENOR, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ */}
+    <div className="w-full min-h-screen flex flex-col items-center pb-36">
+      {/* CABEÇALHO: FONTE BONITA E MENOR, FUNDO VERDE PETRÓLEO TEXTURIZADO, LINHA BEGE NO RODAPÉ (PEGA DE BORDA A BORDA DA JANELA) */}
       {/* Formato: Escolha xx nomes (decrescente) | eleição do tesoureiro | A A */}
       <div
-        className={`${isTieBreak ? 'rounded-xl' : '-mx-4 -mt-5'} mb-4 px-3.5 py-3.5 border-b-[3px] border-[#e6d3a8] shadow-lg`}
+        className="w-full mb-3.5 px-3 sm:px-6 py-3 sm:py-3.5 border-b-[3px] border-[#e6d3a8] shadow-lg shrink-0"
         style={{
           fontFamily: '"Plus Jakarta Sans", "Inter", "Segoe UI", system-ui, sans-serif',
           backgroundColor: '#0b4a4a',
@@ -854,7 +831,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             'repeating-linear-gradient(45deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 2px, transparent 2px, transparent 6px), repeating-linear-gradient(-45deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 5px), linear-gradient(180deg, #0f5c5a 0%, #083b3c 100%)',
         }}
       >
-        <div className="flex items-center justify-between gap-2 text-sm sm:text-base text-white">
+        <div className="w-full max-w-[660px] mx-auto flex items-center justify-between gap-2 text-sm sm:text-base text-white">
           {/* Esquerda: Escolha xx nomes (diminui conforme vai escolhendo) - Fonte da linha +20% e número bold e +20% maior */}
           <div className="flex items-center gap-1.5 font-semibold shrink-0">
             <span>Escolha</span>
@@ -912,6 +889,31 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
         </div>
       </div>
 
+      {/* ÁREA DOS CARDS: AUMENTADA EM 15% DE LARGURA COM POUCO PADDING LATERAL NO MOBILE */}
+      <div className="w-full max-w-[660px] mx-auto px-1.5 sm:px-3 flex-1 flex flex-col">
+        {/* Alerta de Desempate (se aplicável) - Fica em cima dos cards */}
+        {isTieBreak && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-3.5 py-3.5 px-4 rounded-2xl bg-amber-950/80 border-2 border-amber-500 shadow-lg text-amber-100 flex items-center gap-3.5 min-h-[72px]"
+          >
+            <Flame className="w-8 h-8 text-amber-400 shrink-0 animate-bounce" />
+            <div className="space-y-0.5">
+              <h3 className="font-bold text-sm sm:text-base text-amber-300 uppercase tracking-wide">
+                Rodada de Desempate!
+              </h3>
+              <p className="text-[13px] sm:text-sm text-amber-200/90 leading-snug">
+                Escolha apenas{' '}
+                <strong className="text-white font-black text-base sm:text-lg underline decoration-amber-400 decoration-2 px-0.5">
+                  {maxVotes}
+                </strong>{' '}
+                {maxVotes === 1 ? 'nome' : 'nomes'} entre os candidatos abaixo.
+              </p>
+            </div>
+          </motion.div>
+        )}
+
       {/* MODALZINHO LARANJA: FIXO NA TELA VISÍVEL DO CELULAR (SEMPRE VISÍVEL MESMO ROLADO ATÉ O FIM) */}
       <AnimatePresence mode="wait">
         {errorMessage && (
@@ -961,7 +963,7 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
             className={
               isFewCandidates
                 ? 'grid grid-cols-1 max-w-sm mx-auto gap-2.5 w-full'
-                : 'grid grid-cols-2 gap-2 sm:gap-2.5 w-full'
+                : 'grid grid-cols-2 gap-x-4 sm:gap-x-5 gap-y-2.5 w-full'
             }
           >
             {options.map((option) => {
@@ -1016,10 +1018,11 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
           </div>
         );
       })()}
+      </div>
 
       {/* BARRA FLUTUANTE INFERIOR COM O BOTÃO CONFIRMA (20% MENOR NA LARGURA, EFEITO 3D DE PRESSIONAR E BRILHO RELUZENTE) */}
       <div className="fixed bottom-0 left-0 right-0 p-3 sm:p-4 bg-[#00132b]/95 backdrop-blur-lg border-t border-blue-900/80 z-40">
-        <div className="max-w-xl mx-auto flex items-center justify-center">
+        <div className="max-w-[660px] mx-auto flex items-center justify-center">
           {/* BOTÃO CONFIRMA - RÉPLICA 3D DA TECLA VERDE DA URNA COM ANIMAÇÃO DE CLIQUE, PRESSIONAR E BRILHO */}
           <motion.button
             type="button"
