@@ -25,7 +25,13 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
     return [];
   }
   const ties: TieInfo[] = [];
-  const options = [...session.options].sort((a, b) => Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0));
+  const options = [...session.options].sort((a, b) => {
+    const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
+    if (diff !== 0) return diff;
+    const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
+    if (tieDiff !== 0) return tieDiff;
+    return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
+  });
 
   const V = session.vacancies || 1;
   const { s1Count, s2Count } = getEffectiveSuplentes(session);
@@ -37,9 +43,17 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
     const cutoffVotes = Math.floor(lastTitular?.votesCount || 0);
     const firstNonTitularVotes = Math.floor(firstNonTitular?.votesCount || 0);
 
-    if (cutoffVotes > 0 && cutoffVotes === firstNonTitularVotes) {
+    const isTieResolvedByTieBreak =
+      (lastTitular?.tieBreakVotes !== undefined || firstNonTitular?.tieBreakVotes !== undefined) &&
+      Math.floor(lastTitular?.tieBreakVotes || 0) !== Math.floor(firstNonTitular?.tieBreakVotes || 0);
+
+    if (cutoffVotes > 0 && cutoffVotes === firstNonTitularVotes && !isTieResolvedByTieBreak) {
       const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter((o) => Math.floor(o.votesCount || 0) === cutoffVotes);
+      const tiedCandidates = options.filter(
+        (o) =>
+          Math.floor(o.votesCount || 0) === cutoffVotes &&
+          (o.tieBreakVotes === undefined || o.tieBreakVotes === lastTitular.tieBreakVotes)
+      );
       const vacanciesInDispute = Math.max(1, V - candidatesWithHigherVotes.length);
 
       ties.push({
@@ -60,14 +74,23 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
     const cutoffVotes = Math.floor(lastS1?.votesCount || 0);
     const firstNonS1Votes = Math.floor(firstNonS1?.votesCount || 0);
 
+    const isTieResolvedByTieBreak =
+      (lastS1?.tieBreakVotes !== undefined || firstNonS1?.tieBreakVotes !== undefined) &&
+      Math.floor(lastS1?.tieBreakVotes || 0) !== Math.floor(firstNonS1?.tieBreakVotes || 0);
+
     const titularTie = ties.find((t) => t.type === 'TITULAR');
     if (
       cutoffVotes > 0 &&
       cutoffVotes === firstNonS1Votes &&
+      !isTieResolvedByTieBreak &&
       (!titularTie || titularTie.votesCount !== cutoffVotes)
     ) {
       const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter((o) => Math.floor(o.votesCount || 0) === cutoffVotes);
+      const tiedCandidates = options.filter(
+        (o) =>
+          Math.floor(o.votesCount || 0) === cutoffVotes &&
+          (o.tieBreakVotes === undefined || o.tieBreakVotes === lastS1.tieBreakVotes)
+      );
       const vacanciesInDispute = Math.max(1, boundaryS1 - candidatesWithHigherVotes.length);
 
       ties.push({
@@ -88,10 +111,18 @@ export function detectVotingTies(session: VotingSession): TieInfo[] {
     const cutoffVotes = Math.floor(lastS2?.votesCount || 0);
     const firstNonS2Votes = Math.floor(firstNonS2?.votesCount || 0);
 
+    const isTieResolvedByTieBreak =
+      (lastS2?.tieBreakVotes !== undefined || firstNonS2?.tieBreakVotes !== undefined) &&
+      Math.floor(lastS2?.tieBreakVotes || 0) !== Math.floor(firstNonS2?.tieBreakVotes || 0);
+
     const priorTie = ties.find((t) => t.votesCount === cutoffVotes);
-    if (cutoffVotes > 0 && cutoffVotes === firstNonS2Votes && !priorTie) {
+    if (cutoffVotes > 0 && cutoffVotes === firstNonS2Votes && !isTieResolvedByTieBreak && !priorTie) {
       const candidatesWithHigherVotes = options.filter((o) => Math.floor(o.votesCount || 0) > cutoffVotes);
-      const tiedCandidates = options.filter((o) => Math.floor(o.votesCount || 0) === cutoffVotes);
+      const tiedCandidates = options.filter(
+        (o) =>
+          Math.floor(o.votesCount || 0) === cutoffVotes &&
+          (o.tieBreakVotes === undefined || o.tieBreakVotes === lastS2.tieBreakVotes)
+      );
       const vacanciesInDispute = Math.max(1, boundaryS2 - candidatesWithHigherVotes.length);
 
       ties.push({

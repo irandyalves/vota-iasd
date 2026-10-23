@@ -156,21 +156,10 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   // Identifica se estamos em rodada de desempate
   const isTieBreak = session.status === 'TIE_BREAK' && Boolean(session.tieBreak?.active);
 
-  // REGRA DE OURO: Apuração / Ranking no Telão SEMPRE exibe todos os candidatos (JAMAIS somem no desempate!)
+  // Apuração no Telão: Votação de desempate NÃO CONTA PARA O GERAL!
   const optionsToDisplay: VotingOption[] = useMemo(() => {
-    const rawList: VotingOption[] = session.options || [];
-    if (isTieBreak && session.tieBreak?.options) {
-      const tieVotesMap = new Map(session.tieBreak.options.map((t) => [t.id, Math.floor(t.votesCount || 0)]));
-      return rawList.map((opt) => {
-        const extra = tieVotesMap.get(opt.id) || 0;
-        return {
-          ...opt,
-          votesCount: Math.floor(opt.votesCount || 0) + extra,
-        };
-      });
-    }
-    return rawList;
-  }, [session.options, isTieBreak, session.tieBreak]);
+    return session.options || [];
+  }, [session.options]);
 
   const vacancies = session.vacancies || 1;
 
@@ -209,10 +198,12 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
   const suplente2Styles = getCardColorStyles(suplente2Color);
   const unclassifiedStyles = getCardColorStyles(unclassifiedColor, true);
 
-  // Ordena opções por contagem de votos (decrescente) e, quando zerados/empatados, por ordem alfabética (A-Z)
+  // Ordena opções por contagem de votos (decrescente), depois por desempate, e por ordem alfabética (A-Z)
   const sortedOptions = [...optionsToDisplay].sort((a, b) => {
     const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
     if (diff !== 0) return diff;
+    const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
+    if (tieDiff !== 0) return tieDiff;
     return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
   });
 

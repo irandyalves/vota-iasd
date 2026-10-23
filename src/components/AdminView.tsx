@@ -35,6 +35,7 @@ import {
   CheckCircle2,
   Smartphone,
   FlaskConical,
+  Minimize2,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
@@ -88,6 +89,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [isCreatingNewEvent, setIsCreatingNewEvent] = useState<boolean>(false);
   const [editingEventId, setEditingEventId] = useState<string | null>(null);
   const [isTieModalOpen, setIsTieModalOpen] = useState<boolean>(false);
+  const [isTieBreakModalMinimized, setIsTieBreakModalMinimized] = useState<boolean>(false);
   // Filtro de exibição do histórico de votações (Só titulares / Titulares + demais / Completo)
   const [historyFilter, setHistoryFilter] = useState<'titulares' | 'titulares_demais' | 'completo'>('completo');
   const [isHistoryMenuOpen, setIsHistoryMenuOpen] = useState<boolean>(false);
@@ -349,25 +351,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     (hasTies && isTieModalOpen && !isTieAlertDismissed) ||
     session.status === 'TIE_BREAK' ||
     Boolean(session.tieBreak?.active);
-  // Apuração em Tempo Real SEMPRE exibe todos os candidatos (JAMAIS somem!)
+  // Apuração Geral: Votação de desempate NÃO CONTA PARA O GERAL!
+  // Os votos gerais de cada candidato permanecem íntegros
   const activeOptions: VotingOption[] = useMemo(() => {
-    const rawList: VotingOption[] = session.options || [];
-    if (session.status === 'TIE_BREAK' && session.tieBreak?.active && session.tieBreak.options) {
-      const tieVotesMap = new Map(session.tieBreak.options.map((t) => [t.id, Math.floor(t.votesCount || 0)]));
-      return rawList.map((opt) => {
-        const extra = tieVotesMap.get(opt.id) || 0;
-        return {
-          ...opt,
-          votesCount: Math.floor(opt.votesCount || 0) + extra,
-        };
-      });
-    }
-    return rawList;
-  }, [session.options, session.status, session.tieBreak]);
+    return session.options || [];
+  }, [session.options]);
 
   const rankedCandidates = [...activeOptions].sort((a, b) => {
     const diff = Math.floor(b.votesCount || 0) - Math.floor(a.votesCount || 0);
     if (diff !== 0) return diff;
+    const tieDiff = Math.floor(b.tieBreakVotes || 0) - Math.floor(a.tieBreakVotes || 0);
+    if (tieDiff !== 0) return tieDiff;
     return a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' });
   });
 
@@ -442,12 +436,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     if (!session.tieBreak?.active || session.status !== 'TIE_BREAK') return;
 
     const tieVotesMap = new Map(session.tieBreak?.options?.map((t) => [t.id, Math.floor(t.votesCount || 0)]) || []);
+    // NÃO CONTA PARA O GERAL: votesCount permanece íntegro e inalterado!
+    // Registra os votos do desempate exclusivamente em tieBreakVotes para definir classificação
     const updatedOptions = (session.options || []).map((opt) => {
-      const extra = tieVotesMap.get(opt.id) || 0;
-      return {
-        ...opt,
-        votesCount: Math.floor(opt.votesCount || 0) + extra,
-      };
+      const tieVotes = tieVotesMap.get(opt.id);
+      if (tieVotes !== undefined) {
+        return {
+          ...opt,
+          tieBreakVotes: tieVotes,
+        };
+      }
+      return opt;
     });
 
     const updatedEvents = (session.events || []).map((evt) => {
@@ -606,7 +605,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         options: tieOptions,
       },
     });
-    // O painel NÃO fecha ao enviar. Permanece aberto aguardando a apuração do resultado!
+    setIsTieBreakModalMinimized(false);
     setSelectedTieCandidateIds([]);
     showNotification('success', `Votação de desempate iniciada com ${tieOptions.length} candidatos! Aguardando votos...`);
   };
@@ -2278,6 +2277,200 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   return (
     <div className="w-full flex-1 flex flex-col px-3 sm:px-4 lg:px-5 py-2.5 text-slate-100 min-h-0">
+      {/* MODAL DE VOTAÇÃO DE DESEMPATE EM TEMPO REAL (CAI AO CLICAR PARA VOTAR E RECOLHE AO TERMINAR) */}
+      <AnimatePresence>
+        {session.status === 'TIE_BREAK' && session.tieBreak?.active && (
+          isTieBreakModalMinimized ? (
+            /* Pill minimizada flutuante */
+            <motion.div
+              key="tie-break-minimized-pill"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              onClick={() => setIsTieBreakModalMinimized(false)}
+              className="fixed bottom-4 right-4 z-[9990] bg-[#07132a] border-2 border-amber-400 text-white px-4 py-2.5 rounded-xl shadow-[0_0_25px_rgba(245,158,11,0.4)] cursor-pointer flex items-center gap-2.5 hover:scale-105 transition active:scale-95 select-none"
+            >
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+              <div className="text-left">
+                <span className="text-[10px] text-amber-300 font-bold uppercase tracking-wider block">
+                  Desempate em Votação (Clique para Abrir)
+                </span>
+                <span className="text-xs font-semibold text-white">
+                  {session.tieBreak?.title} • {session.tieBreakVotersCount || 0} votaram
+                </span>
+              </div>
+            </motion.div>
+          ) : (
+            /* Modal completo que cai ao iniciar a votação de desempate */
+            <motion.div
+              key="tie-break-live-modal"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-[9990] bg-black/80 backdrop-blur-md flex items-center justify-center p-3 sm:p-5"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: -25 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.92, y: -20 }}
+                transition={{ type: 'spring', stiffness: 340, damping: 26 }}
+                className="relative w-full max-w-2xl bg-gradient-to-b from-[#0a1628] via-[#07132a] to-[#040a17] border-2 border-amber-400/80 rounded-2xl p-4 sm:p-6 shadow-[0_0_50px_rgba(245,158,11,0.3),0_25px_60px_rgba(0,0,0,0.95)] text-white overflow-hidden flex flex-col max-h-[90vh]"
+              >
+                {/* Brilho decorativo superior âmbar */}
+                <div className="absolute -top-16 left-1/2 -translate-x-1/2 w-80 h-28 bg-amber-500/20 blur-3xl pointer-events-none" />
+
+                {/* Linha de borda superior reluzente */}
+                <div
+                  className="absolute top-0 left-0 right-0 h-[2.5px] pointer-events-none"
+                  style={{
+                    background: 'linear-gradient(90deg, transparent 0%, #fbbf24 30%, #f59e0b 70%, transparent 100%)',
+                  }}
+                />
+
+                {/* CABEÇALHO DO MODAL */}
+                <div className="pb-3 border-b border-white/10 flex items-start justify-between gap-3 shrink-0">
+                  <div className="space-y-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-400/60 text-amber-300 font-bold text-[10.5px] uppercase tracking-wider flex items-center gap-1.5 shadow-sm animate-pulse">
+                        <span className="w-2 h-2 rounded-full bg-amber-400" />
+                        Desempate em Votação
+                      </span>
+                      <span className="text-xs text-slate-400 font-mono">
+                        {session.title || 'Eleição'}
+                      </span>
+                    </div>
+                    <h2 className="text-base sm:text-xl font-black text-white uppercase tracking-wide truncate">
+                      {session.tieBreak?.title || 'Resolução de Empate'}
+                    </h2>
+                    <p className="text-xs text-amber-200/80">
+                      Esta votação é exclusiva para resolver o empate e não altera os votos gerais da eleição.
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* Votantes Conectados / Participando */}
+                    <div className="text-right bg-white/[0.04] border border-white/10 rounded-xl px-3 py-1.5">
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Votantes</span>
+                      <div className="text-xs sm:text-sm font-mono font-black text-amber-300">
+                        {session.tieBreakVotersCount || 0}
+                        <span className="text-slate-500 font-normal">
+                          /
+                          {session.mainVotersCount && session.mainVotersCount > 0
+                            ? session.mainVotersCount
+                            : (session.totalVotersConnected || connectedVotersCount || 1)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Botão Minimizar */}
+                    <button
+                      type="button"
+                      onClick={() => setIsTieBreakModalMinimized(true)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition cursor-pointer"
+                      title="Minimizar janela para visualizar painel de fundo"
+                    >
+                      <Minimize2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* CORPO DO MODAL: CARDS DOS CANDIDATOS E PROGRESSÕES */}
+                <div className="py-4 space-y-3 overflow-y-auto flex-1 pr-1">
+                  {(() => {
+                    const tieOptions = session.tieBreak?.options || [];
+                    const totalTieVotes = tieOptions.reduce((acc, c) => acc + Math.floor(c.votesCount || 0), 0);
+                    const maxTieVotes = Math.max(...tieOptions.map((c) => Math.floor(c.votesCount || 0)), 1);
+
+                    return tieOptions.map((c, cIdx) => {
+                      const votes = Math.floor(c.votesCount || 0);
+                      const percent = totalTieVotes > 0 ? Math.round((votes / totalTieVotes) * 100) : 0;
+                      const barWidth = totalTieVotes > 0 ? (votes / maxTieVotes) * 100 : 0;
+                      const isLeading = votes > 0 && votes === maxTieVotes;
+
+                      return (
+                        <div
+                          key={c.id || cIdx}
+                          className={`p-3 rounded-xl border transition-all duration-300 relative overflow-hidden bg-[#0d1627] ${
+                            isLeading
+                              ? 'border-amber-400/80 shadow-[0_0_20px_rgba(245,158,11,0.25)] ring-1 ring-amber-400/40'
+                              : 'border-white/10 hover:border-white/20'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              {c.photoUrl ? (
+                                <img
+                                  src={c.photoUrl}
+                                  alt={c.name}
+                                  className="w-8 h-8 rounded-lg object-cover border border-white/20 shrink-0"
+                                />
+                              ) : (
+                                <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/40 text-amber-300 font-bold text-xs flex items-center justify-center shrink-0">
+                                  {c.name.slice(0, 2).toUpperCase()}
+                                </div>
+                              )}
+                              <div className="min-w-0">
+                                <span className="font-bold text-xs sm:text-sm text-white uppercase truncate block">
+                                  {c.name}
+                                </span>
+                                {c.subtitle && (
+                                  <span className="text-[10.5px] text-slate-400 truncate block">
+                                    {c.subtitle}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Votos do Desempate e % */}
+                            <div className="text-right shrink-0">
+                              <span className="font-mono text-base sm:text-lg font-black text-amber-300">
+                                {votes} {votes === 1 ? 'voto' : 'votos'}
+                              </span>
+                              <span className="text-xs font-mono font-bold text-orange-400 ml-1.5">
+                                ({percent}%)
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Barra de Progresso do Desempate */}
+                          <div className="w-full h-3.5 bg-black/50 rounded-full border border-white/10 overflow-hidden relative shadow-inner">
+                            <motion.div
+                              initial={false}
+                              animate={{ width: `${barWidth}%` }}
+                              transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+                              className="h-full rounded-full bg-gradient-to-r from-amber-500 via-amber-400 to-yellow-300 shadow-[0_0_10px_rgba(251,191,36,0.6)]"
+                            />
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+
+                {/* RODAPÉ DO MODAL */}
+                <div className="pt-3 border-t border-white/10 flex items-center justify-between gap-3 shrink-0">
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                    <span>Aguardando conclusão de todos os votantes...</span>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={concludeTieBreakRound}
+                    className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 text-white font-bold text-xs uppercase tracking-wider transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.4)] flex items-center gap-1.5"
+                    title="Encerrar desempate agora com os votos recebidos"
+                  >
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>Concluir Desempate</span>
+                  </button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )
+        )}
+      </AnimatePresence>
+
       {/* MODAL BONITO DE CONFIRMAÇÃO (SUBSTITUI O CONFIRM NATIVO DO NAVEGADOR) */}
       <AnimatePresence>
         {confirmModal && (
@@ -4386,18 +4579,18 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           }
           return {
             title: label.replace(/^Empate para (vaga de )?/i, '').trim() || 'Desempate',
-            container: 'bg-[#1a0a10]/95 border-0 shadow-[0_0_20px_rgba(244,63,94,0.18)]',
-            badgeText: 'text-rose-400',
-            dot: 'bg-rose-400 drop-shadow-[0_0_6px_rgba(251,113,133,0.9)]',
+            container: 'bg-[#161206]/95 border-0 shadow-[0_0_20px_rgba(245,158,11,0.18)]',
+            badgeText: 'text-amber-400',
+            dot: 'bg-amber-400 drop-shadow-[0_0_6px_rgba(251,191,36,0.9)]',
             cardBase: 'bg-[#141721] border border-white/[0.12] hover:border-slate-500 text-slate-200',
-            cardSelected: 'bg-rose-950/90 border-2 border-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.35)] ring-2 ring-rose-400/40 text-white',
+            cardSelected: 'bg-amber-950/90 border-2 border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.35)] ring-2 ring-amber-400/40 text-white',
             iconBoxBase: 'bg-transparent border-0 text-slate-400',
-            iconBoxSelected: 'bg-transparent border-0 text-rose-300',
+            iconBoxSelected: 'bg-transparent border-0 text-amber-300',
             starBase: 'fill-slate-500 text-slate-500',
-            starSelected: 'fill-rose-300 text-rose-300',
+            starSelected: 'fill-amber-300 text-amber-300',
             subTextBase: 'text-slate-400',
-            subTextSelected: 'text-rose-200 font-bold',
-            circleSelected: 'border-rose-400 bg-rose-400 text-rose-950',
+            subTextSelected: 'text-amber-200 font-bold',
+            circleSelected: 'border-amber-400 bg-amber-400 text-amber-950',
           };
         };
 
@@ -4696,9 +4889,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
-                    className={`relative bg-[#141721] border border-rose-500/80 ${
+                    className={`relative bg-[#121826] border border-amber-500/50 ${
                       isSplit ? 'rounded-l-xl rounded-r-none border-r-0' : 'rounded-xl'
-                    } p-3 sm:p-4 shadow-[0_0_20px_rgba(244,63,94,0.25)] flex items-center justify-between gap-3`}
+                    } p-3 sm:p-4 shadow-[0_0_20px_rgba(245,158,11,0.15)] flex items-center justify-between gap-3`}
                   >
                     {/* Botão de X no canto direito superior: clicou fechou fica do jeito que está, empatado */}
                     <button
@@ -4711,14 +4904,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     </button>
 
                     <div className="flex items-center gap-2.5 min-w-0 pr-2">
-                      <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
-                        <Star className="w-4 h-4 text-rose-400 fill-rose-400 animate-pulse" />
+                      <div className="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-400/60 flex items-center justify-center shrink-0">
+                        <Star className="w-4 h-4 text-amber-400 fill-amber-400 animate-pulse" />
                       </div>
                       <div className="min-w-0">
-                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wide truncate">
-                          TEMOS EMPATE!
+                        <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wide truncate flex items-center gap-2">
+                          <span>TEMOS EMPATE!</span>
+                          <span className="text-[10px] font-semibold text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/40 normal-case">
+                            Aguardando resolução
+                          </span>
                         </h4>
-                        <p className="text-[11px] text-rose-200/80">
+                        <p className="text-[11px] text-amber-200/80">
                           {activeTiesToRender.length} {activeTiesToRender.length === 1 ? 'grupo em disputa' : 'grupos em disputa'} na linha de corte.
                         </p>
                       </div>
@@ -4731,9 +4927,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           setIsTieModalOpen(true);
                           setIsTieAlertDismissed(false);
                         }}
-                        className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)]"
+                        className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 border border-amber-400/80 text-slate-950 font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(245,158,11,0.35)]"
                       >
-                        <Star className="w-3.5 h-3.5 fill-white" />
+                        <Star className="w-3.5 h-3.5 fill-slate-950" />
                         <span>RESOLVER</span>
                       </button>
                     </div>
