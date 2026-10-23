@@ -549,7 +549,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         {totalVotersVoted}
                       </motion.span>
                       <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-300 mt-1">
-                        {totalVotersVoted === 1 ? 'pessoa votou' : 'já votaram'}
+                        {totalVotersVoted === 1 ? 'pessoa votou' : 'votaram'}
                       </span>
                     </motion.div>
                   </div>
@@ -563,7 +563,7 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
               </div>
             ) : (
               <div className="bg-[#001f47]/80 border border-blue-800/60 rounded-2xl p-3 sm:p-4 shadow-xl">
-                {/* CABEÇALHO DO PAINEL TELÃO: XX JÁ VOTARAM (SEM O ÍCONE [ ] DE TELA CHEIA) */}
+                {/* CABEÇALHO DO PAINEL TELÃO: XX VOTARAM */}
                 <div className="flex flex-wrap items-center justify-between mb-3 pb-2.5 border-b border-blue-800/80 gap-2">
                   <div className="inline-flex items-center gap-2.5 px-3 py-1 rounded-xl bg-[#07132a]/90 border border-blue-700/80 shadow-md">
                     <div className="flex items-center gap-1.5 text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider">
@@ -571,36 +571,8 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       <strong className="text-amber-300 font-mono text-sm sm:text-base font-black">
                         {totalVotersVoted}
                       </strong>
-                      <span>{totalVotersVoted === 1 ? 'JÁ VOTOU' : 'JÁ VOTARAM'}</span>
+                      <span>{totalVotersVoted === 1 ? 'VOTOU' : 'VOTARAM'}</span>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-3 text-[11px] font-semibold">
-                    <span className="flex items-center gap-1" style={{ color: winnerStyles.textColor }}>
-                      <span
-                        className="w-2.5 h-2.5 rounded-sm border inline-block"
-                        style={winnerStyles.dotStyle}
-                      />
-                      Titulares ({vacancies})
-                    </span>
-                    {suplentesCount > 0 && (
-                      <span className="flex items-center gap-1" style={{ color: suplente1Styles.textColor }}>
-                        <span
-                          className="w-2.5 h-2.5 rounded-sm border inline-block"
-                          style={suplente1Styles.dotStyle}
-                        />
-                        {segundoSuplentesCount > 0 ? `1º Suplentes (${suplentesCount})` : `Suplentes (${suplentesCount})`}
-                      </span>
-                    )}
-                    {segundoSuplentesCount > 0 && (
-                      <span className="flex items-center gap-1" style={{ color: suplente2Styles.textColor }}>
-                        <span
-                          className="w-2.5 h-2.5 rounded-sm border inline-block"
-                          style={suplente2Styles.dotStyle}
-                        />
-                        2º Suplentes ({segundoSuplentesCount})
-                      </span>
-                    )}
                   </div>
                 </div>
 
@@ -630,6 +602,9 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       ? detectedTies.find((t) => t.tiedCandidates.some((c) => c.id === option.id))
                       : undefined;
 
+                    const isThinking = option.acceptStatus === 'Pensará';
+                    const isDeclined = option.acceptStatus === 'Declinou';
+
                     const isElected = category === 'titular';
                     const isSuplente1 = category === 'suplente1';
                     const isSuplente2 = category === 'suplente2';
@@ -642,6 +617,22 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                       ? suplente2Styles
                       : unclassifiedStyles;
 
+                    const cardBackgroundStyle = tiedGroup
+                      ? {}
+                      : isDeclined
+                      ? {
+                          backgroundColor: 'rgba(21, 15, 20, 0.9)',
+                          borderColor: 'rgba(244, 63, 94, 0.35)',
+                          color: '#94a3b8',
+                        }
+                      : isThinking
+                      ? {
+                          backgroundColor: 'rgba(19, 23, 34, 0.95)',
+                          borderColor: 'rgba(148, 163, 184, 0.45)',
+                          color: '#cbd5e1',
+                        }
+                      : categoryStyles.cardStyle;
+
                     return (
                       <motion.div
                         layout
@@ -651,11 +642,15 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         }}
                         style={{
                           minHeight: `${cardHeight}px`,
-                          ...(tiedGroup ? {} : categoryStyles.cardStyle),
+                          ...cardBackgroundStyle,
                         }}
                         className={`border transition-colors duration-200 relative overflow-hidden flex items-center py-1 px-2.5 sm:py-1.5 sm:px-3 rounded-none first:rounded-t-lg last:rounded-b-lg -mt-px gap-2 shadow-sm hover:z-20 ${
                           tiedGroup
                             ? 'bg-[#18080c]/90 border border-rose-500/80 text-white shadow-md'
+                            : isDeclined
+                            ? 'bg-[#150f14]/80 border-rose-950/60 opacity-65 text-slate-400'
+                            : isThinking
+                            ? 'bg-[#131722]/95 border-slate-600/80 text-slate-200 shadow-[0_0_10px_rgba(100,116,139,0.25)]'
                             : isElected
                             ? 'text-white'
                             : isSuplente1
@@ -668,13 +663,23 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         {/* 1. POSIÇÃO / RANK */}
                         <div
                           style={
-                            !tiedGroup && (!isElected || rank > 3)
+                            tiedGroup
+                              ? undefined
+                              : isDeclined
+                              ? { backgroundColor: '#1e293b', borderColor: '#475569', color: '#64748b' }
+                              : isThinking
+                              ? { backgroundColor: '#334155', borderColor: '#64748b', color: '#cbd5e1' }
+                              : (!isElected || rank > 3)
                               ? categoryStyles.rankStyle
                               : undefined
                           }
                           className={`flex items-center justify-center font-black shrink-0 shadow-sm ${
                             tiedGroup
                               ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-rose-600 text-white border border-rose-400'
+                              : isDeclined
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs border border-slate-700 bg-slate-800 text-slate-500'
+                              : isThinking
+                              ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs border border-slate-500 bg-slate-700 text-slate-200'
                               : isElected
                               ? rank === 1
                                 ? 'w-6 h-6 sm:w-6.5 sm:h-6.5 rounded-md text-[10px] sm:text-xs bg-gradient-to-tr from-amber-400 to-[#d4af37] text-blue-950 ring-1 ring-amber-300'
@@ -704,11 +709,15 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                           </div>
                         )}
 
-                        {/* 2. COLUNA DE NOME DO CANDIDATO (20 CARACTERES) */}
-                        <div className="w-[20ch] min-w-[20ch] max-w-[20ch] z-10 shrink-0" title={option.name}>
+                        {/* 2. COLUNA DE NOME DO CANDIDATO */}
+                        <div className="w-[24ch] min-w-[20ch] max-w-[28ch] z-10 shrink-0" title={option.name}>
                           <h4
                             className={`leading-tight uppercase tracking-wide truncate ${
-                              tiedGroup
+                              isDeclined
+                                ? 'line-through text-slate-500 font-semibold text-[11px] sm:text-xs'
+                                : isThinking
+                                ? 'text-slate-200 font-bold text-xs sm:text-sm'
+                                : tiedGroup
                                 ? 'font-black text-xs sm:text-sm text-white'
                                 : isElected
                                 ? 'font-black text-xs sm:text-sm text-white'
@@ -721,9 +730,19 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             title={option.tieBreakDisputeWith ? `${option.name} > desempate com ${option.tieBreakDisputeWith}` : option.name}
                           >
                             {option.name}
-                            {option.tieBreakDisputeWith && (
+                            {option.tieBreakDisputeWith && !isDeclined && (
                               <span className="text-amber-300 font-normal text-[9px] sm:text-[10px] ml-1">
                                 &gt; desempate com {option.tieBreakDisputeWith}
+                              </span>
+                            )}
+                            {isThinking && (
+                              <span className="text-slate-400 font-normal text-[9px] sm:text-[10px] lowercase italic ml-1.5">
+                                (pensando...)
+                              </span>
+                            )}
+                            {isDeclined && (
+                              <span className="text-rose-400 font-bold text-[8.5px] uppercase ml-1.5 not-italic inline-block no-underline">
+                                (declinou{option.declinedOriginalRank ? ` - ${option.declinedOriginalRank}º orig.` : ''})
                               </span>
                             )}
                           </h4>
@@ -735,6 +754,15 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                             <span className="inline-flex items-center gap-1 text-[8.5px] px-2 py-0.5 rounded-full font-black bg-rose-600/80 border border-rose-400 text-white uppercase shadow whitespace-nowrap">
                               <Star className="w-2.5 h-2.5 fill-current" />
                               EMPATE
+                            </span>
+                          ) : isDeclined ? (
+                            <span className="inline-flex items-center gap-1 text-[8px] px-2 py-0.5 rounded-full font-bold border border-rose-500/60 bg-rose-950/80 text-rose-300 whitespace-nowrap shadow-xs">
+                              Declinou
+                            </span>
+                          ) : isThinking ? (
+                            <span className="inline-flex items-center gap-1 text-[8px] px-2 py-0.5 rounded-full font-bold border border-slate-500 bg-slate-800 text-slate-200 whitespace-nowrap shadow-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
+                              Pensando
                             </span>
                           ) : (
                             <>
@@ -778,11 +806,19 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                               style={{
                                 background: tiedGroup
                                   ? 'linear-gradient(90deg, rgba(225, 29, 72, 0.22) 0%, rgba(225, 29, 72, 0.40) 60%, rgba(225, 29, 72, 0.60) 100%)'
+                                  : isDeclined
+                                  ? 'linear-gradient(90deg, rgba(71, 85, 105, 0.22) 0%, rgba(71, 85, 105, 0.35) 60%, rgba(71, 85, 105, 0.50) 100%)'
+                                  : isThinking
+                                  ? 'linear-gradient(90deg, rgba(100, 116, 139, 0.22) 0%, rgba(100, 116, 139, 0.38) 60%, rgba(100, 116, 139, 0.58) 100%)'
                                   : `linear-gradient(90deg, rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.22) 0%, rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.40) 60%, rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.60) 100%)`,
                                 backdropFilter: 'blur(8px)',
                                 borderTop: '1px solid rgba(255, 255, 255, 0.45)',
-                                borderBottom: `1px solid rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.3)`,
-                                boxShadow: `inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 10px rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.35)`,
+                                borderBottom: isThinking || isDeclined
+                                  ? '1px solid rgba(148, 163, 184, 0.3)'
+                                  : `1px solid rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.3)`,
+                                boxShadow: isThinking || isDeclined
+                                  ? 'inset 0 1px 2px rgba(255, 255, 255, 0.4), 0 0 10px rgba(100, 116, 139, 0.3)'
+                                  : `inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 10px rgba(${categoryStyles.r}, ${categoryStyles.g}, ${categoryStyles.b}, 0.35)`,
                               }}
                             >
                               {/* Brilho especular superior do vidro */}
@@ -790,11 +826,11 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
                               {/* % puxada 1 caracter para a esq (mr-[14px]), bold, fonte 15% maior (text-[12px] sm:text-[13px]) + Faixinha laranja */}
                               <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20 pr-0.5">
-                                <span className="text-[12px] sm:text-[13px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[14px] select-none leading-none">
+                                <span className={`text-[12px] sm:text-[13px] font-mono font-black ${isThinking || isDeclined ? 'text-slate-300' : 'text-amber-100'} drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[14px] select-none leading-none`}>
                                   {percentage}%
                                 </span>
-                                <div className="absolute -inset-y-1 w-2 sm:w-3.5 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[1.5px] sm:blur-[3px]" />
-                                <div className="relative w-[2.8px] sm:w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24,0_0_8px_rgba(245,158,11,0.6)] sm:shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
+                                <div className={`absolute -inset-y-1 w-2 sm:w-3.5 -right-0.5 ${isThinking || isDeclined ? 'bg-slate-400 opacity-60' : 'bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85'} blur-[1.5px] sm:blur-[3px]`} />
+                                <div className={`relative w-[2.8px] sm:w-[4.8px] h-full ${isThinking || isDeclined ? 'bg-slate-300 shadow-[0_0_5px_#94a3b8]' : 'bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24,0_0_8px_rgba(245,158,11,0.6)] sm:shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff]'} rounded-r-xs`} />
                               </div>
                             </motion.div>
                           ) : (
@@ -807,9 +843,17 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                         {/* LINHA VERTICAL FINAL (MARCANDO O LIMITE 100%) */}
                         <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center z-10" title="Limite 100%" />
 
-                        {/* 5. CONTADOR NUMÉRICO DE VOTOS (Sem badge, só o número 80% maior, sem borda, amarelo e bold) */}
+                        {/* 5. CONTADOR NUMÉRICO DE VOTOS */}
                         <div className="text-right z-10 shrink-0 flex items-center justify-end min-w-[42px] font-mono ml-1.5">
-                          <span className="text-[22px] font-black text-amber-300 select-none leading-none drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
+                          <span
+                            className={`text-[22px] font-black select-none leading-none ${
+                              isDeclined
+                                ? 'text-slate-500'
+                                : isThinking
+                                ? 'text-slate-400'
+                                : 'text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]'
+                            }`}
+                          >
                             {Math.floor(option.votesCount || 0)}
                           </span>
                         </div>
