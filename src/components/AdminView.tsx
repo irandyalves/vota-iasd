@@ -32,6 +32,7 @@ import {
   Copy,
   FileDown,
   ChevronDown,
+  Lock,
 } from 'lucide-react';
 import { detectVotingTies, type TieInfo } from '../utils/tieDetection';
 import { getGlobalElectionRules, saveGlobalElectionRules } from '../utils/globalRules';
@@ -241,7 +242,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     }
   }, [detectedTies]);
 
-  const activeTiesToRender = detectedTies.length > 0 ? detectedTies : prevDetectedTiesRef.current;
+  const tiePriorityOrder: Record<string, number> = {
+    TITULAR: 1,
+    SUPLENTE_1: 2,
+    SUPLENTE_2: 3,
+  };
+
+  const activeTiesToRender = useMemo(() => {
+    const list = detectedTies.length > 0 ? detectedTies : prevDetectedTiesRef.current;
+    return [...list].sort((a, b) => {
+      const orderA = tiePriorityOrder[a.type] ?? 99;
+      const orderB = tiePriorityOrder[b.type] ?? 99;
+      return orderA - orderB;
+    });
+  }, [detectedTies]);
   const shouldRenderTieResolution = hasTies || isHoldingTieDisplay;
 
   const [tieGlowingIds, setTieGlowingIds] = useState<Record<string, boolean>>({});
@@ -4227,15 +4241,24 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white truncate flex items-center gap-2 flex-wrap">
                             <span>VOTAÇÃO PARA DESEMPATAR</span>
                             <span className="text-slate-400 font-normal">•</span>
-                            {activeTiesToRender.map((t) => {
+                            {activeTiesToRender.map((t, idx) => {
                               const st = getTieCategoryStyles(t.type, t.label);
+                              const isCurrent = idx === 0;
                               return (
-                                <span
-                                  key={t.label}
-                                  className={`px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-bold uppercase tracking-wider ${st.badgeText} bg-white/10 border-0 shrink-0`}
-                                >
-                                  {st.title}
-                                </span>
+                                <React.Fragment key={t.label}>
+                                  {idx > 0 && <span className="text-slate-500 text-xs font-mono">→</span>}
+                                  <span
+                                    className={`px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-bold uppercase tracking-wider shrink-0 transition-all flex items-center gap-1 ${
+                                      isCurrent
+                                        ? `${st.badgeText} bg-white/10 ring-1 ring-white/20 shadow-sm`
+                                        : 'text-slate-500 bg-white/[0.04] opacity-60'
+                                    }`}
+                                    title={isCurrent ? 'Em resolução agora' : 'Aguardando resolução do grupo anterior'}
+                                  >
+                                    {!isCurrent && <Lock className="w-2.5 h-2.5 text-slate-500" />}
+                                    <span>{st.title}</span>
+                                  </span>
+                                </React.Fragment>
                               );
                             })}
                           </h3>
@@ -4292,7 +4315,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     {/* Lista de Grupos de Empate com Animação de Contração ao Resolver */}
                     <div className="space-y-3 max-h-[60vh] overflow-y-auto pr-1">
                       <AnimatePresence initial={false}>
-                        {activeTiesToRender.map((tie) => {
+                        {activeTiesToRender.map((tie, index) => {
+                          const isLockedByPriorTie = index > 0;
                           const maxAllowed = tie.vacanciesInDispute + 1;
                           const styles = getTieCategoryStyles(tie.type, tie.label);
                           const selectedInThisTie = tie.tiedCandidates.filter((c) => selectedTieCandidateIds.includes(c.id)).length;
@@ -4311,7 +4335,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               animate={{ opacity: 1, height: 'auto', scale: 1 }}
                               exit={{ opacity: 0, height: 0, scale: 0.92, overflow: 'hidden' }}
                               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                              className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-colors ${styles.container}`}
+                              className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-all duration-300 relative ${styles.container} ${
+                                isLockedByPriorTie ? 'opacity-40 grayscale-[35%] select-none' : ''
+                              }`}
                             >
                               {/* Header do Grupo: Escolha xx nomes xx vagas e BOTÃO ENVIAR à direita */}
                               <div className="flex items-center justify-between gap-3 pb-1">
@@ -4337,8 +4363,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   )}
                                 </div>
 
-                                {/* Botão ENVIAR no lado direito: cinza por padrão, fica verde quando verdadeiro, ou indica votação ativa */}
-                                {isThisTieVotingNow ? (
+                                {/* Botão ENVIAR no lado direito: se estiver bloqueado aguardando o grupo acima, avisa */}
+                                {isLockedByPriorTie ? (
+                                  <div
+                                    className="shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5 bg-[#0b0e14]/90 text-amber-300/80 border border-amber-500/30 select-none shadow-sm"
+                                    title="Resolva primeiro o empate acima antes de iniciar este"
+                                  >
+                                    <Lock className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                                    <span>Bloqueado • Resolva {activeTiesToRender[0]?.label ? getTieCategoryStyles(activeTiesToRender[0].type, activeTiesToRender[0].label).title : 'Titular'}</span>
+                                  </div>
+                                ) : isThisTieVotingNow ? (
                                   <div className="shrink-0 px-3.5 py-1.5 rounded-lg font-medium text-xs sm:text-sm tracking-wider uppercase flex items-center gap-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 select-none shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse">
                                     <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
                                     <span>EM VOTAÇÃO ({session.tieBreakVotersCount || 0})</span>
@@ -4376,13 +4410,15 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                   return (
                                     <div
                                       key={c.id}
-                                      onClick={() => !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
-                                      className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-300 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
-                                        isTieGlowing
-                                          ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20'
+                                      onClick={() => !isLockedByPriorTie && !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
+                                      className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-300 select-none flex items-center justify-between gap-2 shadow-sm ${
+                                        isLockedByPriorTie
+                                          ? 'opacity-60 cursor-not-allowed bg-[#0b0e14] border-white/5 pointer-events-none'
+                                          : isTieGlowing
+                                          ? 'bg-gradient-to-r from-amber-500/35 via-yellow-400/25 to-amber-500/35 !border-amber-400 !border-2 ring-2 ring-yellow-400/90 shadow-[0_0_35px_rgba(250,204,21,0.75),inset_0_0_15px_rgba(250,204,21,0.35)] scale-[1.03] z-20 cursor-pointer active:scale-95'
                                           : isSelected
-                                          ? styles.cardSelected
-                                          : styles.cardBase
+                                          ? `${styles.cardSelected} cursor-pointer active:scale-95`
+                                          : `${styles.cardBase} cursor-pointer active:scale-95`
                                       } ${isThisTieVotingNow && !isTieGlowing ? 'opacity-85 pointer-events-none' : ''}`}
                                     >
                                       <div className="flex items-center gap-2 min-w-0">
@@ -4413,15 +4449,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                       {/* Indicador de Seleção Circular Compacto */}
                                       <div
                                         className={`w-4 h-4 rounded-full border-2 flex items-center justify-center shrink-0 transition-all ${
-                                          isTieGlowing
+                                          isLockedByPriorTie
+                                            ? 'border-slate-700 bg-slate-900/40 text-slate-600'
+                                            : isTieGlowing
                                             ? 'border-amber-400 bg-amber-400/40 shadow-[0_0_12px_rgba(250,204,21,0.85)]'
                                             : isSelected
                                             ? styles.circleSelected
                                             : 'border-slate-600 bg-slate-900/60'
                                         }`}
                                       >
-                                        {isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />}
-                                        {isTieGlowing && !isSelected && (
+                                        {isLockedByPriorTie ? (
+                                          <Lock className="w-2 h-2 text-slate-500 stroke-[2]" />
+                                        ) : (
+                                          isSelected && <CheckCircle className="w-3 h-3 stroke-[3]" />
+                                        )}
+                                        {isTieGlowing && !isSelected && !isLockedByPriorTie && (
                                           <div className="w-1.5 h-1.5 rounded-full bg-yellow-300 animate-ping" />
                                         )}
                                       </div>
