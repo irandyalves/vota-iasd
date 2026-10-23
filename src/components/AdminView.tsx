@@ -288,7 +288,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   }, [session?.id]);
 
   const currentVotersVoted = session.status === 'TIE_BREAK' ? (session.tieBreakVotersCount || 0) : (session.mainVotersCount || 0);
-  const displayVotersCount = Math.max(session.mainVotersCount || 0, connectedVotersCount);
   const totalVotersLimit =
     session?.totalVotersConnected && session.totalVotersConnected > 0
       ? session.totalVotersConnected
@@ -2779,7 +2778,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       )}
 
       {/* CARD: EVENTOS GERAIS ONLINE (LISTBOX + NOVO EVENTO À ESQUERDA, HISTÓRICO + ENGRENAGEM SEM FUNDO À DIREITA) */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative z-30">
+      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 mb-2.5 px-3.5 sm:px-5 py-2 bg-gradient-to-r from-[#0a1829] via-[#091b33] to-[#0d2238] border-y border-amber-500/30 shadow-[0_4px_20px_rgba(0,0,0,0.6)] flex items-center justify-between gap-3 relative ${isHistoryMenuOpen ? "z-[100]" : "z-30"}`}>
         {/* Esquerda: Grupo Comissão (sem borda, fica bold no hover) + Lápis, Excluir e Add esmaecidos que voltam à vida da esq para a dir em cores */}
         <div className="group flex items-center gap-1 sm:gap-1.5 min-w-0 flex-wrap">
           <div className="flex items-center justify-center shrink-0 p-1">
@@ -2848,7 +2847,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         {/* Direita: Histórico (sem borda) à esquerda da Engrenagem, e Engrenagem (sem borda) lá na ponta */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
           {/* Atalho para Histórico de Votações (sem borda) com Listbox Dropdown */}
-          <div className="relative" data-history-dropdown="true">
+          <div className={`relative ${isHistoryMenuOpen ? 'z-[110]' : ''}`} data-history-dropdown="true">
             <button
               type="button"
               onClick={() => setIsHistoryMenuOpen((prev) => !prev)}
@@ -2864,16 +2863,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               )}
             </button>
 
-            {/* Listbox Dropdown ao clicar no Histórico */}
+            {/* Listbox Dropdown ao clicar no Histórico (Por Cima de Tudo) */}
             <AnimatePresence>
               {isHistoryMenuOpen && (
-                <motion.div
-                  initial={{ opacity: 0, y: -4, scale: 0.95 }}
-                  animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                  transition={{ duration: 0.15 }}
-                  className="absolute right-0 top-full mt-2 w-64 bg-[#141721] border border-white/[0.12] rounded-xl shadow-2xl py-1.5 z-50 overflow-hidden"
-                >
+                <>
+                  <div
+                    className="fixed inset-0 z-[998] bg-black/40 backdrop-blur-[0.5px]"
+                    onClick={() => setIsHistoryMenuOpen(false)}
+                  />
+                  <motion.div
+                    initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 top-full mt-2 w-64 bg-[#141721] border border-white/[0.12] rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.95)] py-1.5 z-[999] overflow-hidden"
+                  >
                   <div className="px-3 py-1.5 border-b border-white/[0.08] flex items-center justify-between">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
                       Exibição do Histórico
@@ -2949,6 +2953,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     {historyFilter === 'completo' && <Check className="w-4 h-4 text-amber-400 shrink-0" />}
                   </button>
                 </motion.div>
+                </>
               )}
             </AnimatePresence>
           </div>
@@ -3022,7 +3027,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       </div>
 
       {/* BARRA DE EVENTOS: LAYOUT ESTÚDIO MODERNO COM CORES SUAVES E SEM CAIXA ALTA */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative z-30">
+      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative z-10">
         <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
           {/* LINHA CENTRALIZADA VERTICALMENTE: "EVENTOS" + "+ CRIAR VOTAÇÃO" À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
           <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
@@ -3972,8 +3977,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         const suplente2Color = session.telaoLayout?.suplente2Color || '#64748b';
         const unclassifiedColor = session.telaoLayout?.unclassifiedColor || '#1e293b';
 
-        const totalVoters = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
-        const voterProgressPercent = totalVoters > 0 ? Math.min(100, Math.round((currentVotersVoted / totalVoters) * 100)) : 0;
 
         // Painel de Apuração em Tempo Real (Só Admin Vê - Fica Visível o Tempo Todo)
         const renderRealtimeResultsPanel = () => (
@@ -4053,25 +4056,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
             </div>
 
-            {/* Progresso Geral de Votação (Linha Fina Discreta) */}
-            {totalVoters > 0 && (
-              <div className="space-y-0.5 -mt-1">
-                <div className="flex items-center justify-between text-[10px] text-slate-400">
-                  <span>Progresso</span>
-                  <span className="font-mono text-emerald-300 font-bold text-[10px]">
-                    {currentVotersVoted} de {totalVoters} ({voterProgressPercent}%)
-                  </span>
-                </div>
-                <div className="h-1 w-full bg-black/40 rounded-full overflow-hidden border border-white/[0.06]">
-                  <motion.div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)]"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${voterProgressPercent}%` }}
-                    transition={{ duration: 0.5, ease: 'easeOut' }}
-                  />
-                </div>
-              </div>
-            )}
+
 
             {/* Ranking Dinâmico em Tempo Real */}
             <div className="space-y-1.5 pt-1 flex-1 flex flex-col min-h-0">
