@@ -4246,31 +4246,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                       } ${isThisTieVotingNow ? 'opacity-85 pointer-events-none' : ''}`}
                                     >
                                       <div className="flex items-center gap-2 min-w-0">
-                                        {c.photoUrl ? (
+                                        {c.photoUrl && (
                                           <img
                                             src={c.photoUrl}
                                             alt={c.name}
                                             className="w-6 h-6 rounded-md object-cover border border-white/20 shrink-0"
                                           />
-                                        ) : (
-                                          <div
-                                            className={`w-5 h-5 flex items-center justify-center shrink-0 bg-transparent border-0 ${
-                                              isSelected ? styles.iconBoxSelected : styles.iconBoxBase
-                                            }`}
-                                          >
-                                            <Star className={`w-3.5 h-3.5 ${isSelected ? styles.starSelected : styles.starBase}`} />
-                                          </div>
                                         )}
                                         <div className="min-w-0">
                                           <h5 className="font-black text-[11px] sm:text-xs text-white uppercase truncate leading-tight">
                                             {c.name}
                                           </h5>
-                                          <span className={`inline-flex items-center gap-1 text-[7.5px] font-black uppercase leading-tight ${
-                                            isSelected ? styles.subTextSelected : styles.subTextBase
-                                          }`}>
-                                            <Star className="w-2 h-2 fill-current" />
-                                            EMPATE • {tie.votesCount} {tie.votesCount === 1 ? 'voto' : 'votos'}
-                                          </span>
                                         </div>
                                       </div>
 

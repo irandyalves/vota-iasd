@@ -169,7 +169,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
 
   // Detecção de empates que afetam a classificação
   const detectedTies = detectVotingTies(session);
-  const hasTies = session.status === 'CLOSED' && detectedTies.length > 0;
 
   // Lógica do QR Code: Sempre visível na coluna da esquerda por padrão no Telão
   const showQrCode = session.showQrOnTelao !== false;
@@ -607,35 +606,6 @@ export const TelaoView: React.FC<TelaoViewProps> = ({ session }) => {
                     )}
                   </div>
                 </div>
-
-                {/* ALERTA DE EMPATE NO TELÃO AO ENCERRAR VOTAÇÃO (BORDA VERMELHA FINA, ESTRELA E "EMPATE" CLARO) */}
-                {hasTies && (
-                  <div className="mb-3 p-2.5 sm:p-3 rounded-xl bg-rose-950/90 border border-rose-500/80 text-rose-200 shadow-2xl flex items-center justify-between gap-3 animate-pulse">
-                    <div className="flex items-center gap-2.5">
-                      <Star className="w-5 h-5 sm:w-6 sm:h-6 text-rose-400 fill-rose-400 shrink-0" />
-                      <div>
-                        <h4 className="font-black text-xs sm:text-sm lg:text-base text-white uppercase tracking-wide flex items-center gap-2">
-                          EMPATE DETECTADO: {detectedTies.map((t) => t.label).join(' • ')}
-                          <span className="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider bg-rose-600/40 text-rose-300 border border-rose-500/60 inline-flex items-center gap-1">
-                            <Star className="w-2.5 h-2.5 fill-rose-400 text-rose-400" />
-                            EMPATE
-                          </span>
-                        </h4>
-                        <p className="text-[11px] sm:text-xs text-rose-200/90 font-medium">
-                          {detectedTies
-                            .map(
-                              (t) =>
-                                `${t.label} (${t.votesCount} ${t.votesCount === 1 ? 'voto' : 'votos'}): ${t.tiedCandidates.map((c) => c.name).join(', ')}`
-                            )
-                            .join(' | ')}
-                        </p>
-                      </div>
-                    </div>
-                    <span className="px-2.5 py-1 bg-rose-600 border border-rose-400 text-white font-black text-[10px] sm:text-xs uppercase tracking-wider rounded-lg shrink-0 shadow">
-                      Aguardando Desempate
-                    </span>
-                  </div>
-                )}
 
                 {/* ESTRUTURA DOS CARDS DE VOTAÇÃO COM ALTURA, ESPAÇAMENTO, COLUNAS E CORES PERSONALIZÁVEIS */}
                 {(() => {
