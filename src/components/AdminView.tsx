@@ -584,11 +584,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     // Se 2 pessoas votaram na principal, o desempate conclui automaticamente assim que essas 2 pessoas votarem.
     const totalLimit =
       session.status === 'TIE_BREAK'
-        ? (session.mainVotersCount && session.mainVotersCount > 0
-            ? session.mainVotersCount
-            : (session?.totalVotersConnected && session.totalVotersConnected > 0
-                ? session.totalVotersConnected
-                : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0, 1)))
+        ? Math.max(
+            session.mainVotersCount || 0,
+            session?.totalVotersConnected || 0,
+            connectedVotersCount,
+            session?.allowedVoterIds?.length || 0,
+            1
+          )
         : (session?.totalVotersConnected && session.totalVotersConnected > 0
             ? session.totalVotersConnected
             : Math.max(connectedVotersCount, session?.allowedVoterIds?.length || 0));

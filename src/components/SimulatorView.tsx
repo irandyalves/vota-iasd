@@ -16,6 +16,8 @@ import {
   submitBallot,
   clearVotedFlag,
   hasVoted,
+  saveSession,
+  getLocalSession,
 } from '../services/votingService';
 
 interface SimulatorViewProps {
@@ -58,6 +60,34 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     setDeviceInputStr(String(clamped));
     if (typeof window !== 'undefined') {
       localStorage.setItem('vota_sim_device_count', String(clamped));
+    }
+
+    // Sincroniza imediatamente o total de votantes da sessão para que Telão e Admin reconheçam a quantidade simulada
+    const current = getLocalSession();
+    if (current) {
+      const updatedEvents = (current.events || []).map((evt) => {
+        if (evt.id === current.activeEventId) {
+          return {
+            ...evt,
+            totalVotersConnected: clamped,
+            ...(current.status === 'TIE_BREAK'
+              ? { mainVotersCount: Math.max(evt.mainVotersCount || 0, clamped) }
+              : {}),
+          };
+        }
+        return evt;
+      });
+
+      const updatedSession: VotingSession = {
+        ...current,
+        totalVotersConnected: clamped,
+        ...(current.status === 'TIE_BREAK'
+          ? { mainVotersCount: Math.max(current.mainVotersCount || 0, clamped) }
+          : {}),
+        events: updatedEvents,
+        updatedAt: Date.now(),
+      };
+      saveSession(updatedSession);
     }
   };
 
@@ -138,6 +168,40 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     if (!isVotingActive || options.length === 0 || isAutoVoting) return;
     setIsAutoVoting(true);
 
+    // Garante que o total de votantes da sessão acompanhe o número de aparelhos simulados
+    const current = getLocalSession();
+    if (current) {
+      const needsSync =
+        (current.totalVotersConnected || 0) < deviceCount ||
+        (current.status === 'TIE_BREAK' && (current.mainVotersCount || 0) < deviceCount);
+
+      if (needsSync) {
+        const updatedEvents = (current.events || []).map((evt) => {
+          if (evt.id === current.activeEventId) {
+            return {
+              ...evt,
+              totalVotersConnected: Math.max(evt.totalVotersConnected || 0, deviceCount),
+              ...(current.status === 'TIE_BREAK'
+                ? { mainVotersCount: Math.max(evt.mainVotersCount || 0, deviceCount) }
+                : {}),
+            };
+          }
+          return evt;
+        });
+
+        const syncedSession: VotingSession = {
+          ...current,
+          totalVotersConnected: Math.max(current.totalVotersConnected || 0, deviceCount),
+          ...(current.status === 'TIE_BREAK'
+            ? { mainVotersCount: Math.max(current.mainVotersCount || 0, deviceCount) }
+            : {}),
+          events: updatedEvents,
+          updatedAt: Date.now(),
+        };
+        saveSession(syncedSession);
+      }
+    }
+
     const pendingDevices = deviceIds.filter((id) => !checkDeviceVoted(id));
     setVotingProgress({ current: 0, total: pendingDevices.length });
 
@@ -160,6 +224,12 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
       if (i < pendingDevices.length - 1) {
         await new Promise((resolve) => setTimeout(resolve, 500));
       }
+    }
+
+    // Ao concluir todos os celulares simulados, salva a sessão completa para garantir sincronia com Telão e Admin
+    const finalSession = getLocalSession();
+    if (finalSession) {
+      saveSession(finalSession);
     }
 
     setVotingProgress(null);
@@ -222,15 +292,20 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
               <Smartphone className="w-3.5 h-3.5 text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xs sm:text-sm font-bold text-white tracking-wide uppercase">
-                  Simulador Multi-Aparelhos
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-sm sm:text-base font-black text-white tracking-wider uppercase">
+                  SIMULADOR
                 </h1>
-                <span className="text-[10.5px] font-mono text-slate-400">
-                  ({votedCount}/{deviceCount} votaram)
-                </span>
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-[#070e1b] border border-blue-800/60 shadow-inner">
+                  <span className="font-mono font-black text-sm sm:text-base text-amber-300">
+                    {votedCount} / {deviceCount}
+                  </span>
+                  <span className="text-[11px] font-bold text-slate-300 lowercase">
+                    votaram
+                  </span>
+                </div>
               </div>
-              <p className="text-[10px] text-slate-400 leading-tight">
+              <p className="text-[10px] text-slate-400 leading-tight mt-0.5">
                 {session.title || 'Votação Ativa'} • Status:{' '}
                 <span
                   className={`font-semibold ${
@@ -368,37 +443,49 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Lado Direito: BOTÃO ESCOLHER ALEATÓRIO e Auto-PIN */}
+          {/* Lado Direito: BOTÃO ESCOLHER ALEATÓRIO e CONFIRMAR TODOS OS VOTOS */}
           <div className="flex items-center gap-2">
             {/* BOTÃO ESCOLHER ALEATÓRIO */}
             <button
               type="button"
               disabled={!isVotingActive || votedCount === deviceCount}
               onClick={handlePickRandomForAll}
-              className={`flex items-center gap-1.5 px-3 py-1 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shadow-md ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shadow-md ${
                 isVotingActive && votedCount < deviceCount
                   ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 text-amber-300 active:scale-95 shadow-amber-500/10'
                   : 'bg-slate-900/50 border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
               }`}
-              title="O sistema escolhe os candidatos aleatoriamente em todos os celulares, restando para você apenas clicar em Confirmar no rodapé"
+              title="O sistema escolhe os candidatos aleatoriamente em todos os celulares que ainda não votaram"
             >
               <Shuffle className="w-3.5 h-3.5 text-amber-400" />
               <span>Escolher Aleatório</span>
             </button>
 
-            {/* Auto-PIN */}
+            {/* BOTÃO CONFIRMAR TODOS OS VOTOS (LADO DIREITO DO BOTÃO ESCOLHER ALEATÓRIO) */}
             <button
               type="button"
-              onClick={() => setAutoAuthPin(!autoAuthPin)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-lg border text-[11px] font-semibold transition cursor-pointer ${
-                autoAuthPin
-                  ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300'
-                  : 'bg-slate-900/50 border-slate-700 text-slate-400'
+              disabled={!isVotingActive || isAutoVoting || votedCount === deviceCount}
+              onClick={handleConfirmAll}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md ${
+                isVotingActive && votedCount < deviceCount
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 active:scale-95 shadow-emerald-500/20 ring-1 ring-emerald-400/40'
+                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-40 shadow-none'
               }`}
-              title="Auto-preencher e autenticar o PIN em todos os aparelhos"
+              title="Disparar confirmação para todos os aparelhos a cada 0,5 segundo"
             >
-              <KeyRound className="w-3 h-3" />
-              <span>PIN {autoAuthPin ? 'Ativado' : 'Desativado'}</span>
+              {isAutoVoting ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-950" />
+                  <span>
+                    CONFIRMANDO {votingProgress ? `${votingProgress.current}/${votingProgress.total}` : '...'}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-slate-950 stroke-[2.5]" />
+                  <span>CONFIRMAR TODOS OS VOTOS</span>
+                </>
+              )}
             </button>
           </div>
         </div>
@@ -510,37 +597,11 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
           </div>
         </div>
 
-        {/* BOTÃO CONFIRMAR NO RODAPÉ */}
-        <div className="flex-1 max-w-md flex justify-center">
-          <button
-            type="button"
-            disabled={!isVotingActive || isAutoVoting || votedCount === deviceCount}
-            onClick={handleConfirmAll}
-            className={`w-full max-w-sm py-2 px-6 rounded-xl text-sm font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-lg flex items-center justify-center gap-2 ${
-              isVotingActive && votedCount < deviceCount
-                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 active:scale-95 shadow-emerald-500/25 ring-2 ring-emerald-400/40'
-                : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-40 shadow-none'
-            }`}
-            title="Disparar confirmação para todos os aparelhos a cada 0,5 segundo"
-          >
-            {isAutoVoting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
-                <span>
-                  CONFIRMANDO {votingProgress ? `${votingProgress.current}/${votingProgress.total}` : '...'} (0.5s)
-                </span>
-              </>
-            ) : (
-              <>
-                <CheckCircle2 className="w-5 h-5 text-slate-950 stroke-[2.5]" />
-                <span>CONFIRMAR TODOS OS VOTOS</span>
-              </>
-            )}
-          </button>
-        </div>
+        {/* Espaçador central */}
+        <div className="flex-1" />
 
-        {/* Lado Direito do Rodapé: Resetar Todos */}
-        <div className="flex items-center gap-2">
+        {/* Lado Direito do Rodapé: Resetar Todos e PIN Ativado */}
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={handleResetAllDevices}
@@ -549,6 +610,21 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Resetar Todos</span>
+          </button>
+
+          {/* PIN Ativado / Desativado movido para a direita de Resetar Todos */}
+          <button
+            type="button"
+            onClick={() => setAutoAuthPin(!autoAuthPin)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold transition cursor-pointer ${
+              autoAuthPin
+                ? 'bg-emerald-950/50 border-emerald-500/40 text-emerald-300 hover:bg-emerald-900/50'
+                : 'bg-slate-900/50 border-slate-700 text-slate-400 hover:bg-slate-800'
+            }`}
+            title="Auto-preencher e autenticar o PIN em todos os aparelhos"
+          >
+            <KeyRound className="w-3.5 h-3.5" />
+            <span>PIN {autoAuthPin ? 'Ativado' : 'Desativado'}</span>
           </button>
         </div>
       </footer>

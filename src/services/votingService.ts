@@ -488,6 +488,22 @@ export function applyBallotToSession(
     updated.updatedAt = Date.now();
   }
 
+  // Sincroniza o evento ativo correspondente na lista de eventos para manter total consistência
+  if (updated.events && updated.activeEventId) {
+    updated.events = updated.events.map((evt) => {
+      if (evt.id === updated.activeEventId) {
+        return {
+          ...evt,
+          options: updated.options,
+          mainVotersCount: updated.mainVotersCount,
+          tieBreakVotersCount: updated.tieBreakVotersCount,
+          tieBreak: updated.tieBreak,
+        };
+      }
+      return evt;
+    });
+  }
+
   return updated;
 }
 

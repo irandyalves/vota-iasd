@@ -289,8 +289,13 @@ export const VoterView: React.FC<VoterViewProps> = ({
     const suplentesCount = liveTie ? 0 : s1Count;
     const segundoSuplentesCount = liveTie ? 0 : s2Count;
     const totalLimit =
-      session?.status === 'TIE_BREAK' && session?.mainVotersCount && session.mainVotersCount > 0
-        ? session.mainVotersCount
+      session?.status === 'TIE_BREAK'
+        ? Math.max(
+            session?.mainVotersCount || 0,
+            session?.totalVotersConnected || 0,
+            session?.allowedVoterIds?.length || 0,
+            1
+          )
         : session?.totalVotersConnected && session.totalVotersConnected > 0
         ? session.totalVotersConnected
         : (session?.allowedVoterIds?.length || 0);

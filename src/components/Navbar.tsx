@@ -150,8 +150,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   // Limite configurado pelo Admin (totalVotersConnected) é o limite oficial e soberano da votação.
   // Durante TIE_BREAK: o limite é soberanamente a quantidade de votantes que participaram da rodada principal.
   const totalLimit =
-    session?.status === 'TIE_BREAK' && session?.mainVotersCount && session.mainVotersCount > 0
-      ? session.mainVotersCount
+    session?.status === 'TIE_BREAK'
+      ? Math.max(
+          session?.mainVotersCount || 0,
+          session?.totalVotersConnected || 0,
+          connectedVoters.length,
+          session?.allowedVoterIds?.length || 0,
+          1
+        )
       : session?.totalVotersConnected && session.totalVotersConnected > 0
       ? session.totalVotersConnected
       : Math.max(
