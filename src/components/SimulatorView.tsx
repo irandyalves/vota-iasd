@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import {
   Smartphone,
   RotateCcw,
-  Sparkles,
+  CheckCircle2,
   Users,
   KeyRound,
-  PlayCircle
+  PlayCircle,
+  Loader2
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { VoterView } from './VoterView';
@@ -24,13 +25,14 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
   const [deviceCount, setDeviceCount] = useState<number>(() => {
     if (typeof window !== 'undefined') {
       const saved = Number(localStorage.getItem('vota_sim_device_count'));
-      if ([4, 6, 8, 10].includes(saved)) return saved;
+      if ([4, 6, 8, 10, 12, 16, 20].includes(saved)) return saved;
     }
-    return 6;
+    return 8;
   });
 
   const [autoAuthPin, setAutoAuthPin] = useState<boolean>(true);
   const [isAutoVoting, setIsAutoVoting] = useState<boolean>(false);
+  const [votingProgress, setVotingProgress] = useState<{ current: number; total: number } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
 
   const handleSetDeviceCount = (count: number) => {
@@ -74,7 +76,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // Voto individual aleatório em um celular
+  // Voto individual em um celular
   const handleRandomVoteSingle = async (deviceId: string) => {
     if (!isVotingActive || options.length === 0) return;
     if (checkDeviceVoted(deviceId)) return;
@@ -91,37 +93,62 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // Auto-voto em lote para todos os celulares que ainda não votaram
-  const handleAutoVoteAll = async () => {
+  // AO CLICAR NO BOTÃO CONFIRMAR: Dispara para todos com intervalo de 2 segundos entre um confirmar e outro
+  const handleConfirmAll = async () => {
     if (!isVotingActive || options.length === 0 || isAutoVoting) return;
     setIsAutoVoting(true);
 
-    for (const devId of deviceIds) {
-      if (!checkDeviceVoted(devId)) {
-        const shuffled = [...options].sort(() => 0.5 - Math.random());
-        const countToPick = Math.min(
-          shuffled.length,
-          Math.max(1, Math.floor(Math.random() * maxVotesAllowed) + 1)
-        );
-        const selectedIds = shuffled.slice(0, countToPick).map((o) => o.id);
+    const pendingDevices = deviceIds.filter((id) => !checkDeviceVoted(id));
+    setVotingProgress({ current: 0, total: pendingDevices.length });
 
-        await submitBallot(session, selectedIds, currentRound, devId);
-        await new Promise((resolve) => setTimeout(resolve, 160));
-        setRefreshTrigger((prev) => prev + 1);
+    for (let i = 0; i < pendingDevices.length; i++) {
+      const devId = pendingDevices[i];
+      setVotingProgress({ current: i + 1, total: pendingDevices.length });
+
+      const shuffled = [...options].sort(() => 0.5 - Math.random());
+      const countToPick = Math.min(
+        shuffled.length,
+        Math.max(1, Math.floor(Math.random() * maxVotesAllowed) + 1)
+      );
+      const selectedIds = shuffled.slice(0, countToPick).map((o) => o.id);
+
+      await submitBallot(session, selectedIds, currentRound, devId);
+      setRefreshTrigger((prev) => prev + 1);
+
+      // Intervalo de exatamente 2 segundos entre cada confirmação
+      if (i < pendingDevices.length - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
 
+    setVotingProgress(null);
     setIsAutoVoting(false);
   };
 
   const votedCount = deviceIds.filter((id) => checkDeviceVoted(id)).length;
+
+  // Layout das linhas e colunas conforme a regra do usuário:
+  // - A partir de 8 celulares: 2 linhas (4 em cima, 4 em baixo)
+  // - 10 celulares: 2 linhas (5 em cima, 5 em baixo)
+  // - 12 celulares: 2 linhas (6 em cima, 6 em baixo)
+  // - 16 celulares: 2 linhas (8 em cima, 8 em baixo)
+  // - A partir de 17 celulares (ex: 20): 3 linhas
+  const getGridColsClass = () => {
+    if (deviceCount <= 4) return 'grid-cols-2 sm:grid-cols-4';
+    if (deviceCount <= 6) return 'grid-cols-3 sm:grid-cols-6';
+    if (deviceCount === 8) return 'grid-cols-2 sm:grid-cols-4'; // 2 linhas: 4 em cima, 4 em baixo
+    if (deviceCount === 10) return 'grid-cols-2 sm:grid-cols-5'; // 2 linhas: 5 em cima, 5 em baixo
+    if (deviceCount === 12) return 'grid-cols-3 sm:grid-cols-6'; // 2 linhas: 6 em cima, 6 em baixo
+    if (deviceCount <= 16) return 'grid-cols-4 sm:grid-cols-8'; // 2 linhas: 8 em cima, 8 em baixo
+    return 'grid-cols-3 sm:grid-cols-7'; // A partir de 17: 3 linhas
+  };
 
   return (
     <div className="min-h-screen bg-[#060a12] text-slate-100 flex flex-col font-sans select-none w-full">
       {/* BARRA SUPERIOR MINIMALISTA */}
       <header className="bg-[#0b1322]/95 backdrop-blur border-b border-blue-900/40 px-3 sm:px-4 py-2 sticky top-0 z-50 shadow-md">
         <div className="w-full flex flex-wrap items-center justify-between gap-2.5">
-          {/* Lado Esquerdo: Título diretamente alinhado à esquerda (sem botão voltar e sem badge) */}
+          {/* Lado Esquerdo: Título diretamente na extrema esquerda */}
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md shadow-purple-500/20 shrink-0">
               <Smartphone className="w-3.5 h-3.5 text-white" />
@@ -158,13 +185,13 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Centro: Seletor de Telas (4, 6, 8, 10) */}
+          {/* Centro: Seletor de Telas (4, 6, 8, 10, 12, 16, 20) */}
           <div className="flex items-center gap-1 bg-[#070e1b] border border-blue-900/50 rounded-lg p-0.5">
             <span className="text-[10px] font-semibold text-slate-400 px-1.5 flex items-center gap-1">
               <Users className="w-3 h-3 text-blue-400" />
               Telas:
             </span>
-            {[4, 6, 8, 10].map((num) => (
+            {[4, 6, 8, 10, 12, 16, 20].map((num) => (
               <button
                 key={num}
                 type="button"
@@ -180,7 +207,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             ))}
           </div>
 
-          {/* Lado Direito: Ações Rápidas (Auto-voto, Reset, PIN) */}
+          {/* Lado Direito: Ações Rápidas (CONFIRMAR, Reset, PIN) */}
           <div className="flex items-center gap-1.5">
             {/* Auto-PIN */}
             <button
@@ -197,27 +224,29 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
               <span>PIN {autoAuthPin ? 'Ativado' : 'Desativado'}</span>
             </button>
 
-            {/* Votar em Todos Aleatoriamente */}
+            {/* BOTÃO CONFIRMAR: Dispara para todos com intervalo de 2s */}
             <button
               type="button"
               disabled={!isVotingActive || isAutoVoting || votedCount === deviceCount}
-              onClick={handleAutoVoteAll}
-              className={`flex items-center gap-1 px-3 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shadow-sm ${
+              onClick={handleConfirmAll}
+              className={`flex items-center gap-1.5 px-3.5 py-1 rounded-lg text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shadow-md ${
                 isVotingActive && votedCount < deviceCount
-                  ? 'bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 active:scale-95'
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 active:scale-95 shadow-emerald-500/20'
                   : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-50'
               }`}
-              title="Computar votos válidos aleatórios em todos os aparelhos pendentes"
+              title="Disparar confirmação para todos os aparelhos a cada 2 segundos"
             >
               {isAutoVoting ? (
                 <>
-                  <span className="w-2.5 h-2.5 rounded-full border-2 border-slate-950 border-t-transparent animate-spin" />
-                  <span>Votando...</span>
+                  <Loader2 className="w-3 h-3 animate-spin text-slate-950" />
+                  <span>
+                    Confirmando {votingProgress ? `${votingProgress.current}/${votingProgress.total}` : '...'} (2s)
+                  </span>
                 </>
               ) : (
                 <>
-                  <Sparkles className="w-3 h-3" />
-                  <span>Auto-Votar</span>
+                  <CheckCircle2 className="w-3.5 h-3.5 text-slate-950" />
+                  <span>CONFIRMAR</span>
                 </>
               )}
             </button>
@@ -236,19 +265,9 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
         </div>
       </header>
 
-      {/* GRID DE SMARTPHONES MINIMALISTAS COM FONTE REDUZIDA EM 25% */}
-      <main className="flex-1 p-2 sm:p-3 overflow-x-auto">
-        <div
-          className={`grid gap-2 sm:gap-3 justify-center w-full max-w-[1920px] mx-auto ${
-            deviceCount === 4
-              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
-              : deviceCount === 6
-              ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-6'
-              : deviceCount === 8
-              ? 'grid-cols-2 sm:grid-cols-4 lg:grid-cols-8'
-              : 'grid-cols-2 sm:grid-cols-5 lg:grid-cols-10'
-          }`}
-        >
+      {/* GRID DE SMARTPHONES: 4 e 6 (1 linha), 8 a 16 (2 linhas), >= 17 (3 linhas) */}
+      <main className="flex-1 p-2 sm:p-3 overflow-y-auto">
+        <div className={`grid gap-2 sm:gap-2.5 justify-center w-full max-w-[1920px] mx-auto ${getGridColsClass()}`}>
           {deviceIds.map((deviceId, index) => {
             const hasVotedThis = checkDeviceVoted(deviceId);
             const phoneNum = index + 1;
@@ -256,7 +275,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             return (
               <div
                 key={`${deviceId}_${iteration}_${refreshTrigger}`}
-                className="flex flex-col min-w-[180px] max-w-[320px] w-full rounded-xl border border-blue-900/40 bg-[#07132a] overflow-hidden shadow-lg transition-all"
+                className="flex flex-col min-w-[150px] max-w-[340px] w-full rounded-xl border border-blue-900/40 bg-[#07132a] overflow-hidden shadow-lg transition-all"
               >
                 {/* CABEÇALHO SLIM E DISCRETO DO CELULAR */}
                 <div className="w-full flex items-center justify-between px-2 py-1 bg-[#0b1322] border-b border-blue-900/40 text-[11px] shrink-0">
@@ -279,8 +298,8 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
                       <button
                         type="button"
                         onClick={() => handleRandomVoteSingle(deviceId)}
-                        title="Votar aleatoriamente apenas neste aparelho"
-                        className="p-0.5 rounded text-amber-400 hover:text-amber-300 hover:bg-amber-500/10 transition cursor-pointer"
+                        title="Votar/confirmar individualmente apenas neste aparelho"
+                        className="p-0.5 rounded text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 transition cursor-pointer"
                       >
                         <PlayCircle className="w-3 h-3" />
                       </button>
@@ -299,7 +318,11 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
                 </div>
 
                 {/* TELA INTERNA DO CELULAR COM ESCALA DE FONTE REDUZIDA EM 25% (zoom: 0.75) */}
-                <div className="flex-1 w-full h-[580px] overflow-y-auto overflow-x-hidden bg-[#07132a] relative scrollbar-thin [scrollbar-color:rgba(255,255,255,0.15)_transparent]">
+                <div
+                  className={`flex-1 w-full overflow-y-auto overflow-x-hidden bg-[#07132a] relative scrollbar-thin [scrollbar-color:rgba(255,255,255,0.15)_transparent] ${
+                    deviceCount >= 8 ? 'h-[460px]' : 'h-[540px]'
+                  }`}
+                >
                   <div style={{ zoom: 0.75, width: '100%' }}>
                     <VoterView
                       session={session}
