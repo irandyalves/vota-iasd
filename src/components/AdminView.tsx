@@ -23,13 +23,11 @@ import {
   X,
   Star,
   ExternalLink,
-  BarChart3,
   TrendingUp,
   Users,
   Activity,
   Award,
   AlertCircle,
-  ArrowLeft,
   History,
   Calendar,
   Copy,
@@ -49,46 +47,12 @@ interface AdminViewProps {
   session: VotingSession;
 }
 
-// Animação Cortina / Esmagamento suave (Morph) entre Novo (Dashboard) e Antigo (Nomes)
-const morphCurtainVariants = {
-  enter: (direction: 'down' | 'up') => ({
-    y: direction === 'down' ? -45 : 45,
-    scaleY: 0.82,
-    opacity: 0,
-    transformOrigin: direction === 'down' ? 'top center' : 'bottom center',
-    transition: {
-      duration: 0.48,
-      ease: [0.16, 1, 0.3, 1] as const,
-    },
-  }),
-  center: {
-    y: 0,
-    scaleY: 1,
-    opacity: 1,
-    transformOrigin: 'center center',
-    transition: {
-      duration: 0.48,
-      ease: [0.16, 1, 0.3, 1] as const,
-    },
-  },
-  exit: (direction: 'down' | 'up') => ({
-    y: direction === 'down' ? 45 : -45,
-    scaleY: 0.55,
-    opacity: 0,
-    transformOrigin: direction === 'down' ? 'bottom center' : 'top center',
-    transition: {
-      duration: 0.38,
-      ease: [0.32, 0, 0.67, 0] as const,
-    },
-  }),
-};
 
 export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [activeTab, setActiveTab] = useState<'candidates' | 'control' | 'settings'>('candidates');
   const [isBottomSectionOpen, setIsBottomSectionOpen] = useState<boolean>(true);
   const [isGearOpen, setIsGearOpen] = useState<boolean>(false);
   const [isImportMenuOpen, setIsImportMenuOpen] = useState<boolean>(false);
-  const [adminVotingView, setAdminVotingView] = useState<'dashboard' | 'names'>('dashboard');
   const [eventFormName, setEventFormName] = useState<string>(session.title || 'ESCOLHA DO TESOUREIRO');
   const [eventFormVacancies, setEventFormVacancies] = useState<number>(session.vacancies || 1);
   const [eventFormSuplente1Enabled, setEventFormSuplente1Enabled] = useState<boolean>(session.habilitarSuplente1 !== false);
@@ -3761,255 +3725,221 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         )}
       </AnimatePresence>
 
-      {/* ABA: NOMES / CANDIDATOS (ABRE AO CLICAR NO BOTÃO DO EVENTO NO CABEÇALHO) - ENCOSTA NAS BORDAS DIR E ESQ DA PÁGINA */}
-      {activeTab === 'candidates' && isBottomSectionOpen && (
-        <div className="space-y-3.5 flex-1 flex flex-col min-h-0 -mx-3 sm:-mx-4 lg:-mx-5">
-          {/* Inputs ocultos para importação de arquivos */}
-          <input
-            ref={fileUploadAppendRef}
-            type="file"
-            accept=".txt,.csv,.xls,.xlsx"
-            className="hidden"
-            onChange={(e) => handleFileImport(e, 'append')}
-          />
-          <input
-            ref={fileUploadReplaceRef}
-            type="file"
-            accept=".txt,.csv,.xls,.xlsx"
-            className="hidden"
-            onChange={(e) => handleFileImport(e, 'replace')}
-          />
+      {/* ABA: NOMES / CANDIDATOS E APURAÇÃO EM TEMPO REAL */}
+      {activeTab === 'candidates' && isBottomSectionOpen && (() => {
+        const isSplitLayout = isVotingActive || session.status === 'CLOSED';
+        const winnerColor = session.telaoLayout?.winnerColor || '#10b981';
+        const suplenteColor = session.telaoLayout?.suplenteColor || '#3b82f6';
+        const suplente2Color = session.telaoLayout?.suplente2Color || '#64748b';
+        const unclassifiedColor = session.telaoLayout?.unclassifiedColor || '#1e293b';
 
-          {/* SE A VOTAÇÃO ESTIVER EM ANDAMENTO E O ADMIN QUISER O DASHBOARD: MOSTRA O DASHBOARD DE EVOLUÇÃO (ANIMAÇÃO CORTINA / MORPH SUAVE) */}
-          <AnimatePresence mode="wait" custom={isVotingActive && adminVotingView === 'dashboard' ? 'down' : 'up'}>
-            {isVotingActive && adminVotingView === 'dashboard' ? (
-              <motion.div
-                key="layout-novo-dashboard"
-                custom="down"
-                variants={morphCurtainVariants}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 sm:py-5 shadow-xl space-y-4 flex-1 flex flex-col min-h-0"
-              >
-                {/* Header do Dashboard */}
-                <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-white/[0.08]">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
-                      <Activity className="w-4 h-4 animate-pulse" />
-                    </div>
-                    <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap">
-                      <h3 className="font-normal text-slate-100 text-sm sm:text-base tracking-wide whitespace-nowrap">
-                        Escolha de
-                      </h3>
+        const totalVoters = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
+        const voterProgressPercent = totalVoters > 0 ? Math.min(100, Math.round((currentVotersVoted / totalVoters) * 100)) : 0;
 
-                      {/* Card Escolhido (ex: MULHERES): linhas estendidas em mais 15% para dir/esq (-30% total), cobrindo o final de Escolha de */}
-                      <div className="relative px-4 py-1 flex items-center justify-center select-none">
-                        {/* Linha superior com platô no centro e transparência cobrindo o final de Escolha de */}
-                        <span
-                          className="absolute top-0 h-[1.5px] pointer-events-none"
-                          style={{
-                            left: '-30%',
-                            right: '-30%',
-                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 30%, rgba(251,191,36,0.70) 70%, rgba(251,191,36,0) 100%)',
-                            boxShadow: '0 0 5px rgba(251,191,36,0.30)',
-                          }}
-                        />
-                        {/* Linha inferior com platô no centro e transparência cobrindo o final de Escolha de */}
-                        <span
-                          className="absolute bottom-0 h-[1.5px] pointer-events-none"
-                          style={{
-                            left: '-30%',
-                            right: '-30%',
-                            background: 'linear-gradient(to right, rgba(251,191,36,0) 0%, rgba(251,191,36,0.70) 30%, rgba(251,191,36,0.70) 70%, rgba(251,191,36,0) 100%)',
-                            boxShadow: '0 0 5px rgba(251,191,36,0.30)',
-                          }}
-                        />
-
-                        <span className="text-xs sm:text-sm font-normal text-white uppercase tracking-wider whitespace-nowrap">
-                          {session.title || 'ELEIÇÃO'}
-                        </span>
-                      </div>
-
-                  </div>
+        // Painel de Apuração em Tempo Real (Só Admin Vê - Fica Visível o Tempo Todo)
+        const renderRealtimeResultsPanel = () => (
+          <div className="bg-[#141721] border border-white/[0.12] rounded-xl px-3.5 sm:px-4 py-3.5 shadow-2xl space-y-3 flex-1 flex flex-col min-h-0">
+            {/* Header do Painel de Apuração */}
+            <div className="flex items-center justify-between gap-2 pb-2.5 border-b border-white/[0.08]">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Activity className="w-3.5 h-3.5 animate-pulse" />
                 </div>
-
-                {/* Alternar entre Dashboard e Nomes Cadastrados */}
-                <div className="flex items-center gap-1 bg-[#0b0d13] p-1 rounded-lg border border-white/[0.08]">
-                  <button
-                    type="button"
-                    onClick={() => setAdminVotingView('dashboard')}
-                    className="px-3 py-1 rounded text-xs font-medium transition cursor-pointer flex items-center gap-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-sm"
-                  >
-                    <BarChart3 className="w-3.5 h-3.5" />
-                    <span>Evolução</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setAdminVotingView('names')}
-                    className="px-3 py-1 rounded text-xs font-medium transition cursor-pointer flex items-center gap-1.5 text-slate-400 hover:text-slate-200"
-                  >
-                    <span>Gerenciar nomes</span>
-                  </button>
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-slate-100 text-xs sm:text-sm tracking-wide truncate">
+                      Apuração em Tempo Real
+                    </h3>
+                    <span className="text-[10px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-1.5 py-0.5 rounded shrink-0 flex items-center gap-1" title="Visível apenas para o administrador nesta tela">
+                      <span>🔒 Só Admin</span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 truncate">
+                    {session.title || 'Votação em Andamento'}
+                  </p>
                 </div>
               </div>
 
-              {/* 4 Cards de KPI / Telemetria com Fonte Grande */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
-                {/* 1. Votantes (quantidade em fonte grande e controle em tempo real) */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center justify-between gap-2 shadow-sm hover:border-blue-500/30 transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0 shadow-inner">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                          Votantes
-                        </span>
-                        {isVotingActive && (
-                          <span
-                            className={`text-[8.5px] font-bold px-1 py-0.5 rounded uppercase leading-none ${
-                              isSessionLocked
-                                ? 'text-rose-300 bg-rose-950/80 border border-rose-500/30'
-                                : 'text-emerald-300 bg-emerald-950/80 border border-emerald-500/30'
-                            }`}
-                            title={isSessionLocked ? 'Sessão Fechada no cadeado' : 'Sessão Aberta'}
-                          >
-                            {isSessionLocked ? '🔒 Fechada' : '🔓 Aberta'}
-                          </span>
-                        )}
-                      </div>
-                      <span className="text-2xl sm:text-3xl font-black text-slate-100 font-mono leading-none tracking-tight block mt-0.5">
-                        {currentVotersVoted}
-                        {session.totalVotersConnected && session.totalVotersConnected > 0 ? (
-                          <span className="text-sm sm:text-base font-normal text-slate-400 font-mono ml-1" title="Meta / Limite total de votantes">
-                            / {session.totalVotersConnected}
-                          </span>
-                        ) : null}
+              {/* Status da Votação */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1 ${
+                    isVotingActive
+                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 animate-pulse'
+                      : 'bg-slate-700/50 text-slate-300 border border-white/10'
+                  }`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isVotingActive ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+                  {isVotingActive ? 'Ao Vivo' : 'Encerrada'}
+                </span>
+              </div>
+            </div>
+
+            {/* Grid 2x2 de Telemetria / KPIs */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* 1. Votantes */}
+              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center justify-between gap-1.5 shadow-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1">
+                      <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                        Votantes
                       </span>
-                    </div>
-                  </div>
-
-                  {/* Controle rápido de ajuste de votantes em tempo real (para votantes atrasados com sessão aberta) */}
-                  {isVotingActive && (
-                    <div className="flex flex-col items-end shrink-0 gap-1 select-none">
-                      <div className="flex items-center gap-1 bg-[#141721] p-0.5 rounded-lg border border-white/[0.08]">
-                        <button
-                          type="button"
-                          disabled={isSessionLocked || (session.totalVotersConnected || 0) <= currentVotersVoted}
-                          onClick={() => {
-                            const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
-                            const next = Math.max(currentVotersVoted, cur - 1);
-                            saveSession({ ...session, totalVotersConnected: next });
-                          }}
-                          title={isSessionLocked ? 'Abra a sessão no cadeado para alterar' : 'Diminuir limite (-1)'}
-                          className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                      {isVotingActive && (
+                        <span
+                          className={`text-[8px] font-bold px-1 rounded uppercase ${
+                            isSessionLocked
+                              ? 'text-rose-300 bg-rose-950/80 border border-rose-500/30'
+                              : 'text-emerald-300 bg-emerald-950/80 border border-emerald-500/30'
+                          }`}
                         >
-                          -
-                        </button>
-                        <span className="font-mono text-xs font-bold text-amber-300 px-1 min-w-[20px] text-center" title="Limite de votantes ativo">
-                          {session.totalVotersConnected || currentVotersVoted}
+                          {isSessionLocked ? '🔒' : '🔓'}
                         </span>
-                        <button
-                          type="button"
-                          disabled={isSessionLocked}
-                          onClick={() => {
-                            const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
-                            const next = cur + 1;
-                            saveSession({ ...session, totalVotersConnected: next });
-                          }}
-                          title={isSessionLocked ? 'Abra a sessão no cadeado para alterar (votante atrasado)' : 'Adicionar votante atrasado (+1)'}
-                          className="w-5 h-5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <span className="text-[8.5px] text-slate-400 font-medium">
-                        {isSessionLocked ? 'Travada' : 'Ajustar limite'}
-                      </span>
+                      )}
                     </div>
-                  )}
-                </div>
-
-                {/* 2. Total de Votos (quantidade em fonte grande) */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-emerald-500/30 transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-inner">
-                    <Activity className="w-5 h-5 animate-pulse" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                      Total de votos
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-black text-emerald-300 font-mono leading-none tracking-tight block mt-0.5">
-                      {totalVotesCast}
+                    <span className="text-xl sm:text-2xl font-black text-slate-100 font-mono leading-none tracking-tight block mt-0.5">
+                      {currentVotersVoted}
+                      {session.totalVotersConnected && session.totalVotersConnected > 0 ? (
+                        <span className="text-xs font-normal text-slate-400 font-mono ml-0.5">
+                          /{session.totalVotersConnected}
+                        </span>
+                      ) : null}
                     </span>
                   </div>
                 </div>
 
-                {/* 3. Corte Titulares (quantidade em fonte grande) */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-purple-500/30 transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0 shadow-inner">
-                    <Award className="w-5 h-5" />
+                {/* Ajuste rápido de votantes */}
+                {isVotingActive && (
+                  <div className="flex items-center gap-0.5 bg-[#141721] p-0.5 rounded-lg border border-white/[0.08] shrink-0">
+                    <button
+                      type="button"
+                      disabled={isSessionLocked || (session.totalVotersConnected || 0) <= currentVotersVoted}
+                      onClick={() => {
+                        const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
+                        const next = Math.max(currentVotersVoted, cur - 1);
+                        saveSession({ ...session, totalVotersConnected: next });
+                      }}
+                      title={isSessionLocked ? 'Abra a sessão no cadeado para alterar' : 'Diminuir limite (-1)'}
+                      className="w-4.5 h-4.5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <button
+                      type="button"
+                      disabled={isSessionLocked}
+                      onClick={() => {
+                        const cur = session.totalVotersConnected || Math.max(displayVotersCount, currentVotersVoted);
+                        const next = cur + 1;
+                        saveSession({ ...session, totalVotersConnected: next });
+                      }}
+                      title={isSessionLocked ? 'Abra a sessão no cadeado para alterar' : 'Adicionar votante atrasado (+1)'}
+                      className="w-4.5 h-4.5 rounded flex items-center justify-center text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                      +
+                    </button>
                   </div>
-                  <div className="min-w-0">
-                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                      Corte Titulares
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-black text-purple-300 font-mono leading-none tracking-tight block mt-0.5">
-                      {cutoffVotes}
-                    </span>
-                  </div>
-                </div>
+                )}
+              </div>
 
-                {/* 4. Corte 1º Suplente (quantidade em fonte grande) */}
-                <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-3 sm:p-3.5 flex items-center gap-3 shadow-sm hover:border-sky-500/30 transition-colors">
-                  <div className="w-10 h-10 rounded-xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0 shadow-inner">
-                    <TrendingUp className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0">
-                    <span className="text-[11px] font-medium text-slate-400 block truncate uppercase tracking-wider">
-                      Corte 1º Suplente
-                    </span>
-                    <span className="text-2xl sm:text-3xl font-black text-sky-300 font-mono leading-none tracking-tight block mt-0.5">
-                      {cutoffSuplente1}
-                    </span>
-                  </div>
+              {/* 2. Total de Votos */}
+              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center gap-2 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
+                  <Activity className="w-4 h-4 animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                    Total Votos
+                  </span>
+                  <span className="text-xl sm:text-2xl font-black text-emerald-300 font-mono leading-none tracking-tight block mt-0.5">
+                    {totalVotesCast}
+                  </span>
                 </div>
               </div>
 
-              {/* Ranking Dinâmico com Barras de Progresso */}
-              <div className="space-y-2 pt-1 flex-1 flex flex-col min-h-0">
-                <div className="flex items-center justify-between text-xs text-slate-400 px-1 pb-1 shrink-0">
-                  <span>Classificação em tempo real</span>
-                  <span>{activeOptions.length} candidatos na disputa</span>
+              {/* 3. Corte Titulares */}
+              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center gap-2 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                  <Award className="w-4 h-4" />
                 </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                    Corte Tit. ({vacancies}v)
+                  </span>
+                  <span className="text-xl sm:text-2xl font-black text-purple-300 font-mono leading-none tracking-tight block mt-0.5">
+                    {cutoffVotes}
+                  </span>
+                </div>
+              </div>
 
-                {totalVotesCast === 0 ? (
-                  <div className="p-8 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/50 flex flex-col items-center justify-center gap-2">
-                    <Activity className="w-6 h-6 text-slate-500 animate-pulse" />
-                    <p className="font-medium text-slate-300">Votação aberta! Aguardando os primeiros votos...</p>
-                    <p className="text-[11px] text-slate-500">Conforme os eleitores votarem no celular, o ranking e as barras atualizarão automaticamente aqui.</p>
-                  </div>
-                ) : (
-                  <div className="flex flex-col -space-y-px flex-1 overflow-y-auto pr-1 min-h-[320px] max-h-[calc(100vh-360px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
-                    {/* Cabeçalho de Colunas Alinhadas (sem a coluna % separada) */}
-                    <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2.5 py-1 bg-white/[0.03] rounded-md border border-white/[0.05] gap-2 mb-0.5">
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className="w-6 text-center shrink-0">#</span>
-                        <span className="w-[20ch] min-w-[20ch] max-w-[20ch] shrink-0 text-left">Nome (20 carac.)</span>
-                        <span className="w-[85px] min-w-[85px] max-w-[85px] shrink-0 text-left">Titular</span>
-                      </div>
-                      <div className="flex-1 flex items-center justify-between mx-1.5 text-slate-400">
-                        <span>Progressão (%)</span>
-                        <span className="text-[10px] text-slate-400 font-mono">100% |</span>
-                      </div>
-                      <div className="flex items-center shrink-0">
-                        <span className="min-w-[62px] text-center">Votos</span>
-                      </div>
+              {/* 4. Corte 1º Suplente */}
+              <div className="bg-[#0b0d13] border border-white/[0.08] rounded-xl p-2.5 flex items-center gap-2 shadow-sm">
+                <div className="w-8 h-8 rounded-lg bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400 shrink-0">
+                  <TrendingUp className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <span className="text-[10px] font-medium text-slate-400 block truncate uppercase tracking-wider">
+                    Corte Sup. ({s1Count}v)
+                  </span>
+                  <span className="text-xl sm:text-2xl font-black text-sky-300 font-mono leading-none tracking-tight block mt-0.5">
+                    {cutoffSuplente1}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Progresso Geral de Votação */}
+            {totalVoters > 0 && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Progresso dos votantes</span>
+                  <span className="font-mono text-emerald-300 font-bold">{currentVotersVoted} de {totalVoters} ({voterProgressPercent}%)</span>
+                </div>
+                <div className="h-1.5 w-full bg-black/40 rounded-full overflow-hidden border border-white/[0.08]">
+                  <motion.div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${voterProgressPercent}%` }}
+                    transition={{ duration: 0.5, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* Ranking Dinâmico em Tempo Real */}
+            <div className="space-y-1.5 pt-1 flex-1 flex flex-col min-h-0">
+              <div className="flex items-center justify-between text-xs text-slate-400 px-0.5 shrink-0">
+                <span>Ranking em tempo real</span>
+                <span className="text-[11px] text-slate-500">{activeOptions.length} candidatos</span>
+              </div>
+
+              {totalVotesCast === 0 ? (
+                <div className="p-6 text-center text-slate-400 text-xs border border-dashed border-white/[0.1] rounded-xl bg-[#0b0d13]/50 flex flex-col items-center justify-center gap-2 flex-1">
+                  <Activity className="w-5 h-5 text-slate-500 animate-pulse" />
+                  <p className="font-medium text-slate-300">Votação aberta! Aguardando votos...</p>
+                  <p className="text-[11px] text-slate-500">O ranking e as barras atualizarão automaticamente aqui assim que os votos entrarem.</p>
+                </div>
+              ) : (
+                <div className="flex flex-col -space-y-px flex-1 overflow-y-auto pr-1 min-h-[260px] max-h-[calc(100vh-380px)] scrollbar-thin [scrollbar-color:rgba(255,255,255,0.2)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/35">
+                  {/* Cabeçalho de Colunas */}
+                  <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400 px-2 py-1 bg-white/[0.03] rounded-md border border-white/[0.05] gap-1.5 mb-0.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="w-5 text-center">#</span>
+                      <span className="w-[14ch] sm:w-[16ch] truncate">Nome</span>
+                      <span className="w-[68px] text-left">Cargo</span>
                     </div>
+                    <div className="flex-1 flex items-center justify-between mx-1 text-slate-400 min-w-0">
+                      <span className="truncate">Barra</span>
+                      <span className="text-[9px] font-mono shrink-0">100%|</span>
+                    </div>
+                    <div className="shrink-0 min-w-[42px] text-center">
+                      <span>Votos</span>
+                    </div>
+                  </div>
 
-                    <LayoutGroup id="admin-ranking-list">
+                  <LayoutGroup id="admin-realtime-ranking">
                     {rankedCandidates.map((candidate, idx) => {
                       const votes = Math.floor(candidate.votesCount || 0);
                       const percent = totalVotesCast > 0 ? Math.round((votes / totalVotesCast) * 100) : 0;
@@ -4018,12 +3948,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
                       const isFirstAfterTitulares = idx === vacancies && s1Count > 0;
-
-                      // Cores configuradas em config (winnerColor = verde esmeralda por padrão)
-                      const winnerColor = session.telaoLayout?.winnerColor || '#10b981';
-                      const suplenteColor = session.telaoLayout?.suplenteColor || '#3b82f6';
-                      const suplente2Color = session.telaoLayout?.suplente2Color || '#64748b';
-                      const unclassifiedColor = session.telaoLayout?.unclassifiedColor || '#1e293b';
 
                       const activeColor = isTitular
                         ? winnerColor
@@ -4036,10 +3960,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       return (
                         <React.Fragment key={candidate.id}>
                           {isFirstAfterTitulares && (
-                            <div className="flex items-center gap-2 py-0.5 my-0.5">
+                            <div className="flex items-center gap-1.5 py-0.5 my-0.5">
                               <div className="flex-1 h-px bg-emerald-500/30" />
-                              <span className="text-[10px] font-medium text-emerald-400/80 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20">
-                                ▲ Linha de corte dos Titulares ({vacancies} vagas)
+                              <span className="text-[9px] font-medium text-emerald-400/90 px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
+                                ▲ Corte Titulares ({vacancies}v)
                               </span>
                               <div className="flex-1 h-px bg-emerald-500/30" />
                             </div>
@@ -4054,7 +3978,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             style={{
                               borderColor: hexToRgba(activeColor, isTitular ? 0.45 : isSuplente1 ? 0.35 : 0.2),
                             }}
-                            className={`relative overflow-hidden p-2 sm:p-2.5 bg-[#0b0d13] border transition-colors duration-200 flex items-center justify-between gap-2 shadow-sm ${
+                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] border transition-colors duration-200 flex items-center justify-between gap-1.5 shadow-sm ${
                               idx === 0
                                 ? 'rounded-t-lg'
                                 : idx === rankedCandidates.length - 1
@@ -4062,20 +3986,20 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 : 'rounded-none'
                             } -mt-px hover:z-20 hover:border-opacity-100`}
                           >
-                            {/* COLUNA 1: POSIÇÃO / RANK */}
-                            <span className="w-6 text-center font-mono font-bold text-xs text-slate-400 shrink-0">
+                            {/* # Posição */}
+                            <span className="w-5 text-center font-mono font-bold text-xs text-slate-400 shrink-0">
                               #{idx + 1}
                             </span>
 
-                            {/* COLUNA 2: NOME COM 20 CARACTERES */}
-                            <div className="w-[20ch] min-w-[20ch] max-w-[20ch] shrink-0" title={candidate.name}>
-                              <span className="font-bold text-xs sm:text-sm text-slate-100 uppercase truncate block">
-                                {candidate.name.length > 20 ? `${candidate.name.slice(0, 20)}...` : candidate.name}
+                            {/* Nome */}
+                            <div className="w-[14ch] sm:w-[16ch] shrink-0" title={candidate.name}>
+                              <span className="font-bold text-xs text-slate-100 uppercase truncate block">
+                                {candidate.name}
                               </span>
                             </div>
 
-                            {/* COLUNA 3: COLUNA DEDICADA PARA TITULAR / CARGO */}
-                            <div className="w-[85px] min-w-[85px] max-w-[85px] shrink-0 flex items-center">
+                            {/* Cargo */}
+                            <div className="w-[68px] shrink-0 flex items-center">
                               {isTitular ? (
                                 <span
                                   style={{
@@ -4083,7 +4007,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     borderColor: hexToRgba(winnerColor, 0.5),
                                     color: winnerColor.toLowerCase() === '#10b981' ? '#6ee7b7' : '#ffffff',
                                   }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: winnerColor }} />
                                   Titular
@@ -4095,9 +4019,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     borderColor: hexToRgba(suplenteColor, 0.5),
                                     color: '#93c5fd',
                                   }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
                                 >
-                                  {s2Count > 0 ? '1º Supl.' : 'Suplente'}
+                                  {s2Count > 0 ? '1º Sup' : 'Supl.'}
                                 </span>
                               ) : isSuplente2 ? (
                                 <span
@@ -4106,18 +4030,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     borderColor: hexToRgba(suplente2Color, 0.5),
                                     color: '#cbd5e1',
                                   }}
-                                  className="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
+                                  className="px-1.5 py-0.5 rounded text-[9px] font-bold tracking-wider uppercase border inline-flex items-center gap-1 shadow-xs"
                                 >
-                                  2º Supl.
+                                  2º Sup
                                 </span>
                               ) : (
-                                <span className="text-[10px] font-mono text-slate-600 px-2">-</span>
+                                <span className="text-[10px] font-mono text-slate-600 px-1">-</span>
                               )}
                             </div>
 
-                            {/* COLUNA 4: ÁREA DA BARRA DE PROGRESSÃO (O 100% PARA ANTES DOS VOTOS) */}
-                            <div className="flex-1 relative h-6 sm:h-7 mx-1.5 min-w-[80px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner">
-                              {/* Barra de Progresso Fluída, Suave e sem Solavancos */}
+                            {/* Barra de Progresso com % */}
+                            <div className="flex-1 relative h-6 mx-1 min-w-[50px] bg-black/40 rounded border border-white/[0.08] overflow-hidden flex items-center shadow-inner">
                               {votes > 0 ? (
                                 <motion.div
                                   initial={false}
@@ -4135,32 +4058,29 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     boxShadow: `inset 0 1px 2px rgba(255, 255, 255, 0.6), 0 0 10px ${hexToRgba(activeColor, 0.35)}`,
                                   }}
                                 >
-                                  {/* Brilho especular superior do vidro */}
                                   <div className="absolute inset-x-0 top-0 h-1/2 bg-gradient-to-b from-white/35 to-transparent pointer-events-none" />
-
-                                  {/* % puxada 1 caracter para a esq (mr-[14px]), bold, fonte 15% maior (text-[12px] sm:text-[13px]) + Faixinha laranja */}
                                   <div className="absolute right-0 top-0 bottom-0 flex items-center justify-end pointer-events-none z-20 pr-0.5">
-                                    <span className="text-[12px] sm:text-[13px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[14px] select-none leading-none">
+                                    <span className="text-[11px] font-mono font-black text-amber-100 drop-shadow-[0_1px_3px_rgba(0,0,0,0.95)] mr-[10px] select-none leading-none">
                                       {percent}%
                                     </span>
-                                    <div className="absolute -inset-y-1 w-2 sm:w-3 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[1.5px] sm:blur-[3px]" />
-                                    <div className="relative w-[2.8px] sm:w-[4.8px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24,0_0_8px_rgba(245,158,11,0.6)] sm:shadow-[0_0_8px_#fbbf24,0_0_14px_rgba(245,158,11,0.9),0_0_2px_#ffffff] rounded-r-xs" />
+                                    <div className="absolute -inset-y-1 w-2 -right-0.5 bg-gradient-to-b from-amber-300 via-amber-400 to-orange-500 opacity-85 blur-[1.5px]" />
+                                    <div className="relative w-[3px] h-full bg-gradient-to-b from-[#fffbe6] via-[#fbbf24] to-[#f59e0b] shadow-[0_0_5px_#fbbf24] rounded-r-xs" />
                                   </div>
                                 </motion.div>
                               ) : (
-                                <span className="text-[11px] font-mono font-semibold text-slate-500 pl-2">
+                                <span className="text-[10px] font-mono font-semibold text-slate-500 pl-1.5">
                                   0%
                                 </span>
                               )}
                             </div>
 
-                            {/* LINHA VERTICAL FINAL (MARCANDO O LIMITE 100%) */}
-                            <div className="w-[2px] h-5 sm:h-6 bg-white/25 border-r border-white/40 shrink-0 self-center" title="Limite 100%" />
+                            {/* Linha vertical final de limite 100% */}
+                            <div className="w-[1.5px] h-4.5 bg-white/25 border-r border-white/40 shrink-0 self-center" />
 
-                            {/* COLUNA: VOTOS (Sem badge, só o número 80% maior, sem borda, amarelo e bold) */}
-                            <div className="min-w-[52px] text-center shrink-0 ml-1 flex items-center justify-center">
+                            {/* Votos (amarelo, bold, sem badge) */}
+                            <div className="min-w-[42px] text-center shrink-0 flex items-center justify-center">
                               <span
-                                className={`font-mono font-black text-[22px] select-none leading-none ${
+                                className={`font-mono font-black text-[20px] select-none leading-none ${
                                   votes > 0 ? 'text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]' : 'text-slate-600'
                                 }`}
                               >
@@ -4171,389 +4091,438 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         </React.Fragment>
                       );
                     })}
-                    </LayoutGroup>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          ) : (
-            <motion.div
-              key="layout-antigo-nomes"
-              custom="up"
-              variants={morphCurtainVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              className="space-y-3.5 flex-1 flex flex-col min-h-0"
-            >
-              {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ NO TOPO */}
-              <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg">
-                <div className="flex flex-col justify-between gap-3 min-w-0">
-                  {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
-                  <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-                    <div className="flex items-center gap-2 shrink-0">
-                      <label className="font-medium text-slate-200 text-sm tracking-normal">
-                        Digite ou fale os nomes
-                      </label>
-                      {isListening && (
-                        <span className="text-[10px] font-medium text-rose-300 bg-rose-950/80 px-2 py-0.5 rounded-full border border-rose-500/40 animate-pulse flex items-center gap-1">
-                          <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
-                          Ouvindo...
-                        </span>
-                      )}
-                    </div>
+                  </LayoutGroup>
+                </div>
+              )}
+            </div>
+          </div>
+        );
 
-                    {isVotingActive && (
+        // Gestão de Candidatos (Digite/Fale Nomes + Importar + Lista)
+        const renderCandidateManagement = (isSplit: boolean) => (
+          <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
+            {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ NO TOPO */}
+            <div className={`bg-[#141721] shadow-lg ${isSplit ? 'rounded-xl border border-white/[0.08] p-3 sm:p-4' : 'border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4'}`}>
+              <div className="flex flex-col justify-between gap-3 min-w-0">
+                {/* CABEÇALHO NA MESMA LINHA: TÍTULO + IMPORTAR */}
+                <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <label className="font-medium text-slate-200 text-sm tracking-normal">
+                      Digite ou fale os nomes
+                    </label>
+                    {isListening && (
+                      <span className="text-[10px] font-medium text-rose-300 bg-rose-950/80 px-2 py-0.5 rounded-full border border-rose-500/40 animate-pulse flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-400 animate-ping" />
+                        Ouvindo...
+                      </span>
+                    )}
+                  </div>
+
+                  {/* SEÇÃO IMPORTAR */}
+                  <div
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) {
+                        const syntheticEvent = { target: { files: [file] } } as any;
+                        handleFileImport(syntheticEvent, 'append');
+                      }
+                    }}
+                    className="flex flex-wrap items-center gap-2 py-1"
+                  >
+                    {/* Listbox Importar */}
+                    <div className="relative" data-import-listbox="true">
                       <button
                         type="button"
-                        onClick={() => setAdminVotingView('dashboard')}
-                        className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 hover:text-white rounded-lg text-xs font-medium cursor-pointer transition flex items-center gap-1.5 shadow-sm"
+                        onClick={() => setIsImportMenuOpen((prev) => !prev)}
+                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 rounded-lg text-xs font-medium text-slate-300 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer shadow-sm"
+                        title="Clique para escolher o formato de arquivo para importar"
                       >
-                        <ArrowLeft className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                        <span>Voltar à Evolução da Votação</span>
+                        <span>Importar</span>
+                        <svg
+                          className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                            isImportMenuOpen ? 'rotate-180' : ''
+                          }`}
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
                       </button>
-                    )}
 
-                    {/* SEÇÃO IMPORTAR */}
+                      <AnimatePresence>
+                        {isImportMenuOpen && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                            transition={{ duration: 0.15 }}
+                            className="absolute left-0 top-full mt-1.5 w-40 bg-[#141721] border border-white/[0.1] rounded-xl shadow-2xl py-1 z-50 overflow-hidden"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsImportMenuOpen(false);
+                                if (fileUploadAppendRef.current) {
+                                  fileUploadAppendRef.current.accept = '.xls,.xlsx';
+                                  fileUploadAppendRef.current.click();
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <FileSpreadsheet className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                              <span>Excel (.xlsx)</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsImportMenuOpen(false);
+                                if (fileUploadAppendRef.current) {
+                                  fileUploadAppendRef.current.accept = '.csv';
+                                  fileUploadAppendRef.current.click();
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 shrink-0 text-blue-400" />
+                              <span>CSV</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsImportMenuOpen(false);
+                                if (fileUploadAppendRef.current) {
+                                  fileUploadAppendRef.current.accept = '.txt';
+                                  fileUploadAppendRef.current.click();
+                                }
+                              }}
+                              className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
+                            >
+                              <FileText className="w-3.5 h-3.5 shrink-0 text-slate-400" />
+                              <span>TXT</span>
+                            </button>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Arrastar e Soltar */}
                     <div
-                      onDragOver={(e) => e.preventDefault()}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files?.[0];
-                        if (file) {
-                          const syntheticEvent = { target: { files: [file] } } as any;
-                          handleFileImport(syntheticEvent, 'append');
+                      onClick={() => {
+                        if (fileUploadAppendRef.current) {
+                          fileUploadAppendRef.current.accept = '.txt,.csv,.xls,.xlsx';
+                          fileUploadAppendRef.current.click();
                         }
                       }}
-                      className="flex flex-wrap items-center gap-2 py-1"
+                      className="px-2.5 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-dashed border-white/[0.12] hover:border-emerald-500/40 rounded-lg text-xs text-slate-400 hover:text-slate-200 font-normal transition cursor-pointer flex items-center gap-1.5"
+                      title="Arraste qualquer arquivo e solte aqui"
                     >
-                      {/* Listbox Importar */}
-                      <div className="relative" data-import-listbox="true">
-                        <button
-                          type="button"
-                          onClick={() => setIsImportMenuOpen((prev) => !prev)}
-                          className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 rounded-lg text-xs font-medium text-slate-300 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer shadow-sm"
-                          title="Clique para escolher o formato de arquivo para importar"
-                        >
-                          <span>Importar</span>
-                          <svg
-                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                              isImportMenuOpen ? 'rotate-180' : ''
-                            }`}
-                            viewBox="0 0 20 20"
-                            fill="currentColor"
-                          >
-                            <path
-                              fillRule="evenodd"
-                              d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
-                              clipRule="evenodd"
-                            />
-                          </svg>
-                        </button>
-
-                        <AnimatePresence>
-                          {isImportMenuOpen && (
-                            <motion.div
-                              initial={{ opacity: 0, y: -4, scale: 0.96 }}
-                              animate={{ opacity: 1, y: 0, scale: 1 }}
-                              exit={{ opacity: 0, y: -4, scale: 0.96 }}
-                              transition={{ duration: 0.15 }}
-                              className="absolute left-0 top-full mt-1.5 w-40 bg-[#141721] border border-white/[0.1] rounded-xl shadow-2xl py-1 z-50 overflow-hidden"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsImportMenuOpen(false);
-                                  if (fileUploadAppendRef.current) {
-                                    fileUploadAppendRef.current.accept = '.xls,.xlsx';
-                                    fileUploadAppendRef.current.click();
-                                  }
-                                }}
-                                className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
-                              >
-                                <FileSpreadsheet className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-                                <span>Excel (.xlsx)</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsImportMenuOpen(false);
-                                  if (fileUploadAppendRef.current) {
-                                    fileUploadAppendRef.current.accept = '.csv';
-                                    fileUploadAppendRef.current.click();
-                                  }
-                                }}
-                                className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
-                              >
-                                <FileText className="w-3.5 h-3.5 shrink-0 text-blue-400" />
-                                <span>CSV</span>
-                              </button>
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setIsImportMenuOpen(false);
-                                  if (fileUploadAppendRef.current) {
-                                    fileUploadAppendRef.current.accept = '.txt';
-                                    fileUploadAppendRef.current.click();
-                                  }
-                                }}
-                                className="w-full px-3 py-1.5 text-left text-xs font-normal text-slate-300 hover:bg-white/[0.06] hover:text-white flex items-center gap-2 transition cursor-pointer"
-                              >
-                                <FileText className="w-3.5 h-3.5 shrink-0 text-slate-400" />
-                                <span>TXT</span>
-                              </button>
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-
-                      {/* Arrastar e Soltar */}
-                      <div
-                        onClick={() => {
-                          if (fileUploadAppendRef.current) {
-                            fileUploadAppendRef.current.accept = '.txt,.csv,.xls,.xlsx';
-                            fileUploadAppendRef.current.click();
-                          }
-                        }}
-                        className="px-2.5 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-dashed border-white/[0.12] hover:border-emerald-500/40 rounded-lg text-xs text-slate-400 hover:text-slate-200 font-normal transition cursor-pointer flex items-center gap-1.5"
-                        title="Arraste qualquer arquivo e solte aqui"
-                      >
-                        <Upload className="w-3 h-3 text-slate-400" />
-                        <span>ou arraste o arquivo aqui</span>
-                      </div>
+                      <Upload className="w-3 h-3 text-slate-400" />
+                      <span>ou arraste o arquivo aqui</span>
                     </div>
                   </div>
+                </div>
 
-                  {/* Textarea com Microfone e Botão Adicionar */}
-                  <div className="flex-1 relative flex flex-col">
-                    <textarea
-                      ref={namesTextareaRef}
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
+                {/* Textarea com Microfone e Botão Adicionar */}
+                <div className="flex-1 relative flex flex-col">
+                  <textarea
+                    ref={namesTextareaRef}
+                    value={newName}
+                    onChange={(e) => setNewName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        if (isListening) stopListening();
+                        handleAddCandidateName(newName);
+                      }
+                    }}
+                    placeholder="Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)..."
+                    className="w-full flex-1 min-h-[110px] sm:min-h-[120px] p-3 pr-16 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
+                  />
+
+                  {/* Microfone centralizado verticalmente */}
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    title={isListening ? 'Parar digitação por voz' : 'Iniciar digitação por voz'}
+                    className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-[45px] h-[45px] rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
+                      isListening
+                        ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
+                        : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                    }`}
+                  >
+                    {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  </button>
+
+                  {/* Botão Adicionar */}
+                  {newName.trim().length > 0 && (
+                    <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
                           if (isListening) stopListening();
                           handleAddCandidateName(newName);
-                        }
-                      }}
-                      placeholder="Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)..."
-                      className="w-full flex-1 min-h-[115px] sm:min-h-[125px] p-3 pr-16 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
-                    />
-
-                    {/* Microfone centralizado verticalmente e 25% maior */}
-                    <button
-                      type="button"
-                      onClick={toggleListening}
-                      title={isListening ? 'Parar digitação por voz' : 'Iniciar digitação por voz'}
-                      className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-[45px] h-[45px] rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
-                        isListening
-                          ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
-                          : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
-                      }`}
-                    >
-                      {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-                    </button>
-
-                    {/* Botão Adicionar no canto inferior direito quando houver texto */}
-                    {newName.trim().length > 0 && (
-                      <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (isListening) stopListening();
-                            handleAddCandidateName(newName);
-                          }}
-                          className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium cursor-pointer transition active:scale-95 shadow-sm flex items-center gap-1"
-                          title="Adicionar nomes digitados/falados à lista"
-                        >
-                          <span>Adicionar</span>
-                          <span className="text-[10px] text-emerald-400/70">(Enter)</span>
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  {isListening && (
-                    <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-xs">
-                      <span className="text-emerald-300 flex items-center gap-2 font-normal">
-                        <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
-                        <span>{speechTranscript ? `Ouvindo: "${speechTranscript}"` : 'Fale os nomes agora...'}</span>
-                      </span>
-                      <button
-                        type="button"
-                        onClick={stopListening}
-                        className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium text-[11px] transition cursor-pointer"
+                        }}
+                        className="px-3 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 border border-emerald-500/40 text-emerald-300 rounded-lg text-xs font-medium cursor-pointer transition active:scale-95 shadow-sm flex items-center gap-1"
+                        title="Adicionar nomes digitados/falados à lista"
                       >
-                        Pausar fala
+                        <span>Adicionar</span>
+                        <span className="text-[10px] text-emerald-400/70">(Enter)</span>
                       </button>
                     </div>
                   )}
                 </div>
-              </div>
 
-              {/* 2. NOMES PARA ESCOLHA (EXIBIDO APENAS QUANDO HÁ NOMES CADASTRADOS) */}
-              {session.options.length > 0 && (
-                <div className="bg-[#141721] border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4 shadow-lg flex-1">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
-                      <span>
-                        Nomes para escolha (<span className="font-bold text-blue-400">{session.options.length}</span>)
-                      </span>
-                    </h3>
-                    <div className="flex items-center gap-2">
-                      {/* Botão Recuperar Nomes */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sourceNames =
-                            session.options.length > 0
-                              ? session.options.map((o) => o.name)
-                              : backupNamesList;
-                          if (sourceNames.length === 0) return;
-                          const commaSeparated = sourceNames.join(', ');
-                          setNewName((prev) =>
-                            prev.trim() ? `${prev.trim()}, ${commaSeparated}` : commaSeparated
-                          );
-                          showNotification(
-                            'success',
-                            `${sourceNames.length} nomes enviados para o campo de digitação acima (separados por vírgula)!`
-                          );
-                        }}
-                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                        title="Jogar todos os nomes na caixa de digitação acima separados por vírgula"
-                      >
-                        <RotateCcw className="w-3.5 h-3.5" />
-                        <span>Recuperar nomes</span>
-                      </button>
-
-                      {/* Botão A-Z */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const sorted = [...session.options].sort((a, b) =>
-                            a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
-                          );
-                          saveSession({ ...session, options: sorted });
-                          showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
-                        }}
-                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                        title="Ordenar nomes em ordem alfabética (A-Z)"
-                      >
-                        <ArrowDownAZ className="w-3.5 h-3.5" />
-                        <span>A-Z</span>
-                      </button>
-
-                      {/* Botão Limpar Tudo (Apenas o ícone de lixeira) */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setConfirmModal({
-                            title: 'Limpar Todos os Nomes',
-                            highlight: `${session.options.length} nomes cadastrados`,
-                            description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
-                            confirmLabel: 'Sim, Limpar Tudo',
-                            onConfirm: () => {
-                              setBackupNamesList(session.options.map((o) => o.name));
-                              saveSession({ ...session, options: [] });
-                              setConfirmModal(null);
-                              showNotification('success', 'Todos os nomes foram apagados.');
-                            },
-                          });
-                        }}
-                        className="p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
-                        title="Apagar todos os nomes cadastrados"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
+                {isListening && (
+                  <div className="flex items-center justify-between gap-2 p-2 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-xs">
+                    <span className="text-emerald-300 flex items-center gap-2 font-normal">
+                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                      <span>{speechTranscript ? `Ouvindo: "${speechTranscript}"` : 'Fale os nomes agora...'}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={stopListening}
+                      className="px-2 py-0.5 rounded bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 font-medium text-[11px] transition cursor-pointer"
+                    >
+                      Pausar fala
+                    </button>
                   </div>
+                )}
+              </div>
+            </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
-                    <AnimatePresence mode="popLayout">
-                      {[...session.options]
-                        .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
-                        .map((option) => {
-                          const isEditing = editingCandidateId === option.id;
-                          const isGlowing = Boolean(
-                            glowingIds[option.id] ||
-                              (option.createdAt && Date.now() - option.createdAt < 1500)
-                          );
-                          return (
-                            <motion.div
-                              layout
-                              key={option.id}
-                              initial={{ opacity: 0, scale: 0.82, y: -10 }}
-                              animate={{
-                                opacity: 1,
-                                scale: isGlowing ? 1.04 : 1,
-                                y: 0,
-                              }}
-                              exit={{ opacity: 0, scale: 0.85 }}
-                              transition={{
-                                layout: { type: 'spring', stiffness: 320, damping: 26 },
-                                duration: 0.35,
-                              }}
-                              className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
-                                isGlowing
-                                  ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
-                                  : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
-                              }`}
-                            >
-                              {/* Nome Editável Inline */}
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  autoFocus
-                                  value={editingCandidateName}
-                                  onChange={(e) => setEditingCandidateName(e.target.value)}
-                                  onBlur={() => handleSaveCandidateEdit(option.id)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
-                                    if (e.key === 'Escape') setEditingCandidateId(null);
-                                  }}
-                                  className="w-full min-w-0 px-2 py-0.5 bg-[#141721] border border-emerald-500/50 rounded text-xs text-slate-100 font-normal outline-none"
-                                />
-                              ) : (
-                                <span
-                                  onClick={() => {
-                                    setEditingCandidateId(option.id);
-                                    setEditingCandidateName(option.name);
-                                  }}
-                                  className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
-                                    isGlowing
-                                      ? 'text-emerald-200'
-                                      : 'text-slate-200 hover:text-white'
-                                  }`}
-                                  title={`${option.name} (Clique para editar)`}
-                                >
-                                  {option.name}
-                                </span>
-                              )}
+            {/* 2. NOMES PARA ESCOLHA (EXIBIDO APENAS QUANDO HÁ NOMES CADASTRADOS) */}
+            {session.options.length > 0 && (
+              <div className={`bg-[#141721] shadow-lg flex-1 ${isSplit ? 'rounded-xl border border-white/[0.08] p-3 sm:p-4' : 'border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4'}`}>
+                <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+                  <h3 className="font-medium text-slate-200 text-sm tracking-normal flex items-center gap-2">
+                    <span>
+                      Nomes para escolha (<span className="font-bold text-blue-400">{session.options.length}</span>)
+                    </span>
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    {/* Botão Recuperar Nomes */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sourceNames =
+                          session.options.length > 0
+                            ? session.options.map((o) => o.name)
+                            : backupNamesList;
+                        if (sourceNames.length === 0) return;
+                        const commaSeparated = sourceNames.join(', ');
+                        setNewName((prev) =>
+                          prev.trim() ? `${prev.trim()}, ${commaSeparated}` : commaSeparated
+                        );
+                        showNotification(
+                          'success',
+                          `${sourceNames.length} nomes enviados para o campo de digitação acima (separados por vírgula)!`
+                        );
+                      }}
+                      className="px-2.5 sm:px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                      title="Jogar todos os nomes na caixa de digitação acima separados por vírgula"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Recuperar</span>
+                    </button>
 
-                              {/* Botão de Excluir */}
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveCandidate(option.id)}
-                                title="Remover nome"
-                                className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </motion.div>
-                          );
-                        })}
-                    </AnimatePresence>
+                    {/* Botão A-Z */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const sorted = [...session.options].sort((a, b) =>
+                          a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
+                        );
+                        saveSession({ ...session, options: sorted });
+                        showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
+                      }}
+                      className="px-2.5 sm:px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
+                      title="Ordenar nomes em ordem alfabética (A-Z)"
+                    >
+                      <ArrowDownAZ className="w-3.5 h-3.5" />
+                      <span>A-Z</span>
+                    </button>
+
+                    {/* Botão Limpar Tudo */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setConfirmModal({
+                          title: 'Limpar Todos os Nomes',
+                          highlight: `${session.options.length} nomes cadastrados`,
+                          description: 'Deseja realmente apagar todos os nomes desta lista? (Você poderá recuperá-los depois pelo botão Recuperar nomes).',
+                          confirmLabel: 'Sim, Limpar Tudo',
+                          onConfirm: () => {
+                            setBackupNamesList(session.options.map((o) => o.name));
+                            saveSession({ ...session, options: [] });
+                            setConfirmModal(null);
+                            showNotification('success', 'Todos os nomes foram apagados.');
+                          },
+                        });
+                      }}
+                      className="p-1.5 sm:p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
+                      title="Apagar todos os nomes cadastrados"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   </div>
                 </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-      )}
+
+                <div className={`grid gap-2 ${isSplit ? 'grid-cols-1 sm:grid-cols-2 xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'}`}>
+                  <AnimatePresence mode="popLayout">
+                    {[...session.options]
+                      .sort((a, b) => a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' }))
+                      .map((option) => {
+                        const isEditing = editingCandidateId === option.id;
+                        const isGlowing = Boolean(
+                          glowingIds[option.id] ||
+                            (option.createdAt && Date.now() - option.createdAt < 1500)
+                        );
+                        return (
+                          <motion.div
+                            layout
+                            key={option.id}
+                            initial={{ opacity: 0, scale: 0.82, y: -10 }}
+                            animate={{
+                              opacity: 1,
+                              scale: isGlowing ? 1.04 : 1,
+                              y: 0,
+                            }}
+                            exit={{ opacity: 0, scale: 0.85 }}
+                            transition={{
+                              layout: { type: 'spring', stiffness: 320, damping: 26 },
+                              duration: 0.35,
+                            }}
+                            className={`w-full px-3 py-2 rounded-lg flex items-center justify-between gap-2 transition-all duration-300 group min-w-0 ${
+                              isGlowing
+                                ? 'bg-emerald-500/20 border border-emerald-400 ring-1 ring-emerald-400/80 shadow-[0_0_20px_rgba(16,185,129,0.35)] z-10'
+                                : 'bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.08] hover:border-white/[0.16] shadow-sm'
+                            }`}
+                          >
+                            {/* Nome Editável Inline */}
+                            {isEditing ? (
+                              <input
+                                type="text"
+                                autoFocus
+                                value={editingCandidateName}
+                                onChange={(e) => setEditingCandidateName(e.target.value)}
+                                onBlur={() => handleSaveCandidateEdit(option.id)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveCandidateEdit(option.id);
+                                  if (e.key === 'Escape') setEditingCandidateId(null);
+                                }}
+                                className="w-full min-w-0 px-2 py-0.5 bg-[#141721] border border-emerald-500/50 rounded text-xs text-slate-100 font-normal outline-none"
+                              />
+                            ) : (
+                              <span
+                                onClick={() => {
+                                  setEditingCandidateId(option.id);
+                                  setEditingCandidateName(option.name);
+                                }}
+                                className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
+                                  isGlowing
+                                    ? 'text-emerald-200'
+                                    : 'text-slate-200 hover:text-white'
+                                }`}
+                                title={`${option.name} (Clique para editar)`}
+                              >
+                                {option.name}
+                              </span>
+                            )}
+
+                            {/* Botão de Excluir */}
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveCandidate(option.id)}
+                              title="Remover nome"
+                              className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </motion.div>
+                        );
+                      })}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+        return (
+          <div className="space-y-3.5 flex-1 flex flex-col min-h-0 -mx-3 sm:-mx-4 lg:-mx-5">
+            {/* Inputs ocultos para importação de arquivos */}
+            <input
+              ref={fileUploadAppendRef}
+              type="file"
+              accept=".txt,.csv,.xls,.xlsx"
+              className="hidden"
+              onChange={(e) => handleFileImport(e, 'append')}
+            />
+            <input
+              ref={fileUploadReplaceRef}
+              type="file"
+              accept=".txt,.csv,.xls,.xlsx"
+              className="hidden"
+              onChange={(e) => handleFileImport(e, 'replace')}
+            />
+
+            {/* RENDERIZAÇÃO: SPLIT OU FULL-WIDTH */}
+            {isSplitLayout ? (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-3.5 sm:gap-4 flex-1 min-h-0 px-2 sm:px-3">
+                {/* COLUNA ESQUERDA: DESEMPATES + NOVA VOTAÇÃO / ENTRADA E LISTA DE NOMES */}
+                <div className="lg:col-span-7 flex flex-col space-y-3.5 min-w-0">
+                  {/* CARD DE DESEMPATE NO TOPO DA COLUNA ESQUERDA (SE HOUVER EMPATES DETECTADOS) */}
+                  {hasTies && (
+                    <div className="bg-[#141721] border border-rose-500/80 rounded-xl p-3 sm:p-4 shadow-[0_0_20px_rgba(244,63,94,0.25)] flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-rose-500/20 border border-rose-400/80 flex items-center justify-center shrink-0">
+                          <Star className="w-4 h-4 text-rose-400 fill-rose-400 animate-pulse" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-xs sm:text-sm text-white uppercase tracking-wide truncate">
+                            Temos Empates Para Resolver
+                          </h4>
+                          <p className="text-[11px] text-rose-200/80">
+                            {detectedTies.length} {detectedTies.length === 1 ? 'grupo em disputa' : 'grupos em disputa'} na linha de corte.
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsTieModalOpen(true)}
+                        className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 border border-rose-400 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer active:scale-95 shadow-[0_0_15px_rgba(244,63,94,0.4)] shrink-0"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-white" />
+                        <span>Resolver Empate</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* DIGITAÇÃO, IMPORTAÇÃO E GESTÃO DE NOMES */}
+                  {renderCandidateManagement(true)}
+                </div>
+
+                {/* COLUNA DIREITA: RESULTADO EM TEMPO REAL / APURAÇÃO (QUE SÓ O ADMIN VÊ - VISÍVEL O TEMPO TODO) */}
+                <div className="lg:col-span-5 flex flex-col min-w-0">
+                  {renderRealtimeResultsPanel()}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
+                {renderCandidateManagement(false)}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ABA 3: CONFIGURAÇÕES E MIGRAÇÃO (REDUZIDO EM 30%) */}
       {activeTab === 'settings' && (
