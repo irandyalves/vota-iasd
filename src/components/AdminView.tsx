@@ -4106,14 +4106,26 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <div className="p-3.5 sm:p-5 space-y-3.5">
                       {/* Header da Seção Inline de Desempate (sem linha divisória horizontal) */}
                       <div className="relative flex items-center justify-between pb-2 min-h-[36px]">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shrink-0">
-                          <Star className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                        <div className="flex items-center gap-2 min-w-0 flex-wrap">
+                          <div className="w-7 h-7 rounded-lg bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shrink-0">
+                            <Star className="w-4 h-4 text-emerald-400 fill-emerald-400" />
+                          </div>
+                          <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white truncate flex items-center gap-2 flex-wrap">
+                            <span>VOTAÇÃO PARA DESEMPATAR</span>
+                            <span className="text-slate-400 font-normal">•</span>
+                            {detectedTies.map((t) => {
+                              const st = getTieCategoryStyles(t.type, t.label);
+                              return (
+                                <span
+                                  key={t.label}
+                                  className={`px-2 py-0.5 rounded-md text-[11px] sm:text-xs font-bold uppercase tracking-wider ${st.badgeText} bg-white/10 border-0 shrink-0`}
+                                >
+                                  {st.title}
+                                </span>
+                              );
+                            })}
+                          </h3>
                         </div>
-                        <h3 className="text-sm sm:text-base font-black uppercase tracking-wider text-white truncate">
-                          VOTAÇÃO PARA DESEMPATAR
-                        </h3>
-                      </div>
                       <button
                         type="button"
                         onClick={() => {
@@ -4187,10 +4199,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
                               className={`p-3 rounded-xl space-y-2.5 shadow-inner transition-colors ${styles.container}`}
                             >
-                              {/* Header do Grupo: Escolha em cima (sem caixa alta, sem 'para disputa'), Titular embaixo, e BOTÃO ENVIAR à direita */}
+                              {/* Header do Grupo: Escolha xx nomes xx vagas e BOTÃO ENVIAR à direita */}
                               <div className="flex items-center justify-between gap-3 pb-1">
-                                <div className="min-w-0 flex-1 flex flex-col gap-1">
-                                  {/* Linha de Cima: Escolha xx nome(s) xx vaga(s) */}
+                                <div className="min-w-0 flex-1 flex items-center flex-wrap gap-2">
+                                  {/* Linha: Escolha xx nome(s) xx vaga(s) */}
                                   <div className="flex items-center flex-wrap gap-1 text-white font-medium text-xs sm:text-sm select-none leading-tight">
                                     <span>Escolha</span>
                                     <span className="inline-flex items-center justify-center px-1 text-yellow-300 font-mono font-black text-sm sm:text-base leading-none">
@@ -4203,12 +4215,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     <span>{tie.vacanciesInDispute === 1 ? 'vaga' : 'vagas'}</span>
                                   </div>
 
-                                  {/* Linha de Baixo: Titular (sem caixa alta) */}
-                                  <div>
+                                  {/* Se houver múltiplos grupos de empate, exibe também a categoria inline */}
+                                  {detectedTies.length > 1 && (
                                     <span className={`inline-block px-2 py-0.5 rounded-md text-[10.5px] sm:text-[11px] font-semibold ${styles.badgeText} bg-white/10 border-0`}>
                                       {styles.title}
                                     </span>
-                                  </div>
+                                  )}
                                 </div>
 
                                 {/* Botão ENVIAR no lado direito: cinza por padrão, fica verde quando verdadeiro, ou indica votação ativa */}
@@ -4241,8 +4253,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 )}
                               </div>
 
-                              {/* Cards dos Candidatos Empatados */}
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {/* Cards dos Candidatos Empatados: Altura aumentada em 15% (py-2.5, min-h-[42px]) */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                 {tie.tiedCandidates.map((c) => {
                                   const isSelected = selectedTieCandidateIds.includes(c.id);
 
@@ -4250,7 +4262,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                     <div
                                       key={c.id}
                                       onClick={() => !isThisTieVotingNow && handleToggleTieCandidate(c.id, maxAllowed)}
-                                      className={`py-1.5 px-2.5 rounded-lg border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
+                                      className={`py-2.5 px-3 min-h-[42px] rounded-lg border transition-all duration-150 cursor-pointer select-none flex items-center justify-between gap-2 shadow-sm active:scale-95 ${
                                         isSelected ? styles.cardSelected : styles.cardBase
                                       } ${isThisTieVotingNow ? 'opacity-85 pointer-events-none' : ''}`}
                                     >
@@ -4259,11 +4271,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                           <img
                                             src={c.photoUrl}
                                             alt={c.name}
-                                            className="w-6 h-6 rounded-md object-cover border border-white/20 shrink-0"
+                                            className="w-7 h-7 rounded-md object-cover border border-white/20 shrink-0"
                                           />
                                         )}
                                         <div className="min-w-0">
-                                          <h5 className="font-black text-[11px] sm:text-xs text-white uppercase truncate leading-tight">
+                                          <h5 className="font-black text-xs sm:text-[13px] text-white uppercase truncate leading-tight">
                                             {c.name}
                                           </h5>
                                         </div>
