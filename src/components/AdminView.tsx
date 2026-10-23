@@ -62,7 +62,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [eventFormResolverEmpates, setEventFormResolverEmpates] = useState<boolean>(session.resolverEmpates !== false);
   const [eventFormTotalVoters, setEventFormTotalVoters] = useState<number>(session.totalVotersConnected || 0);
   const [eventFormLabelTitulares, setEventFormLabelTitulares] = useState<string>(session.labelTitulares || 'Titulares');
-  const [eventFormLabelSuplente1, setEventFormLabelSuplente1] = useState<string>(session.labelSuplente1 || '1º suplente');
+  const [eventFormLabelSuplente1, setEventFormLabelSuplente1] = useState<string>(session.labelSuplente1 || 'SUPLENTES');
   const [eventFormLabelSuplente2, setEventFormLabelSuplente2] = useState<string>(session.labelSuplente2 || '2º suplente');
   const [isEditingLabelTitulares, setIsEditingLabelTitulares] = useState<boolean>(false);
   const [isEditingLabelSuplente1, setIsEditingLabelSuplente1] = useState<boolean>(false);
@@ -771,7 +771,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormResolverEmpates(true); // Padrão: sempre marcado
     setEventFormTotalVoters(currentGlobal.totalVotersConnected || 1);
     setEventFormLabelTitulares(currentGlobal.labelTitulares || 'Titulares');
-    setEventFormLabelSuplente1(currentGlobal.labelSuplente1 || '1º suplente');
+    setEventFormLabelSuplente1(currentGlobal.labelSuplente1 || 'SUPLENTES');
     setEventFormLabelSuplente2(currentGlobal.labelSuplente2 || '2º suplente');
     setIsEditingLabelTitulares(false);
     setIsEditingLabelSuplente1(false);
@@ -803,8 +803,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       ? (session.labelTitulares || evt.labelTitulares || 'Titulares')
       : (evt.labelTitulares || 'Titulares');
     const lSuplente1 = isSelected
-      ? (session.labelSuplente1 || evt.labelSuplente1 || '1º suplente')
-      : (evt.labelSuplente1 || '1º suplente');
+      ? (session.labelSuplente1 || evt.labelSuplente1 || 'SUPLENTES')
+      : (evt.labelSuplente1 || 'SUPLENTES');
     const lSuplente2 = isSelected
       ? (session.labelSuplente2 || evt.labelSuplente2 || '2º suplente')
       : (evt.labelSuplente2 || '2º suplente');
@@ -1300,7 +1300,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     const resolverEmpates = eventFormResolverEmpates;
     const totalVoters = eventFormTotalVoters > 0 ? eventFormTotalVoters : undefined;
     const labelTitulares = eventFormLabelTitulares.trim() || 'Titulares';
-    const labelSuplente1 = eventFormLabelSuplente1.trim() || '1º suplente';
+    const labelSuplente1 = eventFormLabelSuplente1.trim() || 'SUPLENTES';
     const labelSuplente2 = eventFormLabelSuplente2.trim() || '2º suplente';
 
     if (editingEventId) {
@@ -1540,11 +1540,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             />
           </div>
 
-          {/* Cabeçalho: REGRAS DA ELEIÇÃO */}
+          {/* Cabeçalho: Nome configurado em votação (seção de cards) sem bold */}
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
-            <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-emerald-400">
+            <div className="flex items-center gap-1.5 font-normal text-xs uppercase tracking-wider text-emerald-400">
               <Sliders className="w-3.5 h-3.5 text-emerald-400" />
-              <span>REGRAS DA ELEIÇÃO</span>
+              <span>{(votacoesTitle || 'Votação').toUpperCase()}</span>
             </div>
             <button
               type="button"
@@ -1612,10 +1612,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Linha 2: Vagas Titulares e 1º Suplente (Rótulos editáveis via lapizinho verde e duplo clique) */}
-          <div className="grid grid-cols-2 gap-2">
+          {/* Linha 2: Vagas Titulares e Suplentes (sem fundo na mini-seção) */}
+          <div className="grid grid-cols-2 gap-3">
             {/* Titulares (Obrigatório) */}
-            <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+            <div className="px-1 py-1 flex flex-col justify-between gap-1.5">
               {isEditingLabelTitulares ? (
                 <input
                   autoFocus
@@ -1663,8 +1663,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               </div>
             </div>
 
-            {/* 1º Suplente */}
-            <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
+            {/* Suplentes */}
+            <div className="px-1 py-1 flex flex-col justify-between gap-1.5">
               <div className="flex items-center justify-between gap-1">
                 {isEditingLabelSuplente1 ? (
                   <input
@@ -1685,7 +1685,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     title="Duplo clique ou clique no lápis para editar rótulo"
                   >
                     <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider truncate">
-                      {(eventFormLabelSuplente1 || '1º SUPLENTE').toUpperCase()}:
+                      {(eventFormLabelSuplente1 || 'SUPLENTES').toUpperCase()}:
                     </span>
                     <button
                       type="button"
@@ -1747,7 +1747,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   eventFormResolverEmpates ? 'text-slate-100' : 'text-slate-400'
                 }`}
               >
-                Critério de desempate:
+                Critério de desempate
               </span>
             </div>
           </div>
