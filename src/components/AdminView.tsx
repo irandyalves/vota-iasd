@@ -1377,7 +1377,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         exit={{ opacity: 0, scale: 0.95, y: -10 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
         style={{ transformOrigin: 'top left' }}
-        className="absolute top-full left-0 mt-2 z-50 w-[360px] sm:w-[440px] max-w-[calc(100vw-24px)]"
+        className="absolute top-full left-0 mt-2 z-[200] w-[360px] sm:w-[440px] max-w-[calc(100vw-24px)]"
       >
         <div className="relative bg-[#141721] rounded-xl p-4 shadow-[0_0_30px_rgba(16,185,129,0.22),0_18px_40px_rgba(0,0,0,0.9)] space-y-3.5 border border-emerald-500/40">
           {/* Borda Designer com brilho suave (linhas superiores e laterais limpas, sem borda dupla no fundo) */}
@@ -2785,7 +2785,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       </div>
 
       {/* BARRA DE EVENTOS: LAYOUT ESTÚDIO MODERNO COM CORES SUAVES E SEM CAIXA ALTA */}
-      <div className="-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative z-10">
+      <div className={`-mx-3 sm:-mx-4 lg:-mx-5 bg-[#141721] border-y border-white/[0.08] shadow-lg mb-3 flex items-stretch justify-between min-h-[58px] relative ${isCreatingNewEvent || editingEventId ? 'z-[100]' : 'z-10'}`}>
         <div className="flex-1 min-w-0 flex items-stretch justify-between pr-4 sm:pr-6 lg:pr-8 gap-3">
           {/* LINHA CENTRALIZADA VERTICALMENTE: "EVENTOS" + "+ CRIAR VOTAÇÃO" À ESQUERDA E EVENTOS CRIADOS À DIREITA */}
           <div className="flex-1 min-w-0 flex flex-wrap items-center gap-2">
@@ -2847,7 +2847,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               )}
 
               {/* CONTAINER RELATIVO DO BOTÃO "+ CRIAR VOTAÇÃO" E DO MODALZINHO */}
-              <div className="relative flex items-center shrink-0 pl-1 sm:pl-2">
+              <div className={`relative flex items-center shrink-0 pl-1 sm:pl-2 ${isCreatingNewEvent && !editingEventId ? 'z-[150]' : ''}`}>
                 <button
                   ref={createEventBtnRef}
                   data-create-event-btn="true"
@@ -2891,7 +2891,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                 editingEventId === evt.id &&
                 index === eventsList.findIndex((e) => e.id === editingEventId);
               return (
-                <div key={evt.id} className="relative flex items-center">
+                <div key={evt.id} className={`relative flex items-center ${isEditingThisEvt ? 'z-[150]' : ''}`}>
                   <div
                     onClick={() => handleSelectEventButton(evt)}
                     title="Selecionar este evento"
@@ -3844,7 +3844,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                       const isTitular = idx < vacancies;
                       const isSuplente1 = idx >= vacancies && idx < vacancies + s1Count;
                       const isSuplente2 = idx >= vacancies + s1Count && idx < totalVacancies;
-                      const isFirstAfterTitulares = idx === vacancies && s1Count > 0;
+                      const isLastTitular = vacancies > 0 && idx === vacancies - 1 && rankedCandidates.length > vacancies;
+                      const isFirstAfterTitulares = vacancies > 0 && idx === vacancies;
 
                       const activeColor = isTitular
                         ? winnerColor
@@ -3858,11 +3859,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         <React.Fragment key={candidate.id}>
                           {isFirstAfterTitulares && (
                             <div className="flex items-center gap-1.5 py-0.5 my-0.5">
-                              <div className="flex-1 h-px bg-emerald-500/30" />
-                              <span className="text-[9px] font-medium text-emerald-400/90 px-1.5 py-0.2 rounded bg-emerald-500/10 border border-emerald-500/20">
-                                ▲ Corte Titulares ({vacancies}v)
+                              <div className="flex-1 h-px bg-gradient-to-r from-transparent via-emerald-500/25 to-emerald-500/45" />
+                              <span className="text-[9px] font-medium text-emerald-400/90 px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_8px_rgba(16,185,129,0.15)] select-none">
+                                ▲ Corte Titulares
                               </span>
-                              <div className="flex-1 h-px bg-emerald-500/30" />
+                              <div className="flex-1 h-px bg-gradient-to-l from-transparent via-emerald-500/25 to-emerald-500/45" />
                             </div>
                           )}
 
@@ -3875,7 +3876,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             style={{
                               borderColor: hexToRgba(activeColor, isTitular ? 0.45 : isSuplente1 ? 0.35 : 0.2),
                             }}
-                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] border transition-colors duration-200 flex items-center justify-between gap-1.5 shadow-sm ${
+                            className={`relative overflow-hidden p-1.5 sm:p-2 bg-[#0b0d13] ${
+                              isLastTitular
+                                ? 'border-t border-b-0 border-l-0 border-r-0'
+                                : isFirstAfterTitulares
+                                ? 'border-b border-t-0 border-l-0 border-r-0'
+                                : 'border'
+                            } transition-colors duration-200 flex items-center justify-between gap-1.5 shadow-sm ${
                               idx === 0
                                 ? 'rounded-t-lg'
                                 : idx === rankedCandidates.length - 1
@@ -3883,6 +3890,59 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                 : 'rounded-none'
                             } -mt-px hover:z-20 hover:border-opacity-100`}
                           >
+                            {/* Efeito Especial do Corte: Card Acima (isLastTitular) */}
+                            {isLastTitular && (
+                              <>
+                                {/* Borda esquerda sumindo de cima para baixo */}
+                                <div
+                                  className="absolute left-0 top-0 bottom-0 w-px pointer-events-none"
+                                  style={{
+                                    background: `linear-gradient(to bottom, ${hexToRgba(activeColor, 0.45)} 0%, transparent 100%)`,
+                                  }}
+                                />
+                                {/* Borda direita sumindo de cima para baixo */}
+                                <div
+                                  className="absolute right-0 top-0 bottom-0 w-px pointer-events-none"
+                                  style={{
+                                    background: `linear-gradient(to bottom, ${hexToRgba(activeColor, 0.45)} 0%, transparent 100%)`,
+                                  }}
+                                />
+                                {/* Borda inferior sumindo a partir do centro para esquerda e direita */}
+                                <div
+                                  className="absolute bottom-0 left-0 right-0 h-px pointer-events-none"
+                                  style={{
+                                    background: `linear-gradient(90deg, transparent 0%, ${hexToRgba(winnerColor, 0.65)} 50%, transparent 100%)`,
+                                  }}
+                                />
+                              </>
+                            )}
+
+                            {/* Efeito Especial do Corte: Card Abaixo (isFirstAfterTitulares) */}
+                            {isFirstAfterTitulares && (
+                              <>
+                                {/* Borda esquerda sumindo de baixo para cima */}
+                                <div
+                                  className="absolute left-0 top-0 bottom-0 w-px pointer-events-none"
+                                  style={{
+                                    background: `linear-gradient(to top, ${hexToRgba(activeColor, 0.35)} 0%, transparent 100%)`,
+                                  }}
+                                />
+                                {/* Borda direita sumindo de baixo para cima */}
+                                <div
+                                  className="absolute right-0 top-0 bottom-0 w-px pointer-events-none"
+                                  style={{
+                                    background: `linear-gradient(to top, ${hexToRgba(activeColor, 0.35)} 0%, transparent 100%)`,
+                                  }}
+                                />
+                                {/* Borda superior sumindo a partir do centro para esquerda e direita */}
+                                <div
+                                  className="absolute top-0 left-0 right-0 h-px pointer-events-none"
+                                  style={{
+                                    background: `linear-gradient(90deg, transparent 0%, ${hexToRgba(activeColor, 0.55)} 50%, transparent 100%)`,
+                                  }}
+                                />
+                              </>
+                            )}
                             {/* Posição: 1º dourado, 2º prata, 3º bronze, resto normal */}
                             <span
                               className={`w-7 text-center font-mono font-bold text-xs shrink-0 ${
@@ -4669,30 +4729,30 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     setIsDraggingSplit(true);
                   }}
                   onTouchStart={() => setIsDraggingSplit(true)}
-                  className="hidden lg:flex w-2.5 hover:w-2.5 cursor-col-resize items-center justify-center group relative z-30 shrink-0 select-none -mx-[1px]"
+                  className="hidden lg:flex w-3 hover:w-3 cursor-col-resize items-center justify-center group relative z-20 shrink-0 select-none -mx-[1px]"
                   title="Arraste para redimensionar (Esquerda: Nomes | Direita: Apuração)"
                 >
-                  {/* Linha vertical central */}
+                  {/* Linha vertical central com animação suave de 200ms e efeito brilhoso verde */}
                   <div
-                    className={`w-[2px] h-full transition-colors duration-150 ${
+                    className={`w-[2px] h-full transition-all duration-200 ease-in-out ${
                       isDraggingSplit
-                        ? 'bg-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.9)]'
-                        : 'bg-white/[0.18] group-hover:bg-emerald-400/80'
+                        ? 'bg-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.95),0_0_20px_rgba(52,211,153,0.6)]'
+                        : 'bg-white/[0.18] group-hover:bg-emerald-400 group-hover:shadow-[0_0_10px_rgba(16,185,129,0.85),0_0_18px_rgba(52,211,153,0.5)]'
                     }`}
                   />
 
                   {/* Puxador com ícone/grip central */}
                   <div
-                    className={`absolute top-1/2 -translate-y-1/2 w-4 h-8 rounded-full border flex items-center justify-center transition-all ${
+                    className={`absolute top-1/2 -translate-y-1/2 w-4 h-8 rounded-full border flex items-center justify-center transition-all duration-200 ease-in-out ${
                       isDraggingSplit
-                        ? 'bg-emerald-950 border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.6)] scale-110'
-                        : 'bg-[#141721] border-white/20 group-hover:border-emerald-400 group-hover:bg-[#1c2233]'
+                        ? 'bg-emerald-950 border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.8)] scale-110'
+                        : 'bg-[#141721] border-white/20 group-hover:border-emerald-400 group-hover:bg-[#06241a] group-hover:shadow-[0_0_10px_rgba(16,185,129,0.6)]'
                     }`}
                   >
                     <div className="flex flex-col gap-0.5 pointer-events-none">
-                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300" />
-                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300" />
-                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300" />
+                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300 transition-colors duration-200" />
+                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300 transition-colors duration-200" />
+                      <span className="w-1 h-1 rounded-full bg-slate-400 group-hover:bg-emerald-300 transition-colors duration-200" />
                     </div>
                   </div>
                 </div>
