@@ -903,12 +903,29 @@ export const VoterView: React.FC<VoterViewProps> = ({ session }) => {
               <h3 className="font-bold text-sm sm:text-base text-emerald-400 uppercase tracking-wide">
                 Rodada de Desempate!
               </h3>
-              <p className="text-[13px] sm:text-sm text-emerald-200/90 leading-snug">
-                Escolha apenas{' '}
-                <strong className="text-white font-black text-base sm:text-lg px-0.5">
-                  {maxVotes}
-                </strong>{' '}
-                {maxVotes === 1 ? 'nome' : 'nomes'} entre os candidatos abaixo.
+              <p className="text-[13px] sm:text-sm text-emerald-200/90 leading-snug flex items-center flex-wrap gap-1">
+                <span>Escolha apenas</span>
+                <span className="inline-flex items-center justify-center min-w-[18px] h-[24px] overflow-hidden align-middle">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    <motion.strong
+                      key={remainingVotes}
+                      initial={{ y: -16, opacity: 0, scale: 0.5 }}
+                      animate={{ y: 0, opacity: 1, scale: [1.4, 1] }}
+                      exit={{ y: 16, opacity: 0, scale: 0.5 }}
+                      transition={{
+                        type: 'spring',
+                        stiffness: 550,
+                        damping: 22,
+                      }}
+                      className={`inline-block font-black text-base sm:text-lg px-0.5 leading-none ${
+                        remainingVotes === 0 ? 'text-emerald-300 drop-shadow-[0_0_8px_rgba(52,211,153,0.8)]' : 'text-white'
+                      }`}
+                    >
+                      {remainingVotes}
+                    </motion.strong>
+                  </AnimatePresence>
+                </span>
+                <span>{remainingVotes === 1 ? 'nome' : 'nomes'} entre os candidatos abaixo.</span>
               </p>
             </div>
           </motion.div>
