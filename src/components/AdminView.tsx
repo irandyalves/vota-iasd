@@ -233,6 +233,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const hasTies = detectedTies.length > 0;
 
   const isVotingActive = session.status === 'VOTING' || session.status === 'TIE_BREAK';
+  // Bloqueio de edição de candidatos enquanto um desempate estiver sendo resolvido
+  const isResolvingTie =
+    (hasTies && (isTieModalOpen || session.status === 'CLOSED')) ||
+    session.status === 'TIE_BREAK' ||
+    Boolean(session.tieBreak?.active);
   const activeOptions =
     session.status === 'TIE_BREAK' && session.tieBreak?.active
       ? session.tieBreak.options || []
@@ -1828,6 +1833,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   // Processador de Arquivos (.TXT, .CSV, .XLS, .XLSX)
   const handleFileImport = async (e: React.ChangeEvent<HTMLInputElement>, mode: 'append' | 'replace') => {
+    if (isResolvingTie) {
+      showNotification('error', 'A lista de candidatos não pode ser alterada enquanto o desempate estiver sendo resolvido.');
+      return;
+    }
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -2020,6 +2029,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   // Adicionar Candidato(s) por Texto ou Voz em Tempo Real (Maiúsculo)
   const handleAddCandidateName = (rawText: string) => {
+    if (isResolvingTie) {
+      showNotification('error', 'A lista de candidatos não pode ser alterada enquanto o desempate estiver sendo resolvido.');
+      return;
+    }
     if (!rawText.trim()) return;
     const names = rawText
       .split(/,|\n/)
@@ -4320,7 +4333,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
         // Gestão de Candidatos (Digite/Fale Nomes + Importar + Lista)
         const renderCandidateManagement = (isSplit: boolean) => (
-          <div className="space-y-3.5 flex-1 flex flex-col min-h-0">
+          <div
+            className={`space-y-3.5 flex-1 flex flex-col min-h-0 transition-opacity duration-200 ${
+              isResolvingTie ? 'opacity-40 pointer-events-none select-none grayscale-[30%]' : ''
+            }`}
+          >
             {/* 1. SEÇÃO DE DIGITAÇÃO / VOZ NO TOPO */}
             <div className={`bg-[#141721] shadow-lg ${isSplit ? 'rounded-l-xl rounded-r-none border border-white/[0.08] border-r-0 p-3 sm:p-4' : 'border-y border-white/[0.08] border-x-0 rounded-none px-4 sm:px-6 py-4'}`}>
               <div className="flex flex-col justify-between gap-3 min-w-0">
@@ -4336,12 +4353,21 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                         Ouvindo...
                       </span>
                     )}
+                    {isResolvingTie && (
+                      <span className="text-[10px] font-semibold text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-1">
+                        Desabilitado durante desempate
+                      </span>
+                    )}
                   </div>
 
                   {/* SEÇÃO IMPORTAR */}
                   <div
-                    onDragOver={(e) => e.preventDefault()}
+                    onDragOver={(e) => {
+                      if (isResolvingTie) return;
+                      e.preventDefault();
+                    }}
                     onDrop={(e) => {
+                      if (isResolvingTie) return;
                       e.preventDefault();
                       const file = e.dataTransfer.files?.[0];
                       if (file) {
@@ -4355,9 +4381,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <div className="relative" data-import-listbox="true">
                       <button
                         type="button"
-                        onClick={() => setIsImportMenuOpen((prev) => !prev)}
-                        className="px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 rounded-lg text-xs font-medium text-slate-300 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer shadow-sm"
-                        title="Clique para escolher o formato de arquivo para importar"
+                        disabled={isResolvingTie}
+                        onClick={() => !isResolvingTie && setIsImportMenuOpen((prev) => !prev)}
+                        className={`px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 rounded-lg text-xs font-medium text-slate-300 hover:text-emerald-300 flex items-center gap-2 transition cursor-pointer shadow-sm ${
+                          isResolvingTie ? 'cursor-not-allowed opacity-60' : ''
+                        }`}
+                        title={isResolvingTie ? 'Desabilitado durante desempate' : 'Clique para escolher o formato de arquivo para importar'}
                       >
                         <span>Importar</span>
                         <svg
@@ -4455,34 +4484,51 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   <textarea
                     ref={namesTextareaRef}
                     value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
+                    disabled={isResolvingTie}
+                    onChange={(e) => !isResolvingTie && setNewName(e.target.value)}
                     onKeyDown={(e) => {
+                      if (isResolvingTie) return;
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
                         if (isListening) stopListening();
                         handleAddCandidateName(newName);
                       }
                     }}
-                    placeholder="Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)..."
-                    className="w-full flex-1 min-h-[110px] sm:min-h-[120px] p-3 pr-16 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed"
+                    placeholder={
+                      isResolvingTie
+                        ? 'Seção desabilitada durante a resolução de empate...'
+                        : 'Digite ou fale os nomes (dê Enter ou separe por vírgula ou linha)...'
+                    }
+                    className={`w-full flex-1 min-h-[110px] sm:min-h-[120px] p-3 pr-16 pb-11 bg-[#0b0d13] border border-white/[0.1] focus:border-emerald-500/60 rounded-xl text-slate-100 font-normal text-xs sm:text-sm placeholder-slate-500 outline-none transition shadow-sm resize-none leading-relaxed ${
+                      isResolvingTie ? 'cursor-not-allowed opacity-60' : ''
+                    }`}
                   />
 
                   {/* Microfone centralizado verticalmente */}
                   <button
                     type="button"
-                    onClick={toggleListening}
-                    title={isListening ? 'Parar digitação por voz' : 'Iniciar digitação por voz'}
-                    className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-[45px] h-[45px] rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 cursor-pointer ${
-                      isListening
-                        ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse'
-                        : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)]'
+                    disabled={isResolvingTie}
+                    onClick={() => !isResolvingTie && toggleListening()}
+                    title={
+                      isResolvingTie
+                        ? 'Desabilitado durante desempate'
+                        : isListening
+                        ? 'Parar digitação por voz'
+                        : 'Iniciar digitação por voz'
+                    }
+                    className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-[45px] h-[45px] rounded-full border flex items-center justify-center transition-all duration-150 active:scale-90 ${
+                      isResolvingTie
+                        ? 'bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-40'
+                        : isListening
+                        ? 'bg-rose-500/20 border-rose-500/50 text-rose-300 shadow-[0_0_16px_rgba(244,63,94,0.4)] animate-pulse cursor-pointer'
+                        : 'bg-emerald-500/20 hover:bg-emerald-500/30 border-emerald-500/40 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.25)] cursor-pointer'
                     }`}
                   >
                     {isListening ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
                   </button>
 
                   {/* Botão Adicionar */}
-                  {newName.trim().length > 0 && (
+                  {!isResolvingTie && newName.trim().length > 0 && (
                     <div className="absolute right-3 bottom-2.5 flex items-center gap-1.5">
                       <button
                         type="button"
@@ -4526,12 +4572,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     <span>
                       Nomes para escolha (<span className="font-bold text-blue-400">{session.options.length}</span>)
                     </span>
+                    {isResolvingTie && (
+                      <span className="text-[10px] font-semibold text-amber-300 bg-amber-950/80 px-2 py-0.5 rounded-full border border-amber-500/40 flex items-center gap-1">
+                        Desabilitado durante desempate
+                      </span>
+                    )}
                   </h3>
                   <div className="flex items-center gap-2">
                     {/* Botão Recuperar Nomes */}
                     <button
                       type="button"
+                      disabled={isResolvingTie}
                       onClick={() => {
+                        if (isResolvingTie) return;
                         const sourceNames =
                           session.options.length > 0
                             ? session.options.map((o) => o.name)
@@ -4546,8 +4599,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           `${sourceNames.length} nomes enviados para o campo de digitação acima (separados por vírgula)!`
                         );
                       }}
-                      className="px-2.5 sm:px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                      title="Jogar todos os nomes na caixa de digitação acima separados por vírgula"
+                      className={`px-2.5 sm:px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-amber-400/40 text-slate-300 hover:text-amber-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition shadow-sm ${
+                        isResolvingTie ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                      }`}
+                      title={isResolvingTie ? 'Desabilitado durante desempate' : 'Jogar todos os nomes na caixa de digitação acima separados por vírgula'}
                     >
                       <RotateCcw className="w-3.5 h-3.5" />
                       <span>Recuperar</span>
@@ -4556,15 +4611,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     {/* Botão A-Z */}
                     <button
                       type="button"
+                      disabled={isResolvingTie}
                       onClick={() => {
+                        if (isResolvingTie) return;
                         const sorted = [...session.options].sort((a, b) =>
                           a.name.localeCompare(b.name, 'pt-BR', { sensitivity: 'base' })
                         );
                         saveSession({ ...session, options: sorted });
                         showNotification('success', 'Nomes ordenados em ordem alfabética (A-Z).');
                       }}
-                      className="px-2.5 sm:px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition cursor-pointer shadow-sm"
-                      title="Ordenar nomes em ordem alfabética (A-Z)"
+                      className={`px-2.5 sm:px-3 py-1.5 bg-[#0b0d13] hover:bg-[#181c28] border border-white/[0.1] hover:border-emerald-500/40 text-slate-300 hover:text-emerald-300 rounded-lg font-medium text-xs tracking-normal flex items-center gap-1.5 transition shadow-sm ${
+                        isResolvingTie ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                      }`}
+                      title={isResolvingTie ? 'Desabilitado durante desempate' : 'Ordenar nomes em ordem alfabética (A-Z)'}
                     >
                       <ArrowDownAZ className="w-3.5 h-3.5" />
                       <span>A-Z</span>
@@ -4573,7 +4632,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     {/* Botão Limpar Tudo */}
                     <button
                       type="button"
+                      disabled={isResolvingTie}
                       onClick={() => {
+                        if (isResolvingTie) return;
                         setConfirmModal({
                           title: 'Limpar Todos os Nomes',
                           highlight: `${session.options.length} nomes cadastrados`,
@@ -4587,8 +4648,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                           },
                         });
                       }}
-                      className="p-1.5 sm:p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition cursor-pointer shadow-sm"
-                      title="Apagar todos os nomes cadastrados"
+                      className={`p-1.5 sm:p-2 bg-[#0b0d13] hover:bg-rose-500/20 border border-white/[0.1] hover:border-rose-500/40 text-slate-400 hover:text-rose-300 rounded-lg flex items-center justify-center transition shadow-sm ${
+                        isResolvingTie ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+                      }`}
+                      title={isResolvingTie ? 'Desabilitado durante desempate' : 'Apagar todos os nomes cadastrados'}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -4643,15 +4706,16 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             ) : (
                               <span
                                 onClick={() => {
+                                  if (isResolvingTie) return;
                                   setEditingCandidateId(option.id);
                                   setEditingCandidateName(option.name);
                                 }}
-                                className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize cursor-pointer transition-colors duration-200 ${
-                                  isGlowing
-                                    ? 'text-emerald-200'
-                                    : 'text-slate-200 hover:text-white'
+                                className={`flex-1 min-w-0 truncate font-normal text-xs tracking-normal capitalize transition-colors duration-200 ${
+                                  isResolvingTie
+                                    ? 'cursor-not-allowed text-slate-400'
+                                    : 'cursor-pointer ' + (isGlowing ? 'text-emerald-200' : 'text-slate-200 hover:text-white')
                                 }`}
-                                title={`${option.name} (Clique para editar)`}
+                                title={isResolvingTie ? option.name : `${option.name} (Clique para editar)`}
                               >
                                 {option.name}
                               </span>
@@ -4660,9 +4724,14 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             {/* Botão de Excluir */}
                             <button
                               type="button"
-                              onClick={() => handleRemoveCandidate(option.id)}
-                              title="Remover nome"
-                              className="p-1 text-slate-500 hover:text-rose-400 rounded transition cursor-pointer shrink-0"
+                              disabled={isResolvingTie}
+                              onClick={() => !isResolvingTie && handleRemoveCandidate(option.id)}
+                              title={isResolvingTie ? 'Desabilitado durante desempate' : 'Remover nome'}
+                              className={`p-1 rounded transition shrink-0 ${
+                                isResolvingTie
+                                  ? 'cursor-not-allowed text-slate-600 opacity-40'
+                                  : 'cursor-pointer text-slate-500 hover:text-rose-400'
+                              }`}
                             >
                               <Trash2 className="w-3.5 h-3.5" />
                             </button>
