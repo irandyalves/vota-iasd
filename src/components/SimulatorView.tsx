@@ -134,7 +134,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     setRefreshTrigger((prev) => prev + 1);
   };
 
-  // AO CLICAR NO BOTÃO CONFIRMAR: Dispara para todos com intervalo de 2 segundos entre um e outro
+  // AO CLICAR NO BOTÃO CONFIRMAR: Dispara para todos com intervalo de 0,5 segundo entre um e outro
   const handleConfirmAll = async () => {
     if (!isVotingActive || options.length === 0 || isAutoVoting) return;
     setIsAutoVoting(true);
@@ -157,9 +157,9 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
       await submitBallot(session, selectedIds, currentRound, devId);
       setRefreshTrigger((prev) => prev + 1);
 
-      // Intervalo de exatamente 2 segundos entre cada confirmação
+      // Intervalo de exatamente 0,5 segundo entre cada confirmação
       if (i < pendingDevices.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
     }
 
@@ -527,13 +527,13 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
                 ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 active:scale-95 shadow-emerald-500/25 ring-2 ring-emerald-400/40'
                 : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-40 shadow-none'
             }`}
-            title="Disparar confirmação para todos os aparelhos a cada 2 segundos"
+            title="Disparar confirmação para todos os aparelhos a cada 0,5 segundo"
           >
             {isAutoVoting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
                 <span>
-                  CONFIRMANDO {votingProgress ? `${votingProgress.current}/${votingProgress.total}` : '...'} (2s)
+                  CONFIRMANDO {votingProgress ? `${votingProgress.current}/${votingProgress.total}` : '...'} (0.5s)
                 </span>
               </>
             ) : (
