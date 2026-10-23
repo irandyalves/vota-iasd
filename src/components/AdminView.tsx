@@ -58,8 +58,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [eventFormVacancies, setEventFormVacancies] = useState<number>(session.vacancies || 1);
   const [eventFormSuplente1Enabled, setEventFormSuplente1Enabled] = useState<boolean>(session.habilitarSuplente1 !== false);
   const [eventFormSuplente1Count, setEventFormSuplente1Count] = useState<number>(session.suplentesCount ?? 1);
-  const [eventFormSuplente2Enabled, setEventFormSuplente2Enabled] = useState<boolean>(session.habilitarSuplente2 === true);
-  const [eventFormSuplente2Count, setEventFormSuplente2Count] = useState<number>(session.segundoSuplentesCount ?? 1);
   const [eventFormResolverEmpates, setEventFormResolverEmpates] = useState<boolean>(session.resolverEmpates !== false);
   const [eventFormTotalVoters, setEventFormTotalVoters] = useState<number>(session.totalVotersConnected || 0);
   const [eventFormLabelTitulares, setEventFormLabelTitulares] = useState<string>(session.labelTitulares || 'Titulares');
@@ -67,7 +65,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [eventFormLabelSuplente2, setEventFormLabelSuplente2] = useState<string>(session.labelSuplente2 || '2º suplente');
   const [isEditingLabelTitulares, setIsEditingLabelTitulares] = useState<boolean>(false);
   const [isEditingLabelSuplente1, setIsEditingLabelSuplente1] = useState<boolean>(false);
-  const [isEditingLabelSuplente2, setIsEditingLabelSuplente2] = useState<boolean>(false);
   const [isNewGeneralModalOpen, setIsNewGeneralModalOpen] = useState<boolean>(false);
   const [newGeneralEventNameInput, setNewGeneralEventNameInput] = useState<string>('');
   const [isEditingGeneralModalOpen, setIsEditingGeneralModalOpen] = useState<boolean>(false);
@@ -770,8 +767,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormVacancies(currentGlobal.vacancies);
     setEventFormSuplente1Enabled(currentGlobal.habilitarSuplente1 !== false);
     setEventFormSuplente1Count(currentGlobal.suplentesCount ?? 1);
-    setEventFormSuplente2Enabled(currentGlobal.habilitarSuplente2 === true);
-    setEventFormSuplente2Count(currentGlobal.segundoSuplentesCount ?? 1);
     setEventFormResolverEmpates(true); // Padrão: sempre marcado
     setEventFormTotalVoters(currentGlobal.totalVotersConnected || 1);
     setEventFormLabelTitulares(currentGlobal.labelTitulares || 'Titulares');
@@ -779,7 +774,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormLabelSuplente2(currentGlobal.labelSuplente2 || '2º suplente');
     setIsEditingLabelTitulares(false);
     setIsEditingLabelSuplente1(false);
-    setIsEditingLabelSuplente2(false);
     setIsCreatingNewEvent(true);
   };
 
@@ -797,12 +791,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     const s1Count = isSelected
       ? (session.suplentesCount ?? 1)
       : (evt.suplentesCount ?? session.suplentesCount ?? 1);
-    const s2Enabled = isSelected
-      ? (session.habilitarSuplente2 === true)
-      : (evt.habilitarSuplente2 !== undefined ? evt.habilitarSuplente2 : (session.habilitarSuplente2 === true));
-    const s2Count = isSelected
-      ? (session.segundoSuplentesCount ?? 1)
-      : (evt.segundoSuplentesCount ?? session.segundoSuplentesCount ?? 1);
     const empates = isSelected
       ? (session.resolverEmpates !== false)
       : (evt.resolverEmpates !== undefined ? evt.resolverEmpates : true);
@@ -823,8 +811,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormVacancies(vac || 1);
     setEventFormSuplente1Enabled(s1Enabled);
     setEventFormSuplente1Count(s1Count > 0 ? s1Count : 1);
-    setEventFormSuplente2Enabled(s2Enabled);
-    setEventFormSuplente2Count(s2Count > 0 ? s2Count : 1);
     setEventFormResolverEmpates(empates !== false);
     setEventFormTotalVoters(totVoters);
     setEventFormLabelTitulares(lTitulares);
@@ -832,7 +818,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     setEventFormLabelSuplente2(lSuplente2);
     setIsEditingLabelTitulares(false);
     setIsEditingLabelSuplente1(false);
-    setIsEditingLabelSuplente2(false);
     setIsCreatingNewEvent(true);
   };
 
@@ -1311,7 +1296,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
     const vacancies = Math.max(1, eventFormVacancies || 1);
     const s1Count = eventFormSuplente1Enabled ? Math.max(1, eventFormSuplente1Count || 1) : 0;
-    const s2Count = eventFormSuplente2Enabled ? Math.max(1, eventFormSuplente2Count || 1) : 0;
     const resolverEmpates = eventFormResolverEmpates;
     const totalVoters = eventFormTotalVoters > 0 ? eventFormTotalVoters : undefined;
     const labelTitulares = eventFormLabelTitulares.trim() || 'Titulares';
@@ -1329,8 +1313,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               maxVotesPerVoter: vacancies,
               habilitarSuplente1: eventFormSuplente1Enabled,
               suplentesCount: s1Count,
-              habilitarSuplente2: eventFormSuplente2Enabled,
-              segundoSuplentesCount: s2Count,
+              habilitarSuplente2: false,
+              segundoSuplentesCount: 0,
               resolverEmpates,
               totalVotersConnected: totalVoters,
               rulesConfigured: true,
@@ -1348,8 +1332,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         maxVotesPerVoter: isEditingActive ? vacancies : session.maxVotesPerVoter,
         habilitarSuplente1: isEditingActive ? eventFormSuplente1Enabled : session.habilitarSuplente1,
         suplentesCount: isEditingActive ? s1Count : session.suplentesCount,
-        habilitarSuplente2: isEditingActive ? eventFormSuplente2Enabled : session.habilitarSuplente2,
-        segundoSuplentesCount: isEditingActive ? s2Count : session.segundoSuplentesCount,
+        habilitarSuplente2: false,
+        segundoSuplentesCount: 0,
         resolverEmpates: isEditingActive ? resolverEmpates : session.resolverEmpates,
         totalVotersConnected: isEditingActive ? totalVoters : session.totalVotersConnected,
         rulesConfigured: true,
@@ -1364,8 +1348,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         vacancies,
         habilitarSuplente1: eventFormSuplente1Enabled,
         suplentesCount: s1Count,
-        habilitarSuplente2: eventFormSuplente2Enabled,
-        segundoSuplentesCount: s2Count,
+        habilitarSuplente2: false,
+        segundoSuplentesCount: 0,
         resolverEmpates,
         labelTitulares,
         labelSuplente1,
@@ -1412,9 +1396,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         vacancies,
         maxVotesPerVoter: vacancies,
         suplentesCount: s1Count,
-        segundoSuplentesCount: s2Count,
+        segundoSuplentesCount: 0,
         habilitarSuplente1: eventFormSuplente1Enabled,
-        habilitarSuplente2: eventFormSuplente2Enabled,
+        habilitarSuplente2: false,
         resolverEmpates,
         totalVotersConnected: totalVoters,
         rulesConfigured: true,
@@ -1444,8 +1428,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         maxVotesPerVoter: vacancies,
         habilitarSuplente1: eventFormSuplente1Enabled,
         suplentesCount: s1Count,
-        habilitarSuplente2: eventFormSuplente2Enabled,
-        segundoSuplentesCount: s2Count,
+        habilitarSuplente2: false,
+        segundoSuplentesCount: 0,
         resolverEmpates,
         totalVotersConnected: totalVoters,
         rulesConfigured: true,
@@ -1460,8 +1444,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         vacancies,
         habilitarSuplente1: eventFormSuplente1Enabled,
         suplentesCount: s1Count,
-        habilitarSuplente2: eventFormSuplente2Enabled,
-        segundoSuplentesCount: s2Count,
+        habilitarSuplente2: false,
+        segundoSuplentesCount: 0,
         resolverEmpates,
         labelTitulares,
         labelSuplente1,
@@ -1555,15 +1539,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             />
           </div>
 
-          {/* Cabeçalho: REGRAS DA ELEIÇÃO na frente de 'Configurar votação' */}
+          {/* Cabeçalho: REGRAS DA ELEIÇÃO */}
           <div className="flex items-center justify-between pb-2 border-b border-white/[0.08]">
             <div className="flex items-center gap-1.5 font-black text-xs uppercase tracking-wider text-emerald-400">
               <Sliders className="w-3.5 h-3.5 text-emerald-400" />
               <span>REGRAS DA ELEIÇÃO</span>
-              <span className="text-slate-500 font-normal">•</span>
-              <span className="text-slate-200 font-bold normal-case text-xs">
-                {isEditing ? 'Configurar votação' : 'Nova votação'}
-              </span>
             </div>
             <button
               type="button"
@@ -1584,10 +1564,10 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
               <div className="flex items-center gap-1.5 mb-1">
                 <label
                   onDoubleClick={() => eventTitleInputRef.current?.focus()}
-                  className="text-xs font-semibold text-slate-200 cursor-pointer select-none"
+                  className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider cursor-pointer select-none"
                   title="Duplo clique ou clique no lápis para focar"
                 >
-                  Título da votação: <span className="text-emerald-400">*</span>
+                  TÍTULO DA VOTAÇÃO: <span className="text-emerald-400">*</span>
                 </label>
                 <button
                   type="button"
@@ -1616,8 +1596,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
 
             <div className="sm:col-span-1">
-              <label className="text-xs font-semibold text-slate-400 block mb-1 whitespace-nowrap">
-                Qdte votantes:
+              <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1 whitespace-nowrap">
+                QDTE VOTANTES:
               </label>
               <input
                 type="text"
@@ -1631,8 +1611,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Linha 2: Vagas Titulares, 1º Suplente e 2º Suplente (Rótulos editáveis via lapizinho verde e duplo clique) */}
-          <div className="grid grid-cols-3 gap-2">
+          {/* Linha 2: Vagas Titulares e 1º Suplente (Rótulos editáveis via lapizinho verde e duplo clique) */}
+          <div className="grid grid-cols-2 gap-2">
             {/* Titulares (Obrigatório) */}
             <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
               {isEditingLabelTitulares ? (
@@ -1645,7 +1625,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') setIsEditingLabelTitulares(false);
                   }}
-                  className="w-full text-[11px] font-semibold text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
+                  className="w-full text-[11px] font-semibold uppercase text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
                 />
               ) : (
                 <div
@@ -1653,8 +1633,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   onDoubleClick={() => setIsEditingLabelTitulares(true)}
                   title="Duplo clique ou clique no lápis para editar rótulo"
                 >
-                  <span className="text-[11px] font-semibold text-slate-200 truncate">
-                    {eventFormLabelTitulares || 'Titulares'}: <span className="text-emerald-400">*</span>
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider truncate">
+                    {(eventFormLabelTitulares || 'TITULARES').toUpperCase()}: <span className="text-emerald-400">*</span>
                   </span>
                   <button
                     type="button"
@@ -1695,7 +1675,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') setIsEditingLabelSuplente1(false);
                     }}
-                    className="w-20 text-[11px] font-semibold text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
+                    className="w-20 text-[11px] font-semibold uppercase text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
                   />
                 ) : (
                   <div
@@ -1703,8 +1683,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                     onDoubleClick={() => setIsEditingLabelSuplente1(true)}
                     title="Duplo clique ou clique no lápis para editar rótulo"
                   >
-                    <span className="text-[11px] font-semibold text-slate-200 truncate">
-                      {eventFormLabelSuplente1 || '1º suplente'}:
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider truncate">
+                      {(eventFormLabelSuplente1 || '1º SUPLENTE').toUpperCase()}:
                     </span>
                     <button
                       type="button"
@@ -1734,64 +1714,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                   disabled={!eventFormSuplente1Enabled}
                   value={eventFormSuplente1Enabled ? eventFormSuplente1Count : 0}
                   onChange={(e) => setEventFormSuplente1Count(Math.max(1, parseInt(e.target.value) || 1))}
-                  className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.1] focus:border-emerald-500/60 rounded text-center text-slate-100 font-bold text-xs outline-none disabled:opacity-30"
-                />
-                <span className="text-[10px] text-slate-400 font-normal">vagas</span>
-              </div>
-            </div>
-
-            {/* 2º Suplente */}
-            <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg p-2.5 flex flex-col justify-between gap-1.5">
-              <div className="flex items-center justify-between gap-1">
-                {isEditingLabelSuplente2 ? (
-                  <input
-                    autoFocus
-                    type="text"
-                    value={eventFormLabelSuplente2}
-                    onChange={(e) => setEventFormLabelSuplente2(e.target.value)}
-                    onBlur={() => setIsEditingLabelSuplente2(false)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') setIsEditingLabelSuplente2(false);
-                    }}
-                    className="w-20 text-[11px] font-semibold text-emerald-300 bg-[#141721] border border-emerald-500/60 rounded px-1 py-0.5 outline-none"
-                  />
-                ) : (
-                  <div
-                    className="flex items-center gap-1 group cursor-pointer min-w-0"
-                    onDoubleClick={() => setIsEditingLabelSuplente2(true)}
-                    title="Duplo clique ou clique no lápis para editar rótulo"
-                  >
-                    <span className="text-[11px] font-semibold text-slate-200 truncate">
-                      {eventFormLabelSuplente2 || '2º suplente'}:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setIsEditingLabelSuplente2(true);
-                      }}
-                      className="p-0.5 text-emerald-400 hover:text-emerald-300 rounded transition shrink-0"
-                      title="Editar nome deste cargo"
-                    >
-                      <Pencil className="w-2.5 h-2.5" />
-                    </button>
-                  </div>
-                )}
-                <input
-                  type="checkbox"
-                  checked={eventFormSuplente2Enabled}
-                  onChange={(e) => setEventFormSuplente2Enabled(e.target.checked)}
-                  className="rounded cursor-pointer accent-emerald-500 w-3.5 h-3.5 shrink-0"
-                />
-              </div>
-              <div className="flex items-center gap-1">
-                <input
-                  type="number"
-                  min={1}
-                  max={99}
-                  disabled={!eventFormSuplente2Enabled}
-                  value={eventFormSuplente2Enabled ? eventFormSuplente2Count : 0}
-                  onChange={(e) => setEventFormSuplente2Count(Math.max(1, parseInt(e.target.value) || 1))}
                   className="w-full px-1.5 py-1 bg-[#141721] border border-white/[0.1] focus:border-emerald-500/60 rounded text-center text-slate-100 font-bold text-xs outline-none disabled:opacity-30"
                 />
                 <span className="text-[10px] text-slate-400 font-normal">vagas</span>
