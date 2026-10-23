@@ -6,6 +6,7 @@ export interface VotingOption {
   votesCount: number;
   createdAt?: number;
   tieBreakVotes?: number;
+  tieBreakDisputeWith?: string;
 }
 
 export type SessionStatus = 'WAITING' | 'VOTING' | 'CLOSED' | 'TIE_BREAK';
@@ -147,6 +148,7 @@ export interface HistoryCandidateResult {
   votesCount: number;
   percentage: number;
   photoUrl?: string;
+  tieBreakDisputeWith?: string;
 }
 
 export interface VotingHistoryRecord {

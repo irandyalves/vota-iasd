@@ -454,12 +454,19 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
       }
     }
 
+    // Oponentes que disputaram com os vencedores no desempate
+    const opponentsNames = tieOptions
+      .filter((c) => !winnerIds.has(c.id))
+      .map((c) => c.name)
+      .join(', ');
+
     // O nome vencedor do desempate recebe +1 voto e troca e sobe no ranking!
     const updatedOptions = (session.options || []).map((opt) => {
       if (winnerIds.has(opt.id)) {
         return {
           ...opt,
           votesCount: Math.floor(opt.votesCount || 0) + 1,
+          tieBreakDisputeWith: opponentsNames || undefined,
         };
       }
       return opt;
@@ -1953,12 +1960,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
 
   const handleCopyHistoryAta = (record: VotingHistoryRecord) => {
     const eleitosText = record.eleitos && record.eleitos.length > 0
-      ? record.eleitos.map((c, i) => `${i + 1}. ${c.name} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      ? record.eleitos.map((c, i) => `${i + 1}. ${c.name}${c.tieBreakDisputeWith ? ` (em desempate com ${c.tieBreakDisputeWith})` : ''} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
       : 'Nenhum';
 
     const suplentesAll = [...(record.suplentes || []), ...(record.segundoSuplentes || [])];
     const suplentesText = suplentesAll.length > 0
-      ? suplentesAll.map((c, i) => `${i + 1}. ${c.name} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
+      ? suplentesAll.map((c, i) => `${i + 1}. ${c.name}${c.tieBreakDisputeWith ? ` (em desempate com ${c.tieBreakDisputeWith})` : ''} - ${c.votesCount} votos (${c.percentage}%)`).join('\n')
       : 'Nenhum';
 
     const naoClassificadosText = record.naoClassificados && record.naoClassificados.length > 0
@@ -3908,6 +3915,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                 </span>
                                                 <span className="text-slate-100 font-medium truncate">
                                                   {c.name}
+                                                  {c.tieBreakDisputeWith && (
+                                                    <span className="text-amber-300 font-normal text-[10.5px] ml-1">
+                                                      (em desempate com {c.tieBreakDisputeWith})
+                                                    </span>
+                                                  )}
                                                 </span>
                                               </div>
                                               <span className="text-emerald-300 font-bold text-[10.5px] shrink-0 font-mono">
@@ -3947,6 +3959,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                     </span>
                                                     <span className="text-slate-100 font-medium truncate">
                                                       {c.name}
+                                                      {c.tieBreakDisputeWith && (
+                                                        <span className="text-amber-300 font-normal text-[10.5px] ml-1">
+                                                          (em desempate com {c.tieBreakDisputeWith})
+                                                        </span>
+                                                      )}
                                                     </span>
                                                   </div>
                                                   <span className="text-blue-300 font-bold text-[10.5px] shrink-0 font-mono">
@@ -3965,6 +3982,11 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                                                     </span>
                                                     <span className="text-slate-100 font-medium truncate">
                                                       {c.name}
+                                                      {c.tieBreakDisputeWith && (
+                                                        <span className="text-amber-300 font-normal text-[10.5px] ml-1">
+                                                          (em desempate com {c.tieBreakDisputeWith})
+                                                        </span>
+                                                      )}
                                                     </span>
                                                   </div>
                                                   <span className="text-indigo-300 font-bold text-[10.5px] shrink-0 font-mono">
@@ -4248,9 +4270,17 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
                             </span>
 
                             {/* Nome */}
-                            <div className="w-[130px] sm:w-[155px] shrink-0 truncate" title={candidate.name}>
+                            <div
+                              className="w-[130px] sm:w-[170px] shrink-0 truncate"
+                              title={candidate.tieBreakDisputeWith ? `${candidate.name} (em desempate com ${candidate.tieBreakDisputeWith})` : candidate.name}
+                            >
                               <span className="font-bold text-xs text-slate-100 uppercase truncate block">
                                 {candidate.name}
+                                {candidate.tieBreakDisputeWith && (
+                                  <span className="text-amber-300 font-normal text-[10px] lowercase ml-1">
+                                    (em desempate com {candidate.tieBreakDisputeWith})
+                                  </span>
+                                )}
                               </span>
                             </div>
 

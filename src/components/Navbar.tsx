@@ -324,6 +324,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         votesCount: realVotes,
         percentage: totalVotes > 0 ? Number(((realVotes / totalVotes) * 100).toFixed(1)) : 0,
         photoUrl: opt.photoUrl,
+        tieBreakDisputeWith: opt.tieBreakDisputeWith,
       };
     };
 

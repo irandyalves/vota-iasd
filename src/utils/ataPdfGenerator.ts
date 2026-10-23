@@ -138,7 +138,7 @@ export function generateAtaPdf(record: VotingHistoryRecord): void {
   const eleitosRows = (record.eleitos && record.eleitos.length > 0)
     ? record.eleitos.map((c, i) => [
         String(i + 1),
-        c.name,
+        c.tieBreakDisputeWith ? `${c.name} (em desempate com ${c.tieBreakDisputeWith})` : c.name,
         String(c.votesCount),
         `${c.percentage}%`,
         'ELEITO - TITULAR',
@@ -198,7 +198,7 @@ export function generateAtaPdf(record: VotingHistoryRecord): void {
 
     const suplentesRows = suplentesTotal.map((c, i) => [
       String(i + 1),
-      c.name,
+      c.tieBreakDisputeWith ? `${c.name} (em desempate com ${c.tieBreakDisputeWith})` : c.name,
       String(c.votesCount),
       `${c.percentage}%`,
       c.tipo,
