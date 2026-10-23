@@ -1722,20 +1722,13 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Linha 3: Critério de desempate (padrão sempre marcado) */}
-          <div className="bg-[#0b0d13] border border-white/[0.1] rounded-lg px-3 py-2 flex items-center justify-between gap-2">
+          {/* Linha 3: Critério de desempate (sem fundo e sem legenda secundária) */}
+          <div className="px-1 py-1 flex items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Star className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-              <div>
-                <span className="text-xs font-semibold text-slate-200 block">
-                  Critério de desempate:
-                </span>
-                <span className="text-[10.5px] text-slate-400 block font-normal">
-                  {eventFormResolverEmpates
-                    ? 'Ativado: rodada para desempate'
-                    : 'Desativado: eleição majoritária'}
-                </span>
-              </div>
+              <span className="text-xs font-semibold text-slate-200">
+                Critério de desempate:
+              </span>
             </div>
             <label className="relative inline-flex items-center cursor-pointer shrink-0">
               <input
@@ -1748,12 +1741,12 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
             </label>
           </div>
 
-          {/* Linha 4: Botão Salvar (Fica verde e libera a votação) */}
-          <div className="flex items-center justify-end gap-2 pt-2 border-t border-white/[0.08]">
+          {/* Linha 4: Botão Salvar centralizado horizontalmente */}
+          <div className="flex items-center justify-center gap-2 pt-2 border-t border-white/[0.08]">
             <button
               type="button"
               onClick={handleSaveEventModal}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-wider uppercase rounded-lg border border-emerald-400 cursor-pointer active:scale-95 transition-all shadow-[0_0_15px_rgba(16,185,129,0.35)]"
+              className="px-8 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs tracking-wider uppercase rounded-lg border border-emerald-400 cursor-pointer active:scale-95 transition-all shadow-[0_0_15px_rgba(16,185,129,0.35)]"
             >
               {isEditing ? 'Salvar' : 'Criar votação'}
             </button>
