@@ -39,6 +39,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
   const [isAutoVoting, setIsAutoVoting] = useState<boolean>(false);
   const [votingProgress, setVotingProgress] = useState<{ current: number; total: number } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
+  const [hasRandomPicked, setHasRandomPicked] = useState<boolean>(false);
 
   // Seleções de candidatos por aparelho simulado
   const [deviceSelections, setDeviceSelections] = useState<Record<string, string[]>>({});
@@ -111,12 +112,17 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     return hasVoted(session.id, currentRound, iteration, id);
   };
 
+  useEffect(() => {
+    setHasRandomPicked(false);
+  }, [session.status, session.activeEventId, session.votingIteration, session.tieBreak?.active]);
+
   // Resetar todos os celulares simulados
   const handleResetAllDevices = () => {
     deviceIds.forEach((id) => {
       clearVotedFlag(session.id, currentRound, iteration, id);
     });
     setDeviceSelections({});
+    setHasRandomPicked(false);
     setRefreshTrigger((prev) => prev + 1);
   };
 
@@ -145,6 +151,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     });
 
     setDeviceSelections((prev) => ({ ...prev, ...newSelections }));
+    setHasRandomPicked(true);
   };
 
   // Voto individual em um celular
@@ -234,6 +241,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
 
     setVotingProgress(null);
     setIsAutoVoting(false);
+    setHasRandomPicked(false);
   };
 
   const votedCount = deviceIds.filter((id) => checkDeviceVoted(id)).length;
@@ -260,9 +268,9 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
   }, [deviceCount]);
 
   // CÁLCULO DE AUTO-FIT: Garante que TODAS as linhas de celulares caibam 100% na janela sem rolagem
-  // Top Header: ~46px, Barra de Ajuste: ~34px, Rodapé: ~58px, Padding/Gaps: ~16px + (rows - 1)*8px
+  // Top Header: ~58px, Barra de Ajuste: ~34px, Rodapé: ~58px, Padding/Gaps: ~16px + (rows - 1)*8px
   const fittedRowHeight = useMemo(() => {
-    const overhead = 46 + 34 + 58 + 20 + (gridConfig.rows - 1) * 8;
+    const overhead = 58 + 34 + 58 + 20 + (gridConfig.rows - 1) * 8;
     const available = windowHeight - overhead;
     const calculated = Math.floor(available / gridConfig.rows);
     return Math.max(150, Math.min(580, calculated));
@@ -281,10 +289,12 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
     return Math.max(0.42, Math.min(0.85, Number(z.toFixed(2))));
   }, [currentInnerBodyHeight]);
 
+  const isConfirmAllDisabled = !isVotingActive || isAutoVoting || votedCount === deviceCount || !hasRandomPicked;
+
   return (
     <div className="h-screen max-h-screen overflow-hidden bg-[#060a12] text-slate-100 flex flex-col font-sans select-none w-full">
-      {/* 1. BARRA SUPERIOR SLIM E MINIMALISTA */}
-      <header className="bg-[#0b1322]/95 backdrop-blur border-b border-blue-900/40 px-3 sm:px-4 py-2 shrink-0 z-50 shadow-md">
+      {/* 1. BARRA SUPERIOR (ALTURA AUMENTADA EM 20%) */}
+      <header className="bg-[#0b1322]/95 backdrop-blur border-b border-blue-900/40 px-3 sm:px-4 py-2.5 sm:py-3 min-h-[58px] flex items-center shrink-0 z-50 shadow-md">
         <div className="w-full flex flex-wrap items-center justify-between gap-2.5">
           {/* Lado Esquerdo: Título e Status */}
           <div className="flex items-center gap-2">
@@ -443,16 +453,16 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Lado Direito: BOTÃO ESCOLHER ALEATÓRIO e CONFIRMAR TODOS OS VOTOS */}
+          {/* Lado Direito: BOTÃO ESCOLHER ALEATÓRIO e CONFIRMAR TODOS */}
           <div className="flex items-center gap-2">
-            {/* BOTÃO ESCOLHER ALEATÓRIO */}
+            {/* BOTÃO ESCOLHER ALEATÓRIO (ALTURA AUMENTADA EM 25%) */}
             <button
               type="button"
               disabled={!isVotingActive || votedCount === deviceCount}
               onClick={handlePickRandomForAll}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shadow-md ${
+              className={`flex items-center gap-1.5 px-3.5 h-10 rounded-lg border text-[11px] font-bold uppercase tracking-wider transition shadow-md ${
                 isVotingActive && votedCount < deviceCount
-                  ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 text-amber-300 active:scale-95 shadow-amber-500/10'
+                  ? 'bg-amber-500/20 hover:bg-amber-500/30 border-amber-500/50 text-amber-300 active:scale-95 shadow-amber-500/10 cursor-pointer'
                   : 'bg-slate-900/50 border-slate-800 text-slate-500 cursor-not-allowed opacity-50'
               }`}
               title="O sistema escolhe os candidatos aleatoriamente em todos os celulares que ainda não votaram"
@@ -461,17 +471,21 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
               <span>Escolher Aleatório</span>
             </button>
 
-            {/* BOTÃO CONFIRMAR TODOS OS VOTOS (LADO DIREITO DO BOTÃO ESCOLHER ALEATÓRIO) */}
+            {/* BOTÃO CONFIRMAR TODOS (LADO DIREITO DO BOTÃO ESCOLHER ALEATÓRIO) (ALTURA AUMENTADA EM 25%) */}
             <button
               type="button"
-              disabled={!isVotingActive || isAutoVoting || votedCount === deviceCount}
+              disabled={isConfirmAllDisabled}
               onClick={handleConfirmAll}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer shadow-md ${
-                isVotingActive && votedCount < deviceCount
-                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 active:scale-95 shadow-emerald-500/20 ring-1 ring-emerald-400/40'
-                  : 'bg-slate-800 text-slate-500 border border-slate-700 cursor-not-allowed opacity-40 shadow-none'
+              className={`flex items-center gap-1.5 px-4 h-10 rounded-lg text-xs font-black uppercase tracking-wider transition-all duration-200 shadow-md ${
+                !isConfirmAllDisabled
+                  ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-slate-950 active:scale-95 shadow-emerald-500/20 ring-1 ring-emerald-400/40 cursor-pointer'
+                  : 'bg-slate-800/80 text-slate-500 border border-slate-700/80 cursor-not-allowed opacity-40 shadow-none'
               }`}
-              title="Disparar confirmação para todos os aparelhos a cada 250ms (0,25s)"
+              title={
+                !hasRandomPicked && votedCount < deviceCount
+                  ? 'Clique primeiro em "Escolher Aleatório" para habilitar a confirmação de todos os votos'
+                  : 'Disparar confirmação para todos os aparelhos a cada 250ms (0,25s)'
+              }
             >
               {isAutoVoting ? (
                 <>
@@ -483,7 +497,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4 text-slate-950 stroke-[2.5]" />
-                  <span>CONFIRMAR TODOS OS VOTOS</span>
+                  <span>CONFIRMAR TODOS</span>
                 </>
               )}
             </button>
