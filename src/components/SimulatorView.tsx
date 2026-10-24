@@ -9,6 +9,7 @@ import {
   Loader2,
   Shuffle,
   Maximize2,
+  Gauge,
 } from 'lucide-react';
 import type { VotingSession } from '../types';
 import { VoterView } from './VoterView';
@@ -40,6 +41,23 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
   const [votingProgress, setVotingProgress] = useState<{ current: number; total: number } | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState<number>(0);
   const [hasRandomPicked, setHasRandomPicked] = useState<boolean>(false);
+
+  // Intervalo / velocidade de votação por aparelho em segundos (0,1s a 5,0s)
+  const [voteDelaySeconds, setVoteDelaySeconds] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = Number(localStorage.getItem('vota_sim_delay_seconds'));
+      if (saved && !isNaN(saved) && saved >= 0.1 && saved <= 5.0) return saved;
+    }
+    return 0.2;
+  });
+
+  const handleSetVoteDelay = (val: number) => {
+    const clamped = Math.max(0.1, Math.min(5.0, Number(val.toFixed(1))));
+    setVoteDelaySeconds(clamped);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('vota_sim_delay_seconds', String(clamped));
+    }
+  };
 
   // Seleções de candidatos por aparelho simulado
   const [deviceSelections, setDeviceSelections] = useState<Record<string, string[]>>({});
@@ -227,9 +245,9 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
       await submitBallot(session, selectedIds, currentRound, devId);
       setRefreshTrigger((prev) => prev + 1);
 
-      // Intervalo de exatamente 250ms (0,25 segundo) entre cada confirmação
+      // Intervalo configurável entre cada confirmação (0,1s a 5,0s)
       if (i < pendingDevices.length - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 250));
+        await new Promise((resolve) => setTimeout(resolve, Math.round(voteDelaySeconds * 1000)));
       }
     }
 
@@ -453,8 +471,31 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
             </div>
           </div>
 
-          {/* Lado Direito: BOTÃO ESCOLHER ALEATÓRIO e CONFIRMAR TODOS */}
+          {/* Lado Direito: VELOCIDADE + BOTÃO ESCOLHER ALEATÓRIO e CONFIRMAR TODOS */}
           <div className="flex items-center gap-2">
+            {/* Slider de Velocidade de votação de cada celular (0,1s a 5,0s) */}
+            <div
+              className="flex items-center gap-2 bg-[#070e1b] border border-blue-900/60 rounded-lg px-2.5 h-10 shadow-inner shrink-0"
+              title="Ajuste a velocidade/intervalo de voto entre cada celular (0,1 a 5,0 segundos)"
+            >
+              <Gauge className="w-4 h-4 text-amber-400 shrink-0" />
+              <span className="text-[11px] font-semibold text-slate-300 shrink-0 hidden sm:inline">
+                Velocidade:
+              </span>
+              <input
+                type="range"
+                min={0.1}
+                max={5.0}
+                step={0.1}
+                value={voteDelaySeconds}
+                onChange={(e) => handleSetVoteDelay(parseFloat(e.target.value))}
+                className="w-16 sm:w-20 md:w-24 h-1.5 bg-blue-950/90 border border-blue-900/60 rounded-lg appearance-none cursor-pointer accent-amber-400 hover:accent-amber-300 transition"
+              />
+              <span className="font-mono text-xs text-amber-300 font-bold min-w-[34px] text-right">
+                {voteDelaySeconds.toFixed(1).replace('.', ',')}s
+              </span>
+            </div>
+
             {/* BOTÃO ESCOLHER ALEATÓRIO (ALTURA AUMENTADA EM 25%) */}
             <button
               type="button"
@@ -484,7 +525,7 @@ export const SimulatorView: React.FC<SimulatorViewProps> = ({ session }) => {
               title={
                 !hasRandomPicked && votedCount < deviceCount
                   ? 'Clique primeiro em "Escolher Aleatório" para habilitar a confirmação de todos os votos'
-                  : 'Disparar confirmação para todos os aparelhos a cada 250ms (0,25s)'
+                  : `Disparar confirmação para todos os aparelhos a cada ${voteDelaySeconds.toFixed(1).replace('.', ',')}s`
               }
             >
               {isAutoVoting ? (
