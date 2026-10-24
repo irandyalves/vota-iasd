@@ -32,7 +32,6 @@ import {
   FileDown,
   ChevronDown,
   Lock,
-  CheckCircle2,
   Smartphone,
   FlaskConical,
 } from 'lucide-react';
@@ -746,48 +745,6 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     });
     setSelectedTieCandidateIds([]);
     showNotification('success', `Desempate enviado para os celulares: ${tie.label}`);
-  };
-
-  // Concluir votação: acionado pelo botão no topo (antes do histórico) ou pela detecção do último votante
-  const handleConcludeVoting = () => {
-    if (!isVotingActive) return;
-
-    if (session.status === 'TIE_BREAK') {
-      const result = concludeTieBreakRound();
-      if (result) {
-        if (result.remainingTies.length > 0) {
-          showNotification('success', `Rodada de desempate concluída! Ainda há ${result.remainingTies.length} empate(s) para resolver.`);
-        } else {
-          const activeEvt = session.events?.find((e) => e.id === session.activeEventId);
-          const rawCardName = (activeEvt?.name || session.title || 'Tesoureiro').trim();
-          showNotification('success', getCardCompletionNotification(rawCardName));
-        }
-      }
-      return;
-    }
-
-    // Se estiver em votação normal (MAIN)
-    const updatedSession: VotingSession = {
-      ...session,
-      status: 'CLOSED',
-      telaoMode: 'voting',
-      updatedAt: Date.now(),
-    };
-
-    saveSession(updatedSession);
-
-    const ties = detectVotingTies(updatedSession);
-    if (ties.length > 0) {
-      setIsTieAlertDismissed(false);
-      setIsTieModalOpen(true);
-      showNotification('success', `Votação concluída! Detectamos ${ties.length} empate(s) para resolver.`);
-    } else {
-      setIsTieAlertDismissed(true);
-      setIsTieModalOpen(false);
-      const activeEvt = session.events?.find((e) => e.id === session.activeEventId);
-      const rawCardName = (activeEvt?.name || session.title || 'Tesoureiro').trim();
-      showNotification('success', getCardCompletionNotification(rawCardName));
-    }
   };
 
   const [confirmModal, setConfirmModal] = useState<{
@@ -3021,28 +2978,8 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
           </button>
         </div>
 
-        {/* Direita: Concluir Votação + Histórico + Engrenagem */}
+        {/* Direita: Histórico + Engrenagem */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 ml-auto">
-          {/* BOTÃO CONCLUIR VOTAÇÃO (SEMPRE PRESENTE ANTES DO HISTÓRICO, 100% VISÍVEL E HABILITADO QUANDO EM VOTAÇÃO) */}
-          <button
-            type="button"
-            onClick={handleConcludeVoting}
-            disabled={!isVotingActive}
-            title={
-              isVotingActive
-                ? 'Concluir votação e apurar os resultados (identifica empates ou finaliza rodada)'
-                : 'Concluir votação (disponível quando a votação estiver em andamento)'
-            }
-            className={`px-3 py-1.5 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all select-none shrink-0 ${
-              isVotingActive
-                ? 'bg-emerald-600 hover:bg-emerald-500 border border-emerald-400 text-white shadow-[0_0_15px_rgba(16,185,129,0.45)] cursor-pointer active:scale-95 animate-pulse'
-                : 'opacity-30 grayscale pointer-events-none cursor-not-allowed bg-white/[0.04] border border-white/10 text-slate-400 shadow-none'
-            }`}
-          >
-            <CheckCircle2 className={`w-3.5 h-3.5 ${isVotingActive ? 'text-emerald-200' : 'text-slate-500'}`} />
-            <span>CONCLUIR VOTAÇÃO</span>
-          </button>
-
           {/* Atalho para Histórico de Votações (sem borda) com Listbox Dropdown */}
           <div className={`relative ${isHistoryMenuOpen ? 'z-[110]' : ''}`} data-history-dropdown="true">
             <button
