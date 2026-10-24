@@ -501,12 +501,28 @@ export const Navbar: React.FC<NavbarProps> = ({
       history: updatedHistory,
     });
 
+    const activeEvt = session.events?.find((e) => e.id === session.activeEventId);
+    const rawCardName = (activeEvt?.name || session.title || 'Tesoureiro').trim();
+    const cleanCardName = rawCardName.replace(/^elei[çc][ãa]o\s+(do|da|de|dos|das)?\s*/i, '').trim() || rawCardName;
+
+    let prep = 'do';
+    const matchPrep = rawCardName.match(/^elei[çc][ãa]o\s+(do|da|de|dos|das)\s+/i);
+    if (matchPrep) {
+      prep = matchPrep[1].toLowerCase();
+    } else if (/^(mulheres|diaconisas|secret[aá]ria|m[uú]sica|recep[çc][ãa]o)/i.test(cleanCardName)) {
+      prep = 'da';
+    } else if (/^(jovens|desbravadores|aventureiros|di[aá]conos|anci[aã]os|membros)/i.test(cleanCardName)) {
+      prep = 'de';
+    }
+
     if (typeof window !== 'undefined') {
       window.dispatchEvent(
         new CustomEvent('vota_iasd_notification', {
           detail: {
             type: 'success',
-            message: `Votação "${electionTitle}" encerrada com sucesso! Histórico salvo em Configurações. Pronto para nova votação.`,
+            cardName: cleanCardName,
+            prep: prep,
+            message: `Votação para a eleição ${prep} ${cleanCardName} concluída com sucesso`,
           },
         })
       );

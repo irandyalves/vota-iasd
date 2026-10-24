@@ -49,6 +49,27 @@ interface AdminViewProps {
   session: VotingSession;
 }
 
+const getCardCompletionNotification = (rawCardName?: string) => {
+  const trimmed = (rawCardName || 'Tesoureiro').trim();
+  const cleanCardName = trimmed.replace(/^elei[çc][ãa]o\s+(do|da|de|dos|das)?\s*/i, '').trim() || trimmed;
+  let prep = 'do';
+  const matchPrep = trimmed.match(/^elei[çc][ãa]o\s+(do|da|de|dos|das)\s+/i);
+  if (matchPrep) {
+    prep = matchPrep[1].toLowerCase();
+  } else if (/^(mulheres|diaconisas|secret[aá]ria|m[uú]sica|recep[çc][ãa]o)/i.test(cleanCardName)) {
+    prep = 'da';
+  } else if (/^(jovens|desbravadores|aventureiros|di[aá]conos|anci[aã]os|membros)/i.test(cleanCardName)) {
+    prep = 'de';
+  }
+
+  return (
+    <span>
+      Votação para a eleição {prep}{' '}
+      <span className="font-bold text-amber-300">{cleanCardName}</span>{' '}
+      concluída com sucesso
+    </span>
+  );
+};
 
 export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [activeTab, setActiveTab] = useState<'candidates' | 'control' | 'settings'>('candidates');
@@ -573,7 +594,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     } else {
       setIsTieAlertDismissed(true);
       setIsTieModalOpen(false);
-      showNotification('success', 'Desempate finalizado com sucesso! Todos os empates foram resolvidos.');
+      const activeEvt = session.events?.find((e) => e.id === session.activeEventId);
+      const rawCardName = (activeEvt?.name || session.title || 'Tesoureiro').trim();
+      showNotification('success', getCardCompletionNotification(rawCardName));
     }
 
     return { updatedSession, remainingTies };
@@ -735,7 +758,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
         if (result.remainingTies.length > 0) {
           showNotification('success', `Rodada de desempate concluída! Ainda há ${result.remainingTies.length} empate(s) para resolver.`);
         } else {
-          showNotification('success', 'Desempate finalizado com sucesso! Todos os empates foram resolvidos.');
+          const activeEvt = session.events?.find((e) => e.id === session.activeEventId);
+          const rawCardName = (activeEvt?.name || session.title || 'Tesoureiro').trim();
+          showNotification('success', getCardCompletionNotification(rawCardName));
         }
       }
       return;
@@ -759,7 +784,9 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
     } else {
       setIsTieAlertDismissed(true);
       setIsTieModalOpen(false);
-      showNotification('success', 'Votação concluída com sucesso! Apuração pronta.');
+      const activeEvt = session.events?.find((e) => e.id === session.activeEventId);
+      const rawCardName = (activeEvt?.name || session.title || 'Tesoureiro').trim();
+      showNotification('success', getCardCompletionNotification(rawCardName));
     }
   };
 
@@ -1942,7 +1969,7 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const [editingCandidateName, setEditingCandidateName] = useState('');
   const [glowingIds, setGlowingIds] = useState<Record<string, boolean>>({});
   const knownOptionIdsRef = useRef<Set<string>>(new Set((session.options || []).map((o) => o.id)));
-  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: React.ReactNode } | null>(null);
 
   // Ativa o brilho de 1.5s nos novos nomes que entram na lista
   const triggerGlow = (ids: string[]) => {
@@ -1986,14 +2013,25 @@ export const AdminView: React.FC<AdminViewProps> = ({ session }) => {
   const fileUploadAppendRef = useRef<HTMLInputElement>(null);
   const namesTextareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const showNotification = (type: 'success' | 'error', message: string) => {
+  const showNotification = (type: 'success' | 'error', message: React.ReactNode) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 4000);
   };
 
   useEffect(() => {
     const handleCustomNotify = (e: any) => {
-      if (e.detail?.type && e.detail?.message) {
+      if (e.detail?.cardName) {
+        const prep = e.detail.prep || 'do';
+        const cardName = e.detail.cardName;
+        showNotification(
+          e.detail.type || 'success',
+          <span>
+            Votação para a eleição {prep}{' '}
+            <span className="font-bold text-amber-300">{cardName}</span>{' '}
+            concluída com sucesso
+          </span>
+        );
+      } else if (e.detail?.type && e.detail?.message) {
         showNotification(e.detail.type, e.detail.message);
       }
     };
